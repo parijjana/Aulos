@@ -1,0 +1,15 @@
+# Search Ignores
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+android/.gradle/
+android/build/
+ios/Flutter/.last_build_id
+*.dill
+*.bin
+*.lock
+.idea/
+*.iml

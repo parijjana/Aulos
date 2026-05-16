@@ -1,0 +1,83 @@
+import 'package:dart_rss/dart_rss.dart';
+import 'package:http/http.dart' as http;
+import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:localaudioplayer/domain/library/podcast_service.dart';
+import 'package:drift/drift.dart';
+
+class RssPodcastService implements PodcastService {
+  final AppDatabase _db;
+  final http.Client _client;
+
+  RssPodcastService({required AppDatabase db, http.Client? client})
+      : _db = db,
+        _client = client ?? http.Client();
+
+  @override
+  Future<Podcast> subscribeToFeed(String url) async {
+    // Check if already subscribed
+    final existing = await _db.getPodcastByFeedUrl(url);
+    if (existing != null) return existing;
+
+    final response = await _client.get(Uri.parse(url));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch RSS feed: ${response.statusCode}');
+    }
+
+    final rss = RssFeed.parse(response.body);
+    
+    final id = await _db.addPodcast(PodcastsCompanion.insert(
+      feedUrl: url,
+      title: rss.title ?? 'Unknown Podcast',
+      description: Value(rss.description),
+      author: Value(rss.itunes?.author ?? rss.dc?.creator),
+      imageUrl: Value(rss.itunes?.image?.href ?? rss.image?.url),
+    ));
+
+    final podcast = (await _db.getAllPodcasts()).firstWhere((p) => p.id == id);
+    
+    // Fetch initial episodes
+    await refreshPodcast(id);
+    
+    return podcast;
+  }
+
+  @override
+  Future<List<Episode>> refreshPodcast(int podcastId) async {
+    final podcasts = await _db.getAllPodcasts();
+    final podcast = podcasts.firstWhere((p) => p.id == podcastId);
+    
+    final response = await _client.get(Uri.parse(podcast.feedUrl));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to refresh RSS feed: ${response.statusCode}');
+    }
+
+    final rss = RssFeed.parse(response.body);
+    final List<EpisodesCompanion> companions = [];
+
+    for (final item in rss.items) {
+      if (item.enclosure?.url == null) continue;
+      
+      companions.add(EpisodesCompanion.insert(
+        podcastId: podcastId,
+        guid: item.guid ?? item.enclosure!.url!,
+        title: item.title ?? 'Untitled Episode',
+        description: Value(item.description),
+        audioUrl: item.enclosure!.url!,
+        pubDate: Value(item.pubDate != null ? DateTime.tryParse(item.pubDate!) : null),
+        durationSeconds: Value(item.itunes?.duration?.inSeconds),
+      ));
+    }
+
+    await _db.addEpisodes(companions);
+    return _db.getEpisodesForPodcast(podcastId);
+  }
+
+  @override
+  Future<List<Podcast>> getSubscribedPodcasts() => _db.getAllPodcasts();
+
+  @override
+  Future<List<Episode>> getEpisodes(int podcastId) => _db.getEpisodesForPodcast(podcastId);
+
+  @override
+  Future<void> unsubscribe(int podcastId) => _db.deletePodcast(podcastId);
+}
