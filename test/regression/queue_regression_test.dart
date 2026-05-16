@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/presentation/screens/high_context_tabbed_screen.dart';
+import 'package:localaudioplayer/features/main/screens/high_context_tabbed_screen.dart';
 import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
@@ -56,6 +56,7 @@ void main() {
     when(() => mockPlayerVM.isHostMode).thenReturn(false);
     when(() => mockPlayerVM.isRemoteMode).thenReturn(false);
     when(() => mockPlayerVM.extractedColor).thenReturn(null);
+    when(() => mockPlayerVM.playbackSpeed).thenReturn(1.0);
     when(() => mockPlayerVM.addListener(any())).thenReturn(null);
     when(() => mockPlayerVM.removeListener(any())).thenReturn(null);
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/presentation/screens/library_screen.dart';
+import 'package:localaudioplayer/features/library/screens/library_screen.dart';
 import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';

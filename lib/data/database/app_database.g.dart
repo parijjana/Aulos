@@ -4058,6 +4058,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ArtistAlbumRelationsTable(this);
   late final $PodcastsTable podcasts = $PodcastsTable(this);
   late final $EpisodesTable episodes = $EpisodesTable(this);
+  late final LibraryDao libraryDao = LibraryDao(this as AppDatabase);
+  late final PlaylistDao playlistDao = PlaylistDao(this as AppDatabase);
+  late final PodcastDao podcastDao = PodcastDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

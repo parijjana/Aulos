@@ -18,7 +18,7 @@ import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
 import 'package:localaudioplayer/data/library/podcast_download_service.dart';
 import 'package:localaudioplayer/domain/library/podcast_service.dart';
 import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/high_context_tabbed_screen.dart';
+import 'package:localaudioplayer/features/main/screens/high_context_tabbed_screen.dart';
 import 'package:localaudioplayer/presentation/screens/collapsed_player_screen.dart';
 import 'package:file/local.dart';
 import 'package:themer_flutter/themer_flutter.dart';

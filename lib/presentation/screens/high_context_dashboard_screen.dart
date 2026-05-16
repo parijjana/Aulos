@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/screens/library_screen.dart';
+import 'package:localaudioplayer/features/library/screens/library_screen.dart';
 import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
 import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
