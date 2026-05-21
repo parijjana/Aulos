@@ -1,173 +1,162 @@
 import 'dart:async';
+import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:localaudioplayer/domain/playback/playback_engine.dart'
     as domain;
-import 'package:localaudioplayer/data/playback/audio_service_handler.dart';
 import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:audio_service/audio_service.dart';
-import 'dart:io' as io;
+import 'package:localaudioplayer/data/playback/audio_service_handler.dart';
+import 'package:localaudioplayer/domain/network/log_service.dart';
 
-class JustAudioPlaybackEngine implements domain.PlaybackEngine {
+class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
   final ObsidianAudioHandler _handler;
-  bool _isInitialized = false;
-
-  final _currentTrackController = StreamController<Track?>.broadcast();
-  Track? _currentTrack;
+  final BehaviorSubject<domain.PlaybackState> _stateController =
+      BehaviorSubject<domain.PlaybackState>.seeded(domain.PlaybackState.idle);
+  final StreamController<Track?> _currentTrackController =
+      StreamController<Track?>.broadcast();
 
   JustAudioPlaybackEngine({required ObsidianAudioHandler handler})
-    : _handler = handler {
-    _handler.player.playbackEventStream.listen((event) {}, onError: (Object e, StackTrace st) {
-      _logPlaybackError(e, st);
+      : _handler = handler {
+    _init();
+  }
+
+  void _init() {
+    _handler.playbackState.listen((state) {
+      final domainState = _mapState(state.processingState, state.playing);
+      _stateController.add(domainState);
     });
   }
 
-  void _logPlaybackError(Object e, [StackTrace? st]) {
-    final trackInfo = _currentTrack != null 
-      ? '${_currentTrack!.title} (${_currentTrack!.path})' 
-      : 'Unknown Track';
-    
-    debugPrint('PLAYBACK FAILURE: Failed to play $trackInfo');
-    debugPrint('Error Details: $e');
-    
-    final errorStr = e.toString().toLowerCase();
-    if (errorStr.contains('codec') || errorStr.contains('format')) {
-      debugPrint('Diagnostic: Possible missing codec or unsupported format.');
-    } else if (errorStr.contains('file') || errorStr.contains('not found')) {
-      debugPrint('Diagnostic: File missing or inaccessible.');
+  domain.PlaybackState _mapState(AudioProcessingState state, bool playing) {
+    if (!playing && 
+        state != AudioProcessingState.completed && 
+        state != AudioProcessingState.idle &&
+        state != AudioProcessingState.error) {
+      return domain.PlaybackState.paused;
+    }
+    switch (state) {
+      case AudioProcessingState.idle:
+        return domain.PlaybackState.idle;
+      case AudioProcessingState.loading:
+      case AudioProcessingState.buffering:
+        return domain.PlaybackState.loading;
+      case AudioProcessingState.ready:
+        return domain.PlaybackState.playing;
+      case AudioProcessingState.completed:
+        return domain.PlaybackState.completed;
+      case AudioProcessingState.error:
+        return domain.PlaybackState.error;
     }
   }
 
   Future<void> _ensureSession() async {
-    if (_isInitialized) return;
-    try {
-      final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration.music());
-      _isInitialized = true;
-      debugPrint('Engine: AudioSession configured');
-    } catch (e) {
-      debugPrint('Engine: AudioSession error: $e');
-    }
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.music());
   }
-
-  @override
-  Future<void> play() async {
-    await _ensureSession();
-    await _handler.play();
-  }
-
-  @override
-  Future<void> pause() async {
-    await _handler.pause();
-  }
-
-  @override
-  Future<void> stop() async {
-    await _handler.stop();
-  }
-
-  @override
-  Future<void> seek(Duration position) => _handler.seek(position);
-
-  @override
-  Future<void> setSpeed(double speed) => _handler.player.setSpeed(speed);
-
-  @override
-  Future<void> setVolume(double volume) => _handler.player.setVolume(volume);
 
   @override
   Future<void> setSource(String path) async {
     await _ensureSession();
     try {
-      debugPrint('Engine: Preparing source: $path');
-      final file = io.File(path);
-      if (!file.existsSync()) {
-        final err = 'File does not exist at path: $path';
-        debugPrint('PLAYBACK FAILURE: $err');
-        return;
+      log('ENGINE: Preparing source: $path');
+      Uri uri;
+      if (path.startsWith('http')) {
+        uri = Uri.parse(path);
+      } else {
+        final file = io.File(path);
+        if (!file.existsSync()) {
+          final err = 'File does not exist at path: $path';
+          log('ENGINE_FAILURE: $err');
+          return;
+        }
+        uri = Uri.file(file.absolute.path);
       }
-      await _handler.setSource(Uri.file(file.absolute.path));
-    } catch (e, st) {
-      _logPlaybackError(e, st);
+      await _handler.setSource(uri);
+    } catch (e) {
+      log('ENGINE_ERROR: Failed to set source: $e');
     }
+  }
+
+  @override
+  Future<void> play() async {
+    log('ENGINE: Play');
+    await _handler.play();
+  }
+
+  @override
+  Future<void> pause() async {
+    log('ENGINE: Pause');
+    await _handler.pause();
+  }
+
+  @override
+  Future<void> stop() async {
+    log('ENGINE: Stop');
+    await _handler.stop();
+  }
+
+  @override
+  Future<void> seek(Duration position) async {
+    log('ENGINE: Seek to ${position.inSeconds}s');
+    await _handler.seek(position);
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    await _handler.customAction('setVolume', {'volume': volume});
+  }
+
+  @override
+  Future<void> setSpeed(double speed) async {
+    log('ENGINE: Speed set to ${speed}x');
+    await _handler.setSpeed(speed);
+  }
+
+  @override
+  Future<void> setRepeatMode(domain.RepeatMode mode) async {
+    log('ENGINE: Repeat mode set to $mode');
+    AudioServiceRepeatMode am;
+    switch (mode) {
+      case domain.RepeatMode.off: am = AudioServiceRepeatMode.none; break;
+      case domain.RepeatMode.one: am = AudioServiceRepeatMode.one; break;
+      case domain.RepeatMode.all: am = AudioServiceRepeatMode.all; break;
+    }
+    await _handler.setRepeatMode(am);
+  }
+
+  @override
+  Future<void> setMetadata(String title, String artist, {String? album, Uint8List? art}) async {
+    // MediaItem setup is usually handled within the handler when a source is loaded
   }
 
   @override
   Future<void> loadTrack(Track track) async {
-    _currentTrack = track;
+    log('ENGINE: Loading track: "${track.title}"');
     _currentTrackController.add(track);
     await setSource(track.path);
-    await setMetadata(track.title, 'Artist', art: track.coverArt);
   }
 
   @override
-  void setRepeatMode(domain.RepeatMode mode) {
-    LoopMode justLoop;
-    switch (mode) {
-      case domain.RepeatMode.off:
-        justLoop = LoopMode.off;
-        break;
-      case domain.RepeatMode.one:
-        justLoop = LoopMode.one;
-        break;
-      case domain.RepeatMode.all:
-        // IMPORTANT: We handle playlist-level repeat in the ViewModel.
-        // If we set LoopMode.all here with a single source, just_audio
-        // will loop that source forever and never emit 'completed'.
-        justLoop = LoopMode.off;
-        break;
-    }
-    _handler.player.setLoopMode(justLoop);
-  }
+  Stream<Duration> get positionStream => AudioService.position;
 
   @override
-  Future<void> setMetadata(
-    String title,
-    String artist, {
-    String? album,
-    Uint8List? art,
-  }) async {
-    _handler.updateMetadata(
-      MediaItem(id: title + artist, album: album, title: title, artist: artist),
-    );
-  }
+  Stream<Duration?> get durationStream => _handler.mediaItem.map((i) => i?.duration);
 
   @override
-  Stream<Duration?> get durationStream => _handler.player.durationStream;
+  Stream<domain.PlaybackState> get stateStream => _stateController.stream;
 
   @override
-  Stream<Duration> get positionStream => _handler.player.positionStream;
-
-  @override
-  Stream<domain.PlaybackState> get stateStream =>
-      _handler.player.playerStateStream.map((state) {
-        if (state.processingState == ProcessingState.idle) {
-          return domain.PlaybackState.idle;
-        }
-        if (state.processingState == ProcessingState.loading) {
-          return domain.PlaybackState.loading;
-        }
-        if (state.processingState == ProcessingState.buffering) {
-          return domain.PlaybackState.buffering;
-        }
-        if (state.processingState == ProcessingState.ready) {
-          return state.playing
-              ? domain.PlaybackState.playing
-              : domain.PlaybackState.paused;
-        }
-        if (state.processingState == ProcessingState.completed) {
-          return domain.PlaybackState.completed;
-        }
-        return domain.PlaybackState.error;
-      });
-
-  @override
-  Stream<domain.PlaybackState> get playbackStateStream => stateStream;
+  Stream<domain.PlaybackState> get playbackStateStream => _stateController.stream;
 
   @override
   Stream<Track?> get currentTrackStream => _currentTrackController.stream;
 
   @override
-  Stream<String> get externalCommandStream => _handler.customEventStream;
-}
+  Stream<String> get externalCommandStream => _handler.customEventStream.cast<String>();
+
+  @override
+  Stream<String?> get icyMetadataStream => _handler.icyMetadataStream;
+  }

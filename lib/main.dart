@@ -9,6 +9,7 @@ import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/playlist_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
+import 'package:localaudioplayer/presentation/viewmodels/radio_view_model.dart';
 import 'package:localaudioplayer/data/library/playlist_service.dart';
 import 'package:localaudioplayer/data/library/library_indexer_service.dart';
 import 'package:localaudioplayer/data/library/artwork_service.dart';
@@ -16,6 +17,10 @@ import 'package:localaudioplayer/data/library/ensemble_artwork_service.dart';
 import 'package:localaudioplayer/data/library/rss_podcast_service.dart';
 import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
 import 'package:localaudioplayer/data/library/podcast_download_service.dart';
+import 'package:localaudioplayer/data/library/discovery_sync_manager.dart';
+import 'package:localaudioplayer/data/library/podcast_storage_manager.dart';
+import 'package:localaudioplayer/data/library/radio_browser_service.dart';
+import 'package:localaudioplayer/data/library/radio_sync_manager.dart';
 import 'package:localaudioplayer/domain/library/podcast_service.dart';
 import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
 import 'package:localaudioplayer/features/main/screens/high_context_tabbed_screen.dart';
@@ -23,8 +28,11 @@ import 'package:localaudioplayer/presentation/screens/collapsed_player_screen.da
 import 'package:file/local.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:localaudioplayer/data/database/app_database.dart' as app_db;
+import 'package:localaudioplayer/data/database/discovery_database.dart';
+import 'package:localaudioplayer/data/database/radio_database.dart';
 import 'package:localaudioplayer/data/library/persistent_library_service.dart';
+import 'package:localaudioplayer/core/network/rate_limit_dispatcher.dart';
 
 import 'package:localaudioplayer/data/network/nsd_discovery_service.dart';
 import 'package:localaudioplayer/data/network/websocket_service.dart';
@@ -89,7 +97,14 @@ void main() async {
   final audioHandler = await _initAudioService();
   final playbackEngine = JustAudioPlaybackEngine(handler: audioHandler);
 
-  final database = AppDatabase();
+  final database = app_db.AppDatabase();
+  final discoveryDb = DiscoveryDatabase();
+  final radioDb = RadioDatabase();
+  final prefs = await SharedPreferences.getInstance();
+
+  final settingsViewModel = SettingsViewModel(prefs);
+  final displayViewModel = DisplayViewModel(settingsVM: settingsViewModel);
+  
   final scannerService = LocalLibraryService(
     fileSystem: const LocalFileSystem(),
     tagsWrapper: AudioTagsWrapperImpl(),
@@ -103,15 +118,21 @@ void main() async {
   );
 
   final playlistService = PlaylistServiceImpl();
-  final prefs = await SharedPreferences.getInstance();
   final logService = MediaLogService();
   final artworkService = ArtworkService();
   final ensembleService = EnsembleArtworkService(
     artworkService: artworkService,
   );
+  
+  final rateLimitDispatcher = RateLimitDispatcher();
   final podcastService = RssPodcastService(db: database);
-  final discoveryService = PodcastDiscoveryService();
+  final discoveryService = PodcastDiscoveryService(rateLimiter: rateLimitDispatcher);
   final downloadService = PodcastDownloadService(db: database);
+  final syncManager = DiscoverySyncManager(api: discoveryService, db: discoveryDb);
+  final storageManager = PodcastStorageManager(db: database, settingsVM: settingsViewModel);
+
+  final radioService = RadioBrowserService(rateLimiter: rateLimitDispatcher);
+  final radioSyncManager = RadioSyncManager(api: radioService, db: radioDb);
 
   final libraryIndexerService = LibraryIndexerService(
     db: database,
@@ -133,9 +154,7 @@ void main() async {
   );
 
   unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
-
-  final settingsViewModel = SettingsViewModel(prefs);
-  final displayViewModel = DisplayViewModel();
+  unawaited(storageManager.pruneDownloads());
 
   final libraryViewModel = LibraryViewModel(
     libraryService: persistentLibrary,
@@ -151,6 +170,7 @@ void main() async {
     engine: playbackEngine,
     queueVM: queueViewModel,
     connectionManager: connectionManager,
+    db: database,
   );
   final playlistViewModel = PlaylistViewModel(
     libraryService: persistentLibrary,
@@ -166,12 +186,25 @@ void main() async {
     podcastService: podcastService,
     discoveryService: discoveryService,
     downloadService: downloadService,
+    syncManager: syncManager,
+    discoveryDb: discoveryDb,
     settingsVM: settingsViewModel,
+  );
+  final radioViewModel = RadioViewModel(
+    api: radioService,
+    db: radioDb,
+    syncManager: radioSyncManager,
   );
 
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider<MediaLogService>.value(value: logService),
+        Provider<RateLimitDispatcher>.value(value: rateLimitDispatcher),
+        Provider<DiscoveryDatabase>.value(value: discoveryDb),
+        Provider<RadioDatabase>.value(value: radioDb),
+        ChangeNotifierProvider<DiscoverySyncManager>.value(value: syncManager),
+        Provider<PodcastStorageManager>.value(value: storageManager),
         Provider<PersistentLibraryService>.value(value: persistentLibrary),
         Provider<EnsembleArtworkService>.value(value: ensembleService),
         Provider<PodcastService>.value(value: podcastService),
@@ -184,6 +217,7 @@ void main() async {
         ChangeNotifierProvider.value(value: connectivityViewModel),
         ChangeNotifierProvider.value(value: libraryIndexerService),
         ChangeNotifierProvider.value(value: podcastViewModel),
+        ChangeNotifierProvider.value(value: radioViewModel),
       ],
       child: const LocalAudioPlayerApp(),
     ),
@@ -198,7 +232,6 @@ class LocalAudioPlayerApp extends StatelessWidget {
     final displayVM = context.watch<DisplayViewModel>();
     final settingsVM = context.watch<SettingsViewModel>();
     
-    // ThemerCompiler now uses internal caching to prevent main-thread freezing
     final themeData = ThemerCompiler.compile(settingsVM.themeModel);
 
     Widget home;
@@ -218,7 +251,6 @@ class LocalAudioPlayerApp extends StatelessWidget {
       title: 'Aulos',
       debugShowCheckedModeBanner: false,
       theme: themeData,
-      // Ensure smooth transitions between themes
       themeAnimationDuration: const Duration(milliseconds: 300),
       themeAnimationCurve: Curves.easeInOut,
       home: home,

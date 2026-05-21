@@ -44,6 +44,13 @@ class ObsidianAudioHandler extends BaseAudioHandler with SeekHandler {
 
   AudioPlayer get player => _player;
 
+  Stream<String?> get icyMetadataStream => _player.icyMetadataStream.map((icy) {
+    if (icy == null) return null;
+    final info = icy.info;
+    if (info == null) return icy.headers?.name;
+    return '${info.title}${info.url != null ? " (${info.url})" : ""}';
+  });
+
   PlaybackState _transformEvent(PlaybackEvent event) {
     return PlaybackState(
       controls: [

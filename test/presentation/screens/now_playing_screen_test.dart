@@ -55,6 +55,10 @@ void main() {
     when(() => mockPlayerVM.displayTitle).thenReturn('No Track');
     when(() => mockPlayerVM.isShuffle).thenReturn(false);
     when(() => mockPlayerVM.repeatMode).thenReturn(domain.RepeatMode.off);
+    when(() => mockPlayerVM.currentMediaType).thenReturn(MediaType.music);
+    when(() => mockPlayerVM.currentShowNotes).thenReturn(null);
+    when(() => mockPlayerVM.currentStreamMetadata).thenReturn(null);
+    when(() => mockPlayerVM.currentImageUrl).thenReturn(null);
     when(() => mockPlayerVM.addListener(any())).thenReturn(null);
     when(() => mockPlayerVM.removeListener(any())).thenReturn(null);
 

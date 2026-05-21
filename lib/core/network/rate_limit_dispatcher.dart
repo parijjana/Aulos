@@ -1,16 +1,25 @@
 import 'dart:async';
 
+/// A universal rate limiter that manages multiple independent queues for different APIs.
 class RateLimitDispatcher {
   final Map<String, Future<void>> _queues = {};
+  
+  /// Default cooldowns for known APIs to ensure "Good Citizen" behavior.
+  static const Map<String, Duration> defaultCooldowns = {
+    'itunes': Duration(milliseconds: 500),
+    'musicbrainz': Duration(seconds: 1),
+    'radio-browser': Duration(milliseconds: 200),
+  };
 
   Future<T> dispatch<T>({
     required String apiId,
     required Future<T> Function() call,
-    Duration cooldown = const Duration(seconds: 1),
+    Duration? cooldown,
   }) {
     final completer = Completer<T>();
+    final effectiveCooldown = cooldown ?? defaultCooldowns[apiId] ?? const Duration(seconds: 1);
 
-    // Get the previous future for this API or a completed one if it's the first call
+    // Get the previous future for this API or a completed one
     final previousFuture = _queues[apiId] ?? Future.value();
 
     // Chain the new call
@@ -21,8 +30,7 @@ class RateLimitDispatcher {
       } catch (e, s) {
         completer.completeError(e, s);
       } finally {
-        // Wait for the cooldown before the next request in the queue can start
-        await Future<void>.delayed(cooldown);
+        await Future<void>.delayed(effectiveCooldown);
       }
     });
 

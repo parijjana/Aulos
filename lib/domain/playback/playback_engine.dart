@@ -26,6 +26,7 @@ abstract class PlaybackEngine {
   Stream<PlaybackState> get playbackStateStream; // Alias/Added for parity
   Stream<Track?> get currentTrackStream;
   Stream<String> get externalCommandStream;
+  Stream<String?> get icyMetadataStream;
 }
 
 enum RepeatMode { off, all, one }

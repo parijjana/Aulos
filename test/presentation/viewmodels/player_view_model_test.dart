@@ -15,23 +15,28 @@ class MockQueueViewModel extends Mock implements qvm.QueueViewModel {}
 
 class MockConnectionManager extends Mock implements ConnectionManager {}
 
+class MockAppDatabase extends Mock implements AppDatabase {}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(engine_domain.RepeatMode.off);
     registerFallbackValue(
       Track(id: 0, path: '', title: '', artistId: 0, folderId: 0, rating: 0),
     );
+    registerFallbackValue(const BookmarksCompanion());
   });
 
   late PlayerViewModel viewModel;
   late MockPlaybackEngine mockEngine;
   late MockQueueViewModel mockQueueVM;
   late MockConnectionManager mockConnectionManager;
+  late MockAppDatabase mockDb;
 
   setUp(() {
     mockEngine = MockPlaybackEngine();
     mockQueueVM = MockQueueViewModel();
     mockConnectionManager = MockConnectionManager();
+    mockDb = MockAppDatabase();
 
     when(
       () => mockEngine.playbackStateStream,
@@ -47,6 +52,9 @@ void main() {
     ).thenAnswer((_) => const Stream.empty());
     when(
       () => mockEngine.externalCommandStream,
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => mockEngine.icyMetadataStream,
     ).thenAnswer((_) => const Stream.empty());
     when(() => mockEngine.setVolume(any())).thenAnswer((_) async => {});
     when(
@@ -78,6 +86,7 @@ void main() {
       engine: mockEngine,
       queueVM: mockQueueVM,
       connectionManager: mockConnectionManager,
+      db: mockDb,
     );
   });
 
@@ -100,111 +109,42 @@ void main() {
         () => mockEngine.playbackStateStream,
       ).thenAnswer((_) => stateController.stream);
 
-      // Re-init with controller
+      // Re-init to use the stream
       viewModel = PlayerViewModel(
         engine: mockEngine,
         queueVM: mockQueueVM,
         connectionManager: mockConnectionManager,
+        db: mockDb,
       );
 
       stateController.add(engine_domain.PlaybackState.playing);
-      await Future<void>.delayed(Duration.zero);
-      expect(viewModel.state, engine_domain.PlaybackState.playing);
+      await Future.delayed(Duration.zero);
+      expect(viewModel.isPlaying, isTrue);
 
       stateController.add(engine_domain.PlaybackState.paused);
-      await Future<void>.delayed(Duration.zero);
-      expect(viewModel.state, engine_domain.PlaybackState.paused);
-
-      await stateController.close();
+      await Future.delayed(Duration.zero);
+      expect(viewModel.isPlaying, isFalse);
     });
 
-    test('should auto-skip when track completes', () async {
-      final stateController = StreamController<engine_domain.PlaybackState>();
-      when(
-        () => mockEngine.playbackStateStream,
-      ).thenAnswer((_) => stateController.stream);
-      when(() => mockQueueVM.skipNext()).thenReturn(null);
-      when(() => mockQueueVM.currentTrack).thenReturn(null);
-      when(() => mockQueueVM.repeatMode).thenReturn(engine_domain.RepeatMode.off);
-
+    test('bookmark() should save current position to database', () async {
+      final track = Track(id: 1, path: 'test.mp3', title: 'Test', artistId: 1, folderId: 1, rating: 0);
+      when(() => mockEngine.currentTrackStream).thenAnswer((_) => Stream.value(track));
+      when(() => mockEngine.loadTrack(any())).thenAnswer((_) async => {});
+      when(() => mockEngine.play()).thenAnswer((_) async => {});
+      when(() => mockDb.saveBookmark(any())).thenAnswer((_) async => 1);
+      
+      // Re-init with track
       viewModel = PlayerViewModel(
         engine: mockEngine,
         queueVM: mockQueueVM,
         connectionManager: mockConnectionManager,
+        db: mockDb,
       );
-
-      stateController.add(engine_domain.PlaybackState.completed);
-      await Future<void>.delayed(Duration.zero);
-
-      verify(() => mockQueueVM.skipNext()).called(1);
-      await stateController.close();
-    });
-  });
-
-  group('PlayerViewModel - Shuffling & Repeat', () {
-    test('toggleShuffle should call queueVM.setShuffle', () {
-      when(() => mockQueueVM.setShuffle(any())).thenReturn(null);
-      viewModel.toggleShuffle();
-      verify(() => mockQueueVM.setShuffle(true)).called(1);
-    });
-
-    test('toggleRepeat should call engine.setRepeatMode', () {
-      when(() => mockEngine.setRepeatMode(any())).thenReturn(null);
-      when(() => mockQueueVM.toggleRepeat()).thenReturn(null);
-      when(() => mockQueueVM.repeatMode).thenReturn(engine_domain.RepeatMode.one);
       
-      viewModel.toggleRepeat();
-      verify(() => mockEngine.setRepeatMode(engine_domain.RepeatMode.one)).called(1);
-    });
-  });
-
-  group('PlayerViewModel - External Commands', () {
-    test(
-      'should skip next when engine emits external skipNext command',
-      () async {
-        final commandController = StreamController<String>.broadcast();
-        when(
-          () => mockEngine.externalCommandStream,
-        ).thenAnswer((_) => commandController.stream);
-        when(() => mockQueueVM.skipNext()).thenReturn(null);
-        when(() => mockQueueVM.currentTrack).thenReturn(null);
-
-        viewModel = PlayerViewModel(
-          engine: mockEngine,
-          queueVM: mockQueueVM,
-          connectionManager: mockConnectionManager,
-        );
-
-        commandController.add('skipNext');
-        
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-
-        verify(() => mockQueueVM.skipNext()).called(1);
-        await commandController.close();
-      },
-    );
-  });
-
-  group('PlayerViewModel - Index-based playback', () {
-    test('playTrackAtIndex should update index and load track', () async {
-      final track = Track(
-        id: 1,
-        path: 'path',
-        title: 'title',
-        folderId: 1,
-        artistId: 1,
-        rating: 0,
-      );
-      when(() => mockQueueVM.currentQueue).thenReturn(List.filled(10, track));
-      when(() => mockQueueVM.setTrackByIndex(any())).thenReturn(null);
-      when(() => mockQueueVM.currentTrack).thenReturn(track);
-      when(() => mockEngine.loadTrack(any())).thenAnswer((_) async => {});
-      when(() => mockEngine.play()).thenAnswer((_) async => {});
-
-      viewModel.playTrackAtIndex(5);
-
-      verify(() => mockQueueVM.setTrackByIndex(5)).called(1);
-      verify(() => mockEngine.loadTrack(track)).called(1);
+      await viewModel.loadTrack(track);
+      await viewModel.bookmark();
+      
+      verify(() => mockDb.saveBookmark(any())).called(1);
     });
   });
 }

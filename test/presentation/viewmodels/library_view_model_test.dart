@@ -36,6 +36,7 @@ void main() {
     when(() => mockService.getPlaylists()).thenAnswer((_) async => []);
     
     when(() => mockSettingsVM.lastViewType).thenReturn(LibraryViewType.list);
+    when(() => mockSettingsVM.libraryHubTabIndex).thenReturn(0);
     when(() => mockConnectionManager.remoteCommands).thenAnswer((_) => const Stream.empty());
     when(() => mockConnectionManager.isClient).thenReturn(false);
     when(() => mockConnectionManager.addListener(any())).thenReturn(null);

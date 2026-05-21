@@ -21,6 +21,7 @@ class LibraryViewModel extends ChangeNotifier {
 
   LibraryMode _mode = LibraryMode.folders;
   settings.LibraryViewType _viewType = settings.LibraryViewType.list;
+  int _libraryTabIndex = 0;
 
   List<Folder> _folders = [];
   List<Artist> _artists = [];
@@ -50,6 +51,7 @@ class LibraryViewModel extends ChangeNotifier {
        _connectionManager = connectionManager,
        _settingsVM = settingsVM {
     _viewType = _settingsVM?.lastViewType ?? settings.LibraryViewType.list;
+    _libraryTabIndex = _settingsVM?.libraryHubTabIndex ?? 0;
     _loadInitialData();
     if (!kIsWeb && (io.Platform.isAndroid || io.Platform.isIOS)) {
       unawaited(autoDiscover());
@@ -64,6 +66,14 @@ class LibraryViewModel extends ChangeNotifier {
     if (_connectionManager?.isAuthenticated ?? false) {
       unawaited(_loadInitialData());
     }
+  }
+
+  int get libraryTabIndex => _libraryTabIndex;
+
+  void setLibraryTabIndex(int index) {
+    _libraryTabIndex = index;
+    _settingsVM?.setLibraryHubTabIndex(index);
+    notifyListeners();
   }
 
   void _handleRemoteCommand(MediaCommand command) {

@@ -4,12 +4,13 @@ import 'package:localaudioplayer/data/library/persistent_library_service.dart';
 import 'package:localaudioplayer/data/database/app_database.dart';
 import 'package:localaudioplayer/data/library/artwork_service.dart';
 import 'package:localaudioplayer/data/library/ensemble_artwork_service.dart';
+import 'package:localaudioplayer/domain/network/log_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
 
 enum IndexerState { idle, scanning, optimizing, hardening, paused, error }
 
-class LibraryIndexerService extends ChangeNotifier {
+class LibraryIndexerService extends ChangeNotifier with UniversalLog {
   final AppDatabase _db;
   final SharedPreferences _prefs;
   final ArtworkService _artworkService;
@@ -20,7 +21,6 @@ class LibraryIndexerService extends ChangeNotifier {
   String _statusMessage = 'Idle';
   Uint8List? _lastFetchedArt;
 
-  // Telemetry
   int _foldersScanned = 0;
   int _filesDiscovered = 0;
   int _totalFilesStored = 0;
@@ -53,6 +53,7 @@ class LibraryIndexerService extends ChangeNotifier {
   Future<void> fetchMissingMetadata(PersistentLibraryService service) async {
     if (_state != IndexerState.idle) return;
 
+    log('INDEXER: Starting metadata hardening (Artwork & Photos)');
     _state = IndexerState.hardening;
     _shouldPause = false;
     _statusMessage = 'Starting metadata hardening...';
@@ -69,6 +70,7 @@ class LibraryIndexerService extends ChangeNotifier {
       
       final int totalTasks = missingArtAlbums.length + missingPhotoArtists.length;
       if (totalTasks == 0) {
+        log('INDEXER: No missing metadata found.');
         _statusMessage = 'All artwork and photos are already up to date.';
         _state = IndexerState.idle;
         _progress = 1.0;
@@ -76,9 +78,9 @@ class LibraryIndexerService extends ChangeNotifier {
         return;
       }
 
+      log('INDEXER: Found $totalTasks missing metadata items.');
       int completedTasks = 0;
 
-      // 1. Fetch missing Album Art
       for (final album in missingArtAlbums) {
         if (_shouldPause) break;
         
@@ -92,10 +94,10 @@ class LibraryIndexerService extends ChangeNotifier {
           continue;
         }
 
-        _statusMessage = 'Fetching Art: ${album.name} by ${artist.name}';
+        log('INDEXER: Fetching art for "${album.name}" by "${artist.name}"');
+        _statusMessage = 'Fetching Art: ${album.name}';
         notifyListeners();
 
-        // Resolve a local folder from the first track in this album
         String? albumPath;
         String? firstTrackPath;
         final albumTracks = await _db.getTracksForAlbum(album.id);
@@ -106,24 +108,14 @@ class LibraryIndexerService extends ChangeNotifier {
 
         try {
           Uint8List? art;
-          
-          // Stage 1: Check .artwork subfolder
           if (albumPath != null) {
             art = await _artworkService.tryGetLocalArtwork(albumPath);
-            if (art != null) {
-              debugPrint('Indexer: Found local cover for ${album.name}');
-            }
           }
 
-          // Stage 2: Extract embedded artwork
           if (art == null && firstTrackPath != null) {
             art = await _artworkService.extractEmbeddedArtwork(firstTrackPath);
-            if (art != null) {
-              debugPrint('Indexer: Extracted embedded art for ${album.name}');
-            }
           }
 
-          // Stage 3: Fetch from network
           if (art == null) {
             art = await _artworkService.fetchAlbumArt(
               artist.name,
@@ -135,9 +127,10 @@ class LibraryIndexerService extends ChangeNotifier {
           if (art != null) {
             await service.updateAlbumArt(album.id, art);
             _lastFetchedArt = art;
+            log('INDEXER: Saved art for "${album.name}"');
           }
         } catch (e) {
-          debugPrint('Error fetching art for ${album.name}: $e');
+          log('INDEXER: Error fetching art for "${album.name}": $e');
         }
         
         completedTasks++;
@@ -145,14 +138,13 @@ class LibraryIndexerService extends ChangeNotifier {
         notifyListeners();
       }
 
-      // 2. Fetch missing Artist Photos
       for (final artist in missingPhotoArtists) {
         if (_shouldPause) break;
         
+        log('INDEXER: Fetching photo for artist "${artist.name}"');
         _statusMessage = 'Fetching Photo: ${artist.name}';
         notifyListeners();
 
-        // Resolve a local folder for the artist (using their first album's parent dir)
         String? artistPath;
         final artistTracks = await _db.getTracksForArtist(artist.id);
         if (artistTracks.isNotEmpty) {
@@ -162,20 +154,12 @@ class LibraryIndexerService extends ChangeNotifier {
 
         try {
           Uint8List? photo;
-
-          // Stage 1: Check .artwork subfolder
           if (artistPath != null) {
             photo = await _artworkService.tryGetLocalArtistPhoto(artistPath);
-            if (photo != null) {
-              debugPrint('Indexer: Found local photo for ${artist.name}');
-            }
           }
 
-          // Stage 2: Fetch from network
           if (photo == null) {
             if (_ensembleService.isEnsemble(artist.name)) {
-              _statusMessage = 'Stitching ensemble photo: ${artist.name}';
-              notifyListeners();
               photo = await _ensembleService.createEnsembleArtwork(
                 artist.name,
                 localFolder: artistPath,
@@ -191,9 +175,10 @@ class LibraryIndexerService extends ChangeNotifier {
           if (photo != null) {
             await service.updateArtistPhoto(artist.id, photo);
             _lastFetchedArt = photo;
+            log('INDEXER: Saved photo for "${artist.name}"');
           }
         } catch (e) {
-          debugPrint('Error fetching photo for ${artist.name}: $e');
+          log('INDEXER: Error fetching photo for "${artist.name}": $e');
         }
         
         completedTasks++;
@@ -201,11 +186,13 @@ class LibraryIndexerService extends ChangeNotifier {
         notifyListeners();
       }
 
+      log('INDEXER: Metadata hardening complete.');
       _statusMessage = _shouldPause ? 'Hardening paused' : 'Metadata Hardening Complete';
       _state = IndexerState.idle;
       _progress = 1.0;
       notifyListeners();
     } catch (e) {
+      log('INDEXER: Hardening error: $e');
       _state = IndexerState.error;
       _statusMessage = 'Hardening Error: $e';
       notifyListeners();
@@ -220,28 +207,13 @@ class LibraryIndexerService extends ChangeNotifier {
   Future<void> _resumeIfNeeded() async {
     final offset = _prefs.getInt(_progressKey) ?? 0;
     if (offset > 0) {
+      log('INDEXER: Resuming database optimization from index $offset');
       unawaited(_startOptimizing(startOffset: offset));
     }
   }
 
-  void triggerOptimize() {
-    if (_state == IndexerState.idle) {
-      unawaited(
-        _startOptimizing(startOffset: _prefs.getInt(_progressKey) ?? 0),
-      );
-    }
-  }
-
-  void pauseIndexer() {
-    if (_state == IndexerState.optimizing || _state == IndexerState.scanning) {
-      _shouldPause = true;
-      _state = IndexerState.paused;
-      _statusMessage = 'Paused';
-      notifyListeners();
-    }
-  }
-
   Future<void> rebuildFromScratch() async {
+    log('INDEXER: Wiping library and rebuilding from scratch...');
     _shouldPause = true;
     await Future<void>.delayed(const Duration(milliseconds: 500));
     await _db.delete(_db.artistAlbumRelations).go();
@@ -254,6 +226,7 @@ class LibraryIndexerService extends ChangeNotifier {
     _foldersScanned = 0;
     _filesDiscovered = 0;
     _totalFilesStored = 0;
+    log('INDEXER: Library wiped. Starting fresh index...');
     unawaited(_startOptimizing(startOffset: 0));
   }
 
@@ -263,6 +236,7 @@ class LibraryIndexerService extends ChangeNotifier {
   ) async {
     if (_state != IndexerState.idle) return;
 
+    log('INDEXER: Starting library scan on ${folders.length} folders.');
     _state = IndexerState.scanning;
     _shouldPause = false;
     _statusMessage = 'Initializing scan...';
@@ -273,6 +247,7 @@ class LibraryIndexerService extends ChangeNotifier {
     try {
       for (final path in folders) {
         if (_shouldPause) break;
+        log('INDEXER: Scanning directory: $path');
         _statusMessage = 'Scanning: $path';
         notifyListeners();
 
@@ -290,7 +265,8 @@ class LibraryIndexerService extends ChangeNotifier {
       }
 
       await _updateTotalCount();
-
+      log('INDEXER: Discovered $_filesDiscovered new files across $_foldersScanned folders.');
+      
       _statusMessage = 'Scan Complete. Optimizing Database...';
       notifyListeners();
       await _startOptimizing(startOffset: 0);
@@ -299,6 +275,7 @@ class LibraryIndexerService extends ChangeNotifier {
       _state = IndexerState.idle;
       notifyListeners();
     } catch (e) {
+      log('INDEXER: Scan error: $e');
       _state = IndexerState.error;
       _statusMessage = 'Scan Error: $e';
       notifyListeners();
@@ -306,11 +283,13 @@ class LibraryIndexerService extends ChangeNotifier {
   }
 
   void stopIndexer() {
+    log('INDEXER: User requested stop.');
     _shouldPause = true;
     notifyListeners();
   }
 
   Future<void> _startOptimizing({required int startOffset}) async {
+    log('INDEXER: Running database optimization...');
     _state = IndexerState.optimizing;
     _shouldPause = false;
     notifyListeners();
@@ -335,8 +314,6 @@ class LibraryIndexerService extends ChangeNotifier {
         }
 
         final artist = allArtists[i];
-        _statusMessage = 'Indexing: ${artist.name}';
-
         final artistTracks = await _db.getTracksForArtist(artist.id);
         final Map<int, int> albumCounts = {};
         for (var track in artistTracks) {
@@ -368,12 +345,13 @@ class LibraryIndexerService extends ChangeNotifier {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
 
+      log('INDEXER: Database optimization complete.');
       _state = IndexerState.idle;
       _progress = 1.0;
       await _prefs.setInt(_progressKey, 0);
       notifyListeners();
     } catch (e) {
-      debugPrint('Optimization Error: $e');
+      log('INDEXER: Optimization error: $e');
       _state = IndexerState.error;
       _statusMessage = 'Error: $e';
       notifyListeners();

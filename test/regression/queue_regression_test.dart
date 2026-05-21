@@ -57,6 +57,7 @@ void main() {
     when(() => mockPlayerVM.isRemoteMode).thenReturn(false);
     when(() => mockPlayerVM.extractedColor).thenReturn(null);
     when(() => mockPlayerVM.playbackSpeed).thenReturn(1.0);
+    when(() => mockPlayerVM.currentMediaType).thenReturn(MediaType.music);
     when(() => mockPlayerVM.addListener(any())).thenReturn(null);
     when(() => mockPlayerVM.removeListener(any())).thenReturn(null);
 
@@ -70,6 +71,7 @@ void main() {
 
     when(() => mockDisplayVM.isHighContext).thenReturn(true);
     when(() => mockDisplayVM.mode).thenReturn(UIContextMode.highContext);
+    when(() => mockDisplayVM.selectedTabIndex).thenReturn(0);
     when(() => mockDisplayVM.addListener(any())).thenReturn(null);
     when(() => mockDisplayVM.removeListener(any())).thenReturn(null);
 

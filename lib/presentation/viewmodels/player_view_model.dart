@@ -5,13 +5,19 @@ import 'package:localaudioplayer/data/database/app_database.dart';
 import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
 import 'package:localaudioplayer/domain/network/connection_manager.dart';
 import 'package:localaudioplayer/domain/network/socket_service.dart';
+import 'package:localaudioplayer/domain/network/log_service.dart';
 import 'package:palette_generator/palette_generator.dart';
+import 'package:drift/drift.dart';
 import 'dart:async';
+import 'dart:typed_data';
 
-class PlayerViewModel extends ChangeNotifier {
+enum MediaType { music, podcast, radio, audiobook }
+
+class PlayerViewModel extends ChangeNotifier with UniversalLog {
   final engine_domain.PlaybackEngine _engine;
   final QueueViewModel _queueVM;
   final ConnectionManager _connectionManager;
+  final AppDatabase _db;
 
   Track? _currentTrack;
   Duration _position = Duration.zero;
@@ -22,6 +28,9 @@ class PlayerViewModel extends ChangeNotifier {
   engine_domain.RepeatMode _repeatMode = engine_domain.RepeatMode.off;
   engine_domain.PlaybackState _playbackState = engine_domain.PlaybackState.idle;
   double _playbackSpeed = 1.0;
+  String? _currentShowNotes;
+  String? _currentStreamMetadata;
+  String? _currentImageUrl;
 
   Color? _extractedColor;
   PaletteGenerator? _currentPalette;
@@ -31,14 +40,17 @@ class PlayerViewModel extends ChangeNotifier {
   StreamSubscription<Duration>? _posSub;
   StreamSubscription<Duration?>? _durSub;
   StreamSubscription<MediaCommand>? _remoteSub;
+  StreamSubscription<String?>? _icySub;
 
   PlayerViewModel({
     required engine_domain.PlaybackEngine engine,
     required QueueViewModel queueVM,
     required ConnectionManager connectionManager,
+    required AppDatabase db,
   }) : _engine = engine,
        _queueVM = queueVM,
-       _connectionManager = connectionManager {
+       _connectionManager = connectionManager,
+       _db = db {
     _init();
     _remoteSub = _connectionManager.remoteCommands.listen(_handleRemoteCommand);
   }
@@ -49,7 +61,12 @@ class PlayerViewModel extends ChangeNotifier {
     _trackSub = _engine.currentTrackStream.listen((track) {
       _currentTrack = track;
       if (track != null) {
-        _extractColor(track);
+        log('PLAYER: Now playing "${track.title}"');
+        if (track.coverArt != null && track.coverArt!.isNotEmpty) {
+           _extractColorFromMemory(track.coverArt!);
+        } else if (_currentImageUrl != null) {
+           _extractColorFromUrl(_currentImageUrl!);
+        }
       }
       notifyListeners();
       _broadcastState();
@@ -59,7 +76,7 @@ class PlayerViewModel extends ChangeNotifier {
       _playbackState = state;
       _isPlaying = state == engine_domain.PlaybackState.playing;
       if (state == engine_domain.PlaybackState.completed) {
-        debugPrint('ViewModel: Track completed, triggering auto-skip.');
+        log('PLAYER: Track reached end. Skipping...');
         _debouncedSkipNext();
       }
       notifyListeners();
@@ -68,16 +85,12 @@ class PlayerViewModel extends ChangeNotifier {
 
     _posSub = _engine.positionStream.listen((pos) {
       _position = pos;
-      
-      // Fallback for platforms where completed state might be missed
       if (_playbackState == engine_domain.PlaybackState.playing &&
           _duration > Duration.zero &&
           pos >= _duration &&
           pos > Duration.zero) {
-        debugPrint('ViewModel: Fallback end-of-track detected.');
         _debouncedSkipNext();
       }
-      
       notifyListeners();
     });
 
@@ -94,51 +107,38 @@ class PlayerViewModel extends ChangeNotifier {
         skipPrevious();
       }
     });
+
+    _icySub = _engine.icyMetadataStream.listen((metadata) {
+      if (metadata != null && metadata.isNotEmpty) {
+        log('PLAYER: ICY Metadata received: $metadata');
+        _currentStreamMetadata = metadata;
+        notifyListeners();
+      }
+    });
   }
 
   void _debouncedSkipNext() {
     final now = DateTime.now();
     if (_lastSkipTime != null &&
         now.difference(_lastSkipTime!) < const Duration(seconds: 1)) {
-      debugPrint('ViewModel: Skipping duplicate skip request (cooldown).');
       return;
     }
     _lastSkipTime = now;
     skipNext();
   }
 
-  void _debouncedSkipPrevious() {
-    final now = DateTime.now();
-    if (_lastSkipTime != null &&
-        now.difference(_lastSkipTime!) < const Duration(seconds: 1)) {
-      debugPrint('ViewModel: Skipping duplicate skip request (cooldown).');
-      return;
-    }
-    _lastSkipTime = now;
-    skipPrevious();
-  }
-
   void _handleRemoteCommand(MediaCommand command) {
     if (_connectionManager.isHost) {
       switch (command.type) {
-        case CommandType.play:
-          play();
-          break;
-        case CommandType.pause:
-          pause();
-          break;
-        case CommandType.skipNext:
-          skipNext();
-          break;
-        case CommandType.skipPrev:
-          skipPrevious();
-          break;
+        case CommandType.play: play(); break;
+        case CommandType.pause: pause(); break;
+        case CommandType.skipNext: skipNext(); break;
+        case CommandType.skipPrev: skipPrevious(); break;
         case CommandType.seek:
           final ms = command.payload?['positionMs'] as int?;
           if (ms != null) seek(Duration(milliseconds: ms));
           break;
-        default:
-          break;
+        default: break;
       }
     } else if (_connectionManager.isClient) {
       if (command.type == CommandType.syncState) {
@@ -147,16 +147,9 @@ class PlayerViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _extractColor(Track track) async {
-    if (track.coverArt == null || track.coverArt!.isEmpty) {
-      _extractedColor = null;
-      _currentPalette = null;
-      notifyListeners();
-      return;
-    }
-
+  Future<void> _extractColorFromMemory(Uint8List art) async {
     try {
-      final provider = MemoryImage(track.coverArt!);
+      final provider = MemoryImage(art);
       _currentPalette = await PaletteGenerator.fromImageProvider(
         provider,
         maximumColorCount: 10,
@@ -166,7 +159,23 @@ class PlayerViewModel extends ChangeNotifier {
           _currentPalette?.dominantColor?.color;
       notifyListeners();
     } catch (e) {
-      debugPrint('Failed to extract color: $e');
+      debugPrint('Failed to extract color from memory: $e');
+    }
+  }
+
+  Future<void> _extractColorFromUrl(String url) async {
+    try {
+      final provider = NetworkImage(url);
+      _currentPalette = await PaletteGenerator.fromImageProvider(
+        provider,
+        maximumColorCount: 10,
+      );
+      _extractedColor =
+          _currentPalette?.vibrantColor?.color ??
+          _currentPalette?.dominantColor?.color;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to extract color from URL: $e');
     }
   }
 
@@ -181,12 +190,8 @@ class PlayerViewModel extends ChangeNotifier {
       rating: 0,
     );
     _isPlaying = payload['isPlaying'] as bool? ?? false;
-    _position = Duration(
-      milliseconds: (payload['positionMs'] as num?)?.toInt() ?? 0,
-    );
-    _duration = Duration(
-      milliseconds: (payload['durationMs'] as num?)?.toInt() ?? 0,
-    );
+    _position = Duration(milliseconds: (payload['positionMs'] as num?)?.toInt() ?? 0);
+    _duration = Duration(milliseconds: (payload['durationMs'] as num?)?.toInt() ?? 0);
     notifyListeners();
   }
 
@@ -202,6 +207,14 @@ class PlayerViewModel extends ChangeNotifier {
     }
   }
 
+  MediaType get currentMediaType {
+    if (_currentTrack == null) return MediaType.music;
+    if (_currentTrack!.id < -1000000) return MediaType.audiobook;
+    if (_currentTrack!.id < 0) return MediaType.podcast;
+    if (_currentTrack!.id == 0) return MediaType.radio;
+    return MediaType.music;
+  }
+
   Track? get currentTrack => _currentTrack;
   Duration get position => _position;
   Duration get duration => _duration;
@@ -213,24 +226,69 @@ class PlayerViewModel extends ChangeNotifier {
   engine_domain.PlaybackState get state => _playbackState;
   double get playbackSpeed => _playbackSpeed;
   Color? get extractedColor => _extractedColor;
+  String? get currentShowNotes => _currentShowNotes;
+  String? get currentStreamMetadata => _currentStreamMetadata;
+  String? get currentImageUrl => _currentImageUrl;
 
   bool get isHostMode => _connectionManager.isHost;
   bool get isRemoteMode => _connectionManager.isClient;
 
   String get displayTitle => _currentTrack?.title ?? 'No Track Selected';
-  String get currentArtistName => 'Artist';
-  String get currentAlbumName => 'Album';
+  String _currentArtistName = 'Unknown Artist';
+  String _currentAlbumName = 'Unknown Album';
+  
+  String get currentArtistName => _currentArtistName;
+  String get currentAlbumName => _currentAlbumName;
 
-  Future<void> loadTrack(Track track) async {
-    _lastSkipTime = DateTime.now(); // Set/Reset cooldown window
+  Future<void> loadTrack(
+    Track track, {
+    bool navigateToNowPlaying = false,
+    String? description,
+    String? artistName,
+    String? albumName,
+    String? imageUrl,
+  }) async {
+    _lastSkipTime = DateTime.now();
     _position = Duration.zero;
     _duration = Duration.zero;
     _playbackState = engine_domain.PlaybackState.loading;
+    _currentShowNotes = description;
+    _currentStreamMetadata = null;
+    _currentImageUrl = imageUrl;
+    
+    _currentArtistName = artistName ?? 'Loading...';
+    _currentAlbumName = albumName ?? 'Loading...';
     notifyListeners();
 
-    await _engine.loadTrack(track);
-    await _extractColor(track);
-    play();
+    try {
+      await _engine.loadTrack(track);
+      if (track.id < 0 && artistName == null) {
+        _currentArtistName = 'Podcast Episode';
+        _currentAlbumName = 'Podcast';
+      } else if (track.id == 0 && artistName == null) {
+        _currentArtistName = 'Radio Station';
+        _currentAlbumName = 'Internet Radio';
+      } else if (artistName == null) {
+        _currentArtistName = 'Artist';
+        _currentAlbumName = 'Album';
+      }
+
+      if (track.coverArt != null && track.coverArt!.isNotEmpty) {
+        await _extractColorFromMemory(track.coverArt!);
+      } else if (imageUrl != null && imageUrl.isNotEmpty) {
+        await _extractColorFromUrl(imageUrl);
+      } else {
+        _extractedColor = null;
+        notifyListeners();
+      }
+
+      play();
+    } catch (e) {
+      log('PLAYER_ERROR: Failed to load track: $e');
+      _playbackState = engine_domain.PlaybackState.error;
+    } finally {
+      notifyListeners();
+    }
   }
 
   Future<void> setQueueAndPlay(List<Track> tracks, int index) async {
@@ -244,10 +302,26 @@ class PlayerViewModel extends ChangeNotifier {
     loadTrack(track);
   }
 
-  void play() => _engine.play();
-  void pause() => _engine.pause();
-  void stop() => _engine.stop();
-  void seek(Duration position) => _engine.seek(position);
+  void play() {
+    log('PLAYER: User clicked play');
+    _engine.play();
+  }
+  
+  void pause() {
+    log('PLAYER: User clicked pause');
+    _engine.pause();
+  }
+  
+  void stop() {
+    log('PLAYER: User clicked stop');
+    _engine.stop();
+  }
+  
+  void seek(Duration position) {
+    log('PLAYER: Seeking to ${_formatDuration(position)}');
+    _engine.seek(position);
+  }
+  
   void setVolume(double volume) {
     _volume = volume;
     _engine.setVolume(volume);
@@ -255,37 +329,53 @@ class PlayerViewModel extends ChangeNotifier {
   }
 
   void setSpeed(double speed) {
+    log('PLAYER: Speed set to ${speed}x');
     _playbackSpeed = speed;
     _engine.setSpeed(speed);
     notifyListeners();
   }
 
+  Future<void> bookmark() async {
+    if (_currentTrack == null) return;
+    log('PLAYER: Saving bookmark for "${_currentTrack!.title}" at ${_formatDuration(_position)}');
+    try {
+      await _db.saveBookmark(BookmarksCompanion.insert(
+        trackPath: _currentTrack!.path,
+        title: _currentTrack!.title,
+        positionMs: _position.inMilliseconds,
+      ));
+      log('PLAYER: Bookmark saved.');
+    } catch (e) {
+      log('PLAYER_ERROR: Failed to save bookmark: $e');
+    }
+  }
+
   void skipForward() {
-    final newPos = _position + const Duration(seconds: 30);
+    log('PLAYER: Skip Forward +15s');
+    final newPos = _position + const Duration(seconds: 15);
     seek(newPos < _duration ? newPos : _duration);
   }
 
   void skipBackward() {
+    log('PLAYER: Skip Backward -10s');
     final newPos = _position - const Duration(seconds: 10);
     seek(newPos > Duration.zero ? newPos : Duration.zero);
   }
 
   void skipNext() {
+    log('PLAYER: Skipping to next track');
     _lastSkipTime = DateTime.now();
     _queueVM.skipNext();
     final next = _queueVM.currentTrack;
-    if (next != null) {
-      loadTrack(next);
-    }
+    if (next != null) loadTrack(next);
   }
 
   void skipPrevious() {
+    log('PLAYER: Skipping to previous track');
     _lastSkipTime = DateTime.now();
     _queueVM.skipPrevious();
     final prev = _queueVM.currentTrack;
-    if (prev != null) {
-      loadTrack(prev);
-    }
+    if (prev != null) loadTrack(prev);
   }
 
   void toggleShuffle() {
@@ -301,6 +391,18 @@ class PlayerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateStreamMetadata(String metadata) {
+    _currentStreamMetadata = metadata;
+    notifyListeners();
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
   @override
   void dispose() {
     _posSub?.cancel();
@@ -308,6 +410,7 @@ class PlayerViewModel extends ChangeNotifier {
     _stateSub?.cancel();
     _trackSub?.cancel();
     _remoteSub?.cancel();
+    _icySub?.cancel();
     super.dispose();
   }
 }

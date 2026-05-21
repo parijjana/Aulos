@@ -42,7 +42,7 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
               Expanded(
                 child: _isSearching
                     ? _buildSearchResults(podcastVM, theme)
-                    : _buildPodcastsGrid(podcastVM, theme),
+                    : _buildDiscoveryView(podcastVM, theme),
               ),
             ] else ...[
               _buildPodcastDetailHeader(_selectedPodcast!, theme),
@@ -100,6 +100,166 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
     );
   }
 
+  Widget _buildDiscoveryView(PodcastViewModel vm, ThemeData theme) {
+    if (vm.error != null && vm.trendingResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            Text(vm.error!, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: vm.loadPodcasts, child: const Text('RETRY')),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (vm.podcasts.isNotEmpty) ...[
+          _buildSectionHeader(theme, 'YOUR SUBSCRIPTIONS'),
+          SizedBox(
+            height: 140,
+            child: _buildPodcastsHorizontalList(vm, theme),
+          ),
+          const SizedBox(height: 24),
+        ],
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionHeader(theme, 'TRENDING ON ITUNES'),
+            IconButton(
+              icon: Icon(Icons.refresh, size: 16, color: theme.colorScheme.primary),
+              onPressed: vm.refreshDiscovery,
+              tooltip: 'Refresh Trending',
+            ),
+          ],
+        ),
+        Expanded(
+          child: _buildTrendingGrid(vm, theme),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(ThemeData theme, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          color: theme.colorScheme.primary.withValues(alpha: 0.7),
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPodcastsHorizontalList(PodcastViewModel vm, ThemeData theme) {
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: vm.podcasts.length,
+      itemBuilder: (context, index) {
+        final podcast = vm.podcasts[index];
+        return Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: InkWell(
+            onTap: () {
+              setState(() => _selectedPodcast = podcast);
+              vm.loadEpisodes(podcast.id);
+            },
+            child: Column(
+              children: [
+                _buildArt(podcast.imageUrl, theme, size: 100),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    podcast.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTrendingGrid(PodcastViewModel vm, ThemeData theme) {
+    if (vm.isLoading && vm.trendingResults.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final results = vm.trendingResults;
+    if (results.isEmpty) {
+      return const Center(child: Text('No trending podcasts found.'));
+    }
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final result = results[index];
+        return InkWell(
+          onTap: () => vm.subscribeFromDiscovery(result),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _buildArt(result.imageUrl, theme),
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                result.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              Text(
+                result.artist,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.38)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSearchResults(PodcastViewModel vm, ThemeData theme) {
     if (vm.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -125,65 +285,10 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
           trailing: IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: () {
-              vm.subscribe(result.feedUrl);
+              vm.subscribeFromDiscovery(result);
               setState(() => _isSearching = false);
               _searchController.clear();
             },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPodcastsGrid(PodcastViewModel vm, ThemeData theme) {
-    if (vm.isLoading && vm.podcasts.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (vm.podcasts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.podcasts, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-            const SizedBox(height: 16),
-            Text(
-              'No podcasts subscribed yet.',
-              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.38)),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.8,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: vm.podcasts.length,
-      itemBuilder: (context, index) {
-        final podcast = vm.podcasts[index];
-        return InkWell(
-          onTap: () {
-            setState(() => _selectedPodcast = podcast);
-            vm.loadEpisodes(podcast.id);
-          },
-          child: Column(
-            children: [
-              Expanded(
-                child: _buildArt(podcast.imageUrl, theme),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                podcast.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ],
           ),
         );
       },

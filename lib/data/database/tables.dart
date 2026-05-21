@@ -102,6 +102,15 @@ class Episodes extends Table {
   DateTimeColumn get pubDate => dateTime().nullable()();
   IntColumn get durationSeconds => integer().nullable()();
   BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
   IntColumn get playbackPositionSeconds =>
       integer().withDefault(const Constant(0))();
+}
+
+class Bookmarks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get trackPath => text()();
+  TextColumn get title => text()();
+  IntColumn get positionMs => integer()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }

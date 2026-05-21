@@ -6,7 +6,6 @@ import 'src/rate_limiter.dart';
 
 export 'src/rate_limiter.dart';
 export 'src/media_cache.dart';
-export 'src/musicbrainz_client.dart';
 
 class MediaFetcher {
   final MusicBrainzClient _client;
@@ -17,58 +16,72 @@ class MediaFetcher {
     required String userAgent,
     MediaCache? cache,
     http.Client? httpClient,
+    Future<T> Function<T>(Future<T> Function() call)? universalDispatcher,
+    void Function(String message)? onLog,
   }) : _httpClient = httpClient ?? http.Client(),
        _cache = cache,
        _client = MusicBrainzClient(
          userAgent: userAgent,
          client: httpClient,
+         universalDispatcher: universalDispatcher,
+         onLog: onLog,
        );
 
-  /// Fetches album art for the given artist and album.
-  /// Returns the image bytes or null if not found.
   Future<Uint8List?> getAlbumArt(String artist, String album) async {
-    final cacheKey = 'album_art:$artist:$album';
+    // 1. Check Cache
+    final cacheKey = 'art_${artist}_$album'.replaceAll(' ', '_').toLowerCase();
     if (_cache != null) {
-      final cached = await _cache.get(cacheKey);
+      final cached = await _cache!.get(cacheKey);
       if (cached != null) return cached;
     }
 
+    // 2. Find Release MBID
     final mbid = await _client.findReleaseMbid(artist, album);
     if (mbid == null) return null;
 
+    // 3. Get Image URL
     final url = await _client.getCoverArtUrl(mbid);
     if (url == null) return null;
 
-    final bytes = await _downloadImage(url);
-    if (bytes != null) {
-      await _cache?.put(cacheKey, bytes);
+    // 4. Download
+    final bytes = await _download(url);
+    
+    // 5. Store in Cache
+    if (bytes != null && _cache != null) {
+      await _cache!.put(cacheKey, bytes);
     }
+
     return bytes;
   }
 
-  /// Fetches an artist photo.
-  /// Returns the image bytes or null if not found.
   Future<Uint8List?> getArtistPhoto(String artist) async {
-    final cacheKey = 'artist_photo:$artist';
+    // 1. Check Cache
+    final cacheKey = 'artist_$artist'.replaceAll(' ', '_').toLowerCase();
     if (_cache != null) {
-      final cached = await _cache.get(cacheKey);
+      final cached = await _cache!.get(cacheKey);
       if (cached != null) return cached;
     }
 
+    // 2. Find Artist MBID
     final mbid = await _client.findArtistMbid(artist);
     if (mbid == null) return null;
 
+    // 3. Get Image URL
     final url = await _client.getArtistPhotoUrl(mbid);
     if (url == null) return null;
 
-    final bytes = await _downloadImage(url);
-    if (bytes != null) {
-      await _cache?.put(cacheKey, bytes);
+    // 4. Download
+    final bytes = await _download(url);
+
+    // 5. Store in Cache
+    if (bytes != null && _cache != null) {
+      await _cache!.put(cacheKey, bytes);
     }
+
     return bytes;
   }
 
-  Future<Uint8List?> _downloadImage(String url) async {
+  Future<Uint8List?> _download(String url) async {
     try {
       final response = await _httpClient.get(Uri.parse(url));
       if (response.statusCode == 200) {

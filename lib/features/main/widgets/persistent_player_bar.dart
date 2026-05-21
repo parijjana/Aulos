@@ -20,7 +20,6 @@ class PersistentPlayerBar extends StatelessWidget {
     final playerVM = context.watch<PlayerViewModel>();
     final track = playerVM.currentTrack;
     final theme = Theme.of(context);
-    final bool isDesktop = !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
     final onSurface = theme.colorScheme.onSurface;
 
     return Container(
@@ -32,26 +31,22 @@ class PersistentPlayerBar extends StatelessWidget {
           const SizedBox(height: 4),
           SizedBox(
             height: 64,
-            child: Stack(
+            child: Row(
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.4,
-                    ),
-                    child: GlassCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      borderRadius: BorderRadius.circular(32),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          GestureDetector(
+                Expanded(
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    borderRadius: BorderRadius.circular(32),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => tabController.animateTo(0),
+                          child: _buildMiniArt(track?.coverArt, playerVM, theme),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
                             onTap: () => tabController.animateTo(0),
-                            child: _buildMiniArt(track?.coverArt, theme),
-                          ),
-                          const SizedBox(width: 12),
-                          Flexible(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,34 +66,13 @@ class PersistentPlayerBar extends StatelessWidget {
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildMiniPlayButton(playerVM, theme),
+                      ],
                     ),
                   ),
                 ),
-                Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.skip_previous_rounded, color: onSurface.withValues(alpha: 0.7), size: isDesktop ? 22 : 24),
-                        onPressed: playerVM.skipPrevious,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildProminentPlayButton(playerVM, theme, isDesktop),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: Icon(Icons.skip_next_rounded, color: onSurface.withValues(alpha: 0.7), size: isDesktop ? 22 : 24),
-                        onPressed: playerVM.skipNext,
-                      ),
-                    ],
-                  ),
-                ),
-                if (isDesktop)
-                   Align(
-                    alignment: Alignment.centerRight,
-                    child: _buildSpeedButton(playerVM, theme),
-                  ),
               ],
             ),
           ),
@@ -123,62 +97,43 @@ class PersistentPlayerBar extends StatelessWidget {
     );
   }
 
-  Widget _buildProminentPlayButton(PlayerViewModel vm, ThemeData theme, bool isDesktop) {
-    return GestureDetector(
-      onTap: vm.isPlaying ? vm.pause : vm.play,
-      child: Container(
-        padding: EdgeInsets.all(isDesktop ? 10 : 8),
+  Widget _buildMiniPlayButton(PlayerViewModel vm, ThemeData theme) {
+    return IconButton(
+      onPressed: vm.isPlaying ? vm.pause : vm.play,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      icon: Container(
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: primaryColor.withValues(alpha: 0.1),
-          border: Border.all(color: primaryColor.withValues(alpha: 0.5), width: 1.5),
         ),
         child: Icon(
           vm.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
           color: theme.colorScheme.onSurface,
-          size: isDesktop ? 28 : 32,
+          size: 24,
         ),
       ),
     );
   }
 
-  Widget _buildMiniArt(Uint8List? art, ThemeData theme) {
+  Widget _buildMiniArt(Uint8List? art, PlayerViewModel vm, ThemeData theme) {
+    final imageUrl = vm.currentImageUrl;
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
         color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20), // Circular mini art
         image: art != null && art.isNotEmpty
             ? DecorationImage(image: MemoryImage(art), fit: BoxFit.cover)
-            : null,
+            : imageUrl != null && imageUrl.isNotEmpty
+                ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                : null,
       ),
-      child: art == null || art.isEmpty
+      child: (art == null || art.isEmpty) && (imageUrl == null || imageUrl.isEmpty)
           ? Icon(Icons.music_note, color: theme.colorScheme.onSurface.withValues(alpha: 0.24), size: 22)
           : null,
-    );
-  }
-
-  Widget _buildSpeedButton(PlayerViewModel vm, ThemeData theme) {
-    return InkWell(
-      onTap: () {
-        final speeds = [0.5, 0.8, 1.0, 1.2, 1.5, 2.0];
-        final currentIndex = speeds.indexOf(vm.playbackSpeed);
-        final nextIndex = (currentIndex + 1) % speeds.length;
-        vm.setSpeed(speeds[nextIndex]);
-      },
-      borderRadius: BorderRadius.circular(4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          '${vm.playbackSpeed}x',
-          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-        ),
-      ),
     );
   }
 }

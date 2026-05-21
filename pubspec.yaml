@@ -46,6 +46,7 @@ dependencies:
   image: ^4.8.0
   dart_rss: ^3.0.3
   http: ^1.6.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

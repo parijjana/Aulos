@@ -46,6 +46,7 @@ class PodcastDao extends DatabaseAccessor<AppDatabase> with _$PodcastDaoMixin {
     bool? isPlayed,
     int? downloadState,
     String? localFilePath,
+    bool? isPinned,
   }) {
     return (update(episodes)..where((e) => e.id.equals(id))).write(
       EpisodesCompanion(
@@ -53,6 +54,7 @@ class PodcastDao extends DatabaseAccessor<AppDatabase> with _$PodcastDaoMixin {
         isPlayed: isPlayed != null ? Value(isPlayed) : const Value.absent(),
         downloadState: downloadState != null ? Value(downloadState) : const Value.absent(),
         localFilePath: localFilePath != null ? Value(localFilePath) : const Value.absent(),
+        isPinned: isPinned != null ? Value(isPinned) : const Value.absent(),
       ),
     );
   }

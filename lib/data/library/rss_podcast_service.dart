@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:localaudioplayer/data/database/app_database.dart';
 import 'package:localaudioplayer/domain/library/podcast_service.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 
 class RssPodcastService implements PodcastService {
   final AppDatabase _db;
@@ -25,20 +26,35 @@ class RssPodcastService implements PodcastService {
 
     final rss = RssFeed.parse(response.body);
     
-    final id = await _db.addPodcast(PodcastsCompanion.insert(
+    final imageUrl = rss.itunes?.image?.href ?? rss.image?.url;
+    Uint8List? imageBytes;
+    if (imageUrl != null) {
+      try {
+        final imgRes = await _client.get(Uri.parse(imageUrl));
+        if (imgRes.statusCode == 200) {
+          imageBytes = imgRes.bodyBytes;
+        }
+      } catch (e) {
+        debugPrint('RssPodcastService: Failed to fetch podcast image: $e');
+      }
+    }
+
+    final podcastCompanion = PodcastsCompanion.insert(
       feedUrl: url,
-      title: rss.title ?? 'Unknown Podcast',
+      title: rss.title ?? 'Unknown',
       description: Value(rss.description),
       author: Value(rss.itunes?.author ?? rss.dc?.creator),
-      imageUrl: Value(rss.itunes?.image?.href ?? rss.image?.url),
-    ));
+      imageUrl: Value(imageUrl),
+      image: Value(imageBytes),
+    );
 
-    final podcast = (await _db.getAllPodcasts()).firstWhere((p) => p.id == id);
+    final id = await _db.addPodcast(podcastCompanion);
     
     // Fetch initial episodes
     await refreshPodcast(id);
     
-    return podcast;
+    final podcasts = await _db.getAllPodcasts();
+    return podcasts.firstWhere((p) => p.id == id);
   }
 
   @override
@@ -80,4 +96,22 @@ class RssPodcastService implements PodcastService {
 
   @override
   Future<void> unsubscribe(int podcastId) => _db.deletePodcast(podcastId);
+
+  @override
+  Future<void> updateEpisodePlayback(
+    int id, {
+    int? positionSeconds,
+    bool? isPlayed,
+    int? downloadState,
+    String? localFilePath,
+    bool? isPinned,
+  }) =>
+      _db.updateEpisodePlayback(
+        id,
+        positionSeconds: positionSeconds,
+        isPlayed: isPlayed,
+        downloadState: downloadState,
+        localFilePath: localFilePath,
+        isPinned: isPinned,
+      );
 }

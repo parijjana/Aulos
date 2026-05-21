@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:localaudioplayer/features/library/screens/library_screen.dart';
+import 'package:localaudioplayer/features/library/screens/library_hub_screen.dart';
 import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
-import 'package:localaudioplayer/presentation/screens/podcasts_screen.dart';
+import 'package:localaudioplayer/features/podcasts/screens/podcast_browser_screen.dart';
+import 'package:localaudioplayer/features/radio/screens/radio_browser_screen.dart';
 import 'package:localaudioplayer/features/settings/screens/settings_screen.dart';
 import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
+import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
 import 'package:provider/provider.dart';
 
 import 'package:localaudioplayer/presentation/screens/widgets/remote_control_glow.dart';
@@ -21,21 +23,62 @@ class HighContextTabbedScreen extends StatefulWidget {
 class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _lastKnownVmIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() => setState(() {}));
+    final displayVM = context.read<DisplayViewModel>();
+    _lastKnownVmIndex = displayVM.selectedTabIndex;
+    
+    _tabController = TabController(
+      length: 5, 
+      vsync: this,
+      initialIndex: _lastKnownVmIndex,
+    );
+
+    _tabController.addListener(_handleTabControllerChange);
+  }
+
+  void _handleTabControllerChange() {
+    if (_tabController.indexIsChanging) {
+      setState(() {}); // Update UI during transition
+      return;
+    }
+    
+    final displayVM = context.read<DisplayViewModel>();
+    if (displayVM.selectedTabIndex != _tabController.index) {
+      _lastKnownVmIndex = _tabController.index;
+      displayVM.setTabIndex(_tabController.index);
+      setState(() {}); // Ensure UI updates when index fully changes
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final displayVM = context.watch<DisplayViewModel>();
+    
+    if (_lastKnownVmIndex != displayVM.selectedTabIndex) {
+      _lastKnownVmIndex = displayVM.selectedTabIndex;
+      _tabController.animateTo(displayVM.selectedTabIndex);
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabControllerChange);
     _tabController.dispose();
     super.dispose();
   }
 
-  final List<String> _tabNames = ['NOW PLAYING', 'LIBRARY', 'PODCASTS', 'SETTINGS'];
+  final List<String> _tabNames = [
+    'NOW PLAYING',
+    'LIBRARY',
+    'PODCASTS',
+    'RADIO',
+    'SETTINGS'
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -69,18 +112,21 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
+                      physics: const NeverScrollableScrollPhysics(), // Prevent swipe to avoid sync issues
                       children: [
                         const NowPlayingScreen(isTabbed: true),
-                        const LibraryScreen(),
-                        const PodcastsScreen(),
+                        const LibraryHubScreen(),
+                        const PodcastBrowserScreen(),
+                        const RadioBrowserScreen(),
                         const SettingsScreen(),
                       ],
                     ),
                   ),
-                  PersistentPlayerBar(
-                    tabController: _tabController,
-                    primaryColor: primaryColor,
-                  ),
+                  if (_tabController.index != 0)
+                    PersistentPlayerBar(
+                      tabController: _tabController,
+                      primaryColor: primaryColor,
+                    ),
                 ],
               ),
             ),

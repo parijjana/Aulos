@@ -26,6 +26,7 @@ part 'app_database.g.dart';
     ArtistAlbumRelations,
     Podcasts,
     Episodes,
+    Bookmarks,
   ],
   daos: [
     LibraryDao,
@@ -38,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -74,14 +75,28 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(episodes);
       }
       if (from < 10) {
-        await m.addColumn(episodes, episodes.localFilePath);
-        await m.addColumn(episodes, episodes.downloadState);
+        try {
+          await m.addColumn(episodes, episodes.localFilePath);
+          await m.addColumn(episodes, episodes.downloadState);
+        } catch (_) {}
+      }
+      if (from < 11) {
+        try {
+          await m.addColumn(podcasts, podcasts.image);
+        } catch (_) {}
+      }
+      if (from < 12) {
+        try {
+          await m.addColumn(episodes, episodes.isPinned);
+        } catch (_) {}
+      }
+      if (from < 13) {
+        await m.createTable(bookmarks);
       }
     },
   );
 
-  // Delegation methods to maintain compatibility with existing services
-  // Library Operations
+  // Delegation methods
   Future<int> addFolder(FoldersCompanion folder) => libraryDao.addFolder(folder);
   Future<List<Folder>> getAllFolders() => libraryDao.getAllFolders();
   Future<List<Folder>> getRootFolders() => libraryDao.getRootFolders();
@@ -110,7 +125,6 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Track>> getLikedTracks() => libraryDao.getLikedTracks();
   Future<List<Track>> getDislikedTracks() => libraryDao.getDislikedTracks();
 
-  // Playlist Operations
   Future<List<Playlist>> getAllPlaylists() => playlistDao.getAllPlaylists();
   Future<void> deletePlaylist(int id) => playlistDao.deletePlaylist(id);
   Future<void> savePlaylistWithTracks(String name, List<int> trackIds, {bool isSmart = false}) => playlistDao.savePlaylistWithTracks(name, trackIds, isSmart: isSmart);
@@ -119,7 +133,6 @@ class AppDatabase extends _$AppDatabase {
   Future<void> saveQueue(List<int> trackIds) => playlistDao.saveQueue(trackIds);
   Future<List<Track>> getQueue() => playlistDao.getQueue();
 
-  // Podcast Operations
   Future<int> addPodcast(PodcastsCompanion podcast) => podcastDao.addPodcast(podcast);
   Future<void> updatePodcast(int id, PodcastsCompanion podcast) => podcastDao.updatePodcast(id, podcast);
   Future<void> deletePodcast(int id) => podcastDao.deletePodcast(id);
@@ -127,7 +140,24 @@ class AppDatabase extends _$AppDatabase {
   Future<Podcast?> getPodcastByFeedUrl(String url) => podcastDao.getPodcastByFeedUrl(url);
   Future<void> addEpisodes(List<EpisodesCompanion> companions) => podcastDao.addEpisodes(companions);
   Future<List<Episode>> getEpisodesForPodcast(int podcastId) => podcastDao.getEpisodesForPodcast(podcastId);
-  Future<void> updateEpisodePlayback(int id, {int? positionSeconds, bool? isPlayed}) => podcastDao.updateEpisodePlayback(id, positionSeconds: positionSeconds, isPlayed: isPlayed);
+  
+  Future<void> updateEpisodePlayback(
+    int id, {
+    int? positionSeconds,
+    bool? isPlayed,
+    int? downloadState,
+    String? localFilePath,
+    bool? isPinned,
+  }) => podcastDao.updateEpisodePlayback(
+        id,
+        positionSeconds: positionSeconds,
+        isPlayed: isPlayed,
+        downloadState: downloadState,
+        localFilePath: localFilePath,
+        isPinned: isPinned,
+      );
+
+  Future<int> saveBookmark(BookmarksCompanion companion) => into(bookmarks).insert(companion);
 }
 
 LazyDatabase _openConnection() {

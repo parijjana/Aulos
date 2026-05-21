@@ -25,48 +25,65 @@ class AppearanceSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'THEME PRESET',
-              style: TextStyle(
-                color: onSurface.withValues(alpha: 0.38),
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'THEME PRESET',
+                  style: TextStyle(
+                    color: onSurface.withValues(alpha: 0.38),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${vm.availableThemes.length} AVAILABLE',
+                  style: TextStyle(color: theme.colorScheme.primary, fontSize: 8, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
           SizedBox(
             height: 120,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: vm.availableThemes.length,
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (context, index) {
-                final t = vm.availableThemes[index];
-                final isSelected = vm.themeModel.name == t.name;
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: InkWell(
-                    onTap: () => vm.setTheme(t),
-                    child: Container(
-                      width: 80,
-                      decoration: BoxDecoration(
-                        color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isSelected ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.1)),
+            child: vm.availableThemes.isEmpty 
+              ? const Center(child: Text('No themes found.', style: TextStyle(fontSize: 10)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: vm.availableThemes.length,
+                  scrollDirection: Axis.horizontal,
+                  itemBuilder: (context, index) {
+                    final t = vm.availableThemes[index];
+                    final isSelected = vm.themeModel.name == t.name;
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: InkWell(
+                        onTap: () => vm.setTheme(t),
+                        child: Container(
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isSelected ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.1)),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.palette, color: isSelected ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.24)),
+                              const SizedBox(height: 4),
+                              Text(
+                                t.name, 
+                                style: TextStyle(fontSize: 9, color: onSurface, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal), 
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.palette, color: isSelected ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.24)),
-                          const SizedBox(height: 4),
-                          Text(t.name, style: TextStyle(fontSize: 10, color: onSurface), textAlign: TextAlign.center),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
           ),
           const Divider(color: Colors.black12),
           Padding(

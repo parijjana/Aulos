@@ -4,121 +4,102 @@ import 'package:localaudioplayer/presentation/viewmodels/connectivity_view_model
 import 'package:localaudioplayer/data/library/library_indexer_service.dart';
 import 'package:provider/provider.dart';
 
-import '../widgets/identity_hosting_section.dart';
-import '../widgets/network_section.dart';
-import '../widgets/library_scanner_section.dart';
-import '../widgets/appearance_section.dart';
-import '../widgets/effects_section.dart';
-import '../widgets/diagnostics_section.dart';
-import '../widgets/about_section.dart';
+import '../widgets/ui_section.dart';
+import '../widgets/services_storage_section.dart';
+import '../widgets/logs_about_section.dart';
+import '../widgets/services_dashboard_section.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final settingsVM = context.watch<SettingsViewModel>();
     final connectivityVM = context.watch<ConnectivityViewModel>();
     final indexerService = context.watch<LibraryIndexerService>();
-    final theme = Theme.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isDesktop = constraints.maxWidth > 1100;
-        final bool isShort = constraints.maxHeight < 600;
-
-        if (!constraints.hasBoundedHeight || (isDesktop && isShort) || !isDesktop) {
-          return _buildMobileLayout(context, settingsVM, connectivityVM, indexerService, theme);
+        
+        if (!isDesktop) {
+          return _buildMobileLayout(settingsVM, connectivityVM, indexerService);
         } else {
-          return _buildDesktopLayout(context, settingsVM, connectivityVM, indexerService, theme);
+          return _buildDesktopLayout(settingsVM, connectivityVM, indexerService);
         }
       },
     );
   }
 
   Widget _buildMobileLayout(
-    BuildContext context,
     SettingsViewModel vm,
     ConnectivityViewModel connectivityVM,
     LibraryIndexerService service,
-    ThemeData theme,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          IdentityHostingSection(vm: vm, connectivityVM: connectivityVM),
+          UiSection(vm: vm),
           const SizedBox(height: 16),
-          NetworkSection(vm: connectivityVM, settingsVM: vm, isDesktop: false),
+          const ServicesDashboardSection(),
           const SizedBox(height: 16),
-          LibraryScannerSection(vm: vm, indexerService: service, isDesktop: false),
+          ServicesStorageSection(vm: vm, connectivityVM: connectivityVM, indexerService: service),
           const SizedBox(height: 16),
-          AppearanceSection(vm: vm, isDesktop: false),
-          const SizedBox(height: 16),
-          EffectsSection(vm: vm),
-          const SizedBox(height: 16),
-          DiagnosticsSection(vm: connectivityVM, isDesktop: false),
-          const SizedBox(height: 16),
-          const AboutSection(),
+          SizedBox(
+            height: 500,
+            child: LogsAboutSection(isDesktop: false),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildDesktopLayout(
-    BuildContext context,
     SettingsViewModel vm,
     ConnectivityViewModel connectivityVM,
     LibraryIndexerService service,
-    ThemeData theme,
   ) {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Column: Identity & Network
+          // Column 1: UI & Services Overview
           Expanded(
             flex: 3,
-            child: Column(
-              children: [
-                IdentityHostingSection(vm: vm, connectivityVM: connectivityVM),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: NetworkSection(vm: connectivityVM, settingsVM: vm, isDesktop: true),
-                ),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  UiSection(vm: vm),
+                  const SizedBox(height: 20),
+                  const ServicesDashboardSection(),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 24),
-          // Middle Column: Library & Appearance
+          const SizedBox(width: 20),
+          // Column 2: Storage & Connectivity
           Expanded(
             flex: 4,
-            child: Column(
-              children: [
-                Expanded(
-                  child: LibraryScannerSection(vm: vm, indexerService: service, isDesktop: true),
-                ),
-                const SizedBox(height: 16),
-                AppearanceSection(vm: vm, isDesktop: true),
-              ],
+            child: SingleChildScrollView(
+              child: ServicesStorageSection(vm: vm, connectivityVM: connectivityVM, indexerService: service),
             ),
           ),
-          const SizedBox(width: 24),
-          // Right Column: Effects, Diagnostics & About
+          const SizedBox(width: 20),
+          // Column 3: System Logs
           Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                EffectsSection(vm: vm),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: DiagnosticsSection(vm: connectivityVM, isDesktop: true),
-                ),
-                const SizedBox(height: 16),
-                const AboutSection(),
-              ],
-            ),
+            flex: 4,
+            child: LogsAboutSection(isDesktop: true),
           ),
         ],
       ),
