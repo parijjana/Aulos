@@ -46,15 +46,15 @@ class RadioStationResult {
 
   factory RadioStationResult.fromJson(Map<String, dynamic> json) {
     return RadioStationResult(
-      stationuuid: json['stationuuid'] ?? '',
-      name: json['name'] ?? 'Unknown Station',
-      url: json['url_resolved'] ?? json['url'] ?? '',
-      favicon: json['favicon'],
-      tags: json['tags'],
-      country: json['country'],
-      votes: json['votes'] ?? 0,
-      bitrate: json['bitrate'] ?? 0,
-      codec: json['codec'],
+      stationuuid: (json['stationuuid']?.toString() ?? '') as String,
+      name: (json['name']?.toString() ?? 'Unknown Station') as String,
+      url: (json['url_resolved']?.toString() ?? json['url']?.toString() ?? '') as String,
+      favicon: json['favicon']?.toString(),
+      tags: json['tags']?.toString(),
+      country: json['country']?.toString(),
+      votes: (json['votes'] as num? ?? 0).toInt(),
+      bitrate: (json['bitrate'] as num? ?? 0).toInt(),
+      codec: json['codec']?.toString(),
     );
   }
 }
@@ -82,9 +82,9 @@ class RadioBrowserService with UniversalLog {
       // Use DNS lookup or a known reliable mirror
       final response = await http.get(Uri.parse('https://all.api.radio-browser.info/json/servers'));
       if (response.statusCode == 200) {
-        final List servers = json.decode(response.body);
+        final servers = json.decode(response.body) as List;
         if (servers.isNotEmpty) {
-          final best = servers.first['name'];
+          final best = (servers.first as Map<String, dynamic>)['name'];
           _baseUrl = 'https://$best/json';
           log('RADIO: Resolved API host to $best');
         }
@@ -113,14 +113,14 @@ class RadioBrowserService with UniversalLog {
 
   Future<List<Map<String, dynamic>>> getTopTags(int limit) async {
     final url = '$_baseUrl/tags?limit=$limit&order=stationcount&reverse=true';
-    return _rateLimiter.dispatch(
+    return _rateLimiter.dispatch<List<Map<String, dynamic>>>(
       apiId: 'radio-browser',
       call: () async {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final List data = json.decode(response.body);
-            return data.cast<Map<String, dynamic>>();
+            final data = json.decode(response.body) as List;
+            return data.map((e) => e as Map<String, dynamic>).toList();
           }
         } catch (e) {
           debugPrint('RadioBrowserService: Tag fetch failed: $e');
@@ -131,14 +131,14 @@ class RadioBrowserService with UniversalLog {
   }
 
   Future<List<RadioStationResult>> _dispatch(String url) async {
-    return _rateLimiter.dispatch(
+    return _rateLimiter.dispatch<List<RadioStationResult>>(
       apiId: 'radio-browser',
       call: () async {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final List data = json.decode(response.body);
-            return data.map((j) => RadioStationResult.fromJson(j)).toList();
+            final data = json.decode(response.body) as List;
+            return data.map((j) => RadioStationResult.fromJson(j as Map<String, dynamic>)).toList();
           }
         } catch (e) {
           debugPrint('RadioBrowserService: Request failed ($url): $e');

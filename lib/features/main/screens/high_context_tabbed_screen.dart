@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:localaudioplayer/features/library/screens/library_hub_screen.dart';
+import 'package:localaudioplayer/features/library/widgets/music_library_view.dart';
 import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
-import 'package:localaudioplayer/features/podcasts/screens/podcast_browser_screen.dart';
-import 'package:localaudioplayer/features/radio/screens/radio_browser_screen.dart';
+import 'package:localaudioplayer/features/podcasts/screens/podcast_root_screen.dart';
+import 'package:localaudioplayer/features/radio/screens/radio_root_screen.dart';
 import 'package:localaudioplayer/features/settings/screens/settings_screen.dart';
 import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
@@ -34,7 +34,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     _tabController = TabController(
       length: 5, 
       vsync: this,
-      initialIndex: _lastKnownVmIndex,
+      initialIndex: _lastKnownVmIndex.clamp(0, 4),
     );
 
     _tabController.addListener(_handleTabControllerChange);
@@ -42,7 +42,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
 
   void _handleTabControllerChange() {
     if (_tabController.indexIsChanging) {
-      setState(() {}); // Update UI during transition
+      setState(() {});
       return;
     }
     
@@ -50,7 +50,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     if (displayVM.selectedTabIndex != _tabController.index) {
       _lastKnownVmIndex = _tabController.index;
       displayVM.setTabIndex(_tabController.index);
-      setState(() {}); // Ensure UI updates when index fully changes
+      setState(() {});
     }
   }
 
@@ -61,7 +61,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     
     if (_lastKnownVmIndex != displayVM.selectedTabIndex) {
       _lastKnownVmIndex = displayVM.selectedTabIndex;
-      _tabController.animateTo(displayVM.selectedTabIndex);
+      _tabController.animateTo(displayVM.selectedTabIndex.clamp(0, 4));
     }
   }
 
@@ -74,7 +74,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
 
   final List<String> _tabNames = [
     'NOW PLAYING',
-    'LIBRARY',
+    'MUSIC',
     'PODCASTS',
     'RADIO',
     'SETTINGS'
@@ -112,12 +112,12 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
-                      physics: const NeverScrollableScrollPhysics(), // Prevent swipe to avoid sync issues
+                      physics: const NeverScrollableScrollPhysics(),
                       children: [
                         const NowPlayingScreen(isTabbed: true),
-                        const LibraryHubScreen(),
-                        const PodcastBrowserScreen(),
-                        const RadioBrowserScreen(),
+                        const MusicLibraryView(),
+                        const PodcastRootScreen(),
+                        const RadioRootScreen(),
                         const SettingsScreen(),
                       ],
                     ),

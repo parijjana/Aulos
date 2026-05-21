@@ -23,12 +23,12 @@ class PodcastSearchResult {
 
   factory PodcastSearchResult.fromJson(Map<String, dynamic> json) {
     return PodcastSearchResult(
-      title: json['collectionName'] ?? 'Unknown Podcast',
-      artist: json['artistName'] ?? 'Unknown Artist',
-      feedUrl: json['feedUrl'] ?? '',
-      imageUrl: json['artworkUrl600'] ?? json['artworkUrl100'],
+      title: (json['collectionName']?.toString() ?? 'Unknown Podcast') as String,
+      artist: (json['artistName']?.toString() ?? 'Unknown Artist') as String,
+      feedUrl: (json['feedUrl']?.toString() ?? '') as String,
+      imageUrl: (json['artworkUrl600'] ?? json['artworkUrl100'])?.toString(),
       itunesId: json['collectionId']?.toString(),
-      description: json['description'],
+      description: json['description']?.toString(),
     );
   }
 }
@@ -59,11 +59,11 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body);
-            final List results = data['results'] ?? [];
+            final data = json.decode(response.body) as Map<String, dynamic>;
+            final results = data['results'] as List? ?? [];
             log('API: Search successful. Found ${results.length} results.');
             return results
-                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j))
+                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j as Map<String, dynamic>))
                 .where((r) => r.feedUrl.isNotEmpty)
                 .toList();
           } else {
@@ -91,11 +91,11 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body);
-            final List results = data['results'] ?? [];
+            final data = json.decode(response.body) as Map<String, dynamic>;
+            final results = data['results'] as List? ?? [];
             log('API: Category fetch successful. Found ${results.length} items.');
             return results
-                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j))
+                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j as Map<String, dynamic>))
                 .where((r) => r.feedUrl.isNotEmpty)
                 .toList();
           } else {
@@ -118,16 +118,17 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body);
-            final List results = data['feed']['results'] ?? [];
+            final data = json.decode(response.body) as Map<String, dynamic>;
+            final results = data['feed']['results'] as List? ?? [];
             log('API: Trending fetch successful. Found ${results.length} items.');
             return results.map<PodcastSearchResult>((j) {
+              final item = j as Map<String, dynamic>;
               return PodcastSearchResult(
-                title: j['name'] ?? 'Unknown',
-                artist: j['artistName'] ?? 'Unknown',
+                title: item['name'] as String? ?? 'Unknown',
+                artist: item['artistName'] as String? ?? 'Unknown',
                 feedUrl: '', 
-                imageUrl: j['artworkUrl100'],
-                itunesId: j['id']?.toString(),
+                imageUrl: item['artworkUrl100'] as String?,
+                itunesId: item['id']?.toString(),
               );
             }).toList();
           } else {
@@ -167,10 +168,11 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body);
+            final data = json.decode(response.body) as Map<String, dynamic>;
             final results = data['results'] as List;
             if (results.isNotEmpty) {
-              final feedUrl = results.first['feedUrl'];
+              final item = results.first as Map<String, dynamic>;
+              final feedUrl = item['feedUrl'] as String?;
               log('API: Lookup successful. Found URL: $feedUrl');
               return feedUrl;
             } else {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:themer_flutter/themer_flutter.dart';
 import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
 import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
 import 'package:localaudioplayer/features/settings/widgets/settings_shared.dart';
@@ -77,7 +78,7 @@ class UiSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
-      child: DropdownButton<dynamic>(
+      child: DropdownButton<ThemerModel>(
         value: vm.themeModel,
         isExpanded: true,
         underline: const SizedBox.shrink(),
@@ -86,7 +87,9 @@ class UiSection extends StatelessWidget {
           value: t,
           child: Text(t.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
         )).toList(),
-        onChanged: (val) => vm.setTheme(val as dynamic),
+        onChanged: (val) {
+          if (val != null) vm.setTheme(val);
+        },
       ),
     );
   }

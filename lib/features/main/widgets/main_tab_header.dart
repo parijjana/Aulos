@@ -127,7 +127,7 @@ class MainTabHeader extends StatelessWidget {
 
   Widget _buildWideNavigation(ThemeData theme) {
     return SizedBox(
-      width: 450,
+      width: 600,
       child: TabBar(
         controller: tabController,
         indicatorColor: primaryColor,

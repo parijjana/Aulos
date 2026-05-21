@@ -73,7 +73,7 @@ class InsightsScreen extends StatelessWidget {
       stream: vm.topTracks,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyState('No plays recorded yet.');
+          return _buildEmptyState(context, 'No plays recorded yet.');
         }
         return Column(
           children: snapshot.data!.map((track) {
@@ -112,7 +112,7 @@ class InsightsScreen extends StatelessWidget {
       stream: vm.favoriteArtists,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyState('Add artists to favorites.');
+          return _buildEmptyState(context, 'Add artists to favorites.');
         }
         return SizedBox(
           height: 120,
@@ -155,7 +155,7 @@ class InsightsScreen extends StatelessWidget {
       stream: vm.favoriteAlbums,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyState('Add albums to favorites.');
+          return _buildEmptyState(context, 'Add albums to favorites.');
         }
         return SizedBox(
           height: 160,
@@ -203,7 +203,7 @@ class InsightsScreen extends StatelessWidget {
       stream: vm.favoritePodcasts,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyState('Add podcasts to favorites.');
+          return _buildEmptyState(context, 'Add podcasts to favorites.');
         }
         return Column(
           children: snapshot.data!.map((podcast) {
@@ -235,7 +235,7 @@ class InsightsScreen extends StatelessWidget {
       stream: vm.radioStats,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyState('Listen to radio to see stats.');
+          return _buildEmptyState(context, 'Listen to radio to see stats.');
         }
         return Column(
           children: snapshot.data!.map((stat) {
@@ -252,7 +252,7 @@ class InsightsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(String message) {
+  Widget _buildEmptyState(BuildContext context, String message) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0),
       child: Center(
@@ -263,6 +263,7 @@ class InsightsScreen extends StatelessWidget {
             color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
           ),
         ),
-        ),
-        );
-        }
+      ),
+    );
+  }
+}

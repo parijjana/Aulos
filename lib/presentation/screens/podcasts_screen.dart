@@ -407,6 +407,8 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
                 artistId: 0,
                 folderId: 0,
                 rating: 0,
+                isFavorite: false,
+                playCount: 0,
               );
               playerVM.loadTrack(track);
             },

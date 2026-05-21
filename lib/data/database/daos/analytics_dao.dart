@@ -92,10 +92,15 @@ class AnalyticsDao extends DatabaseAccessor<AppDatabase> with _$AnalyticsDaoMixi
       (select(podcasts)..where((t) => t.isFavorite.equals(true))).watch();
 
   Stream<List<Track>> watchMostPlayedTracks({int limit = 20}) =>
-      (select(tracks)..orderBy([(t) => OrderingTerm.desc(t.playCount)])..limit(limit)).watch();
+      (select(tracks)
+            ..where((t) => t.playCount.isBiggerThanValue(0))
+            ..orderBy([(t) => OrderingTerm.desc(t.playCount)])
+            ..limit(limit))
+          .watch();
 
   Stream<List<RadioListeningStat>> watchRadioStats({int limit = 10}) =>
       (select(radioListeningStats)
+            ..where((t) => t.timeSpentSeconds.isBiggerThanValue(0))
             ..orderBy([(t) => OrderingTerm.desc(t.timeSpentSeconds)])
             ..limit(limit))
           .watch();

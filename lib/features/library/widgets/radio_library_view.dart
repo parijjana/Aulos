@@ -28,6 +28,7 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
     }
 
     return ListView.separated(
+      key: const PageStorageKey('radio_library_list'),
       padding: const EdgeInsets.all(24),
       itemCount: radioVM.favorites.length,
       separatorBuilder: (_, __) => Divider(height: 1, color: onSurface.withValues(alpha: 0.05)),

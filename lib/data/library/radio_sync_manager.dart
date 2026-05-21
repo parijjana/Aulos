@@ -27,8 +27,8 @@ class RadioSyncManager with UniversalLog {
       // 1. Sync Top Tags (Categories)
       final tags = await _api.getTopTags(50);
       final tagCompanions = tags.map((t) => RadioCategoriesCompanion(
-        name: Value(t['name'] ?? 'Unknown'),
-        stationCount: Value(t['stationcount'] ?? 0),
+        name: Value(t['name'] as String? ?? 'Unknown'),
+        stationCount: Value(t['stationcount'] as int? ?? 0),
       )).toList();
       await _db.upsertCategories(tagCompanions);
       log('RADIO: Synced ${tags.length} genres.');
