@@ -21,9 +21,9 @@ void main() {
 
   group('Queue Regression: Album Addition', () {
     test('Adding an album to queue and skipping should work correctly', () async {
-      final trackA = Track(id: 1, path: 'a.mp3', title: 'Song A', artistId: 1, albumId: 1, folderId: 1, rating: 0);
-      final track1 = Track(id: 2, path: '1.mp3', title: 'Song 1', artistId: 1, albumId: 2, folderId: 1, rating: 0);
-      final track2 = Track(id: 3, path: '2.mp3', title: 'Song 2', artistId: 1, albumId: 2, folderId: 1, rating: 0);
+      final trackA = Track(id: 1, path: 'a.mp3', title: 'Song A', artistId: 1, albumId: 1, folderId: 1, rating: 0, isFavorite: false, playCount: 0);
+      final track1 = Track(id: 2, path: '1.mp3', title: 'Song 1', artistId: 1, albumId: 2, folderId: 1, rating: 0, isFavorite: false, playCount: 0);
+      final track2 = Track(id: 3, path: '2.mp3', title: 'Song 2', artistId: 1, albumId: 2, folderId: 1, rating: 0, isFavorite: false, playCount: 0);
 
       // 1. Set initial queue with Song A
       await viewModel.setQueue([trackA], startIndex: 0);
@@ -47,8 +47,8 @@ void main() {
     });
 
     test('Adding an album to empty queue should work correctly', () async {
-      final track1 = Track(id: 2, path: '1.mp3', title: 'Song 1', artistId: 1, albumId: 2, folderId: 1, rating: 0);
-      final track2 = Track(id: 3, path: '2.mp3', title: 'Song 2', artistId: 1, albumId: 2, folderId: 1, rating: 0);
+      final track1 = Track(id: 2, path: '1.mp3', title: 'Song 1', artistId: 1, albumId: 2, folderId: 1, rating: 0, isFavorite: false, playCount: 0);
+      final track2 = Track(id: 3, path: '2.mp3', title: 'Song 2', artistId: 1, albumId: 2, folderId: 1, rating: 0, isFavorite: false, playCount: 0);
 
       // 1. Add Album [Song 1, Song 2] to empty queue
       await viewModel.addAllToQueue([track1, track2]);

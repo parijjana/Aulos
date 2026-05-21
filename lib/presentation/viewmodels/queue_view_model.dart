@@ -89,6 +89,8 @@ class QueueViewModel extends ChangeNotifier {
               folderId: 0,
               artistId: map['artistId'] as int? ?? 0,
               rating: 0,
+              isFavorite: false,
+              playCount: 0,
             );
           }
         )

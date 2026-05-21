@@ -10,6 +10,7 @@ import 'package:localaudioplayer/presentation/viewmodels/playlist_view_model.dar
 import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
 import 'package:localaudioplayer/presentation/viewmodels/radio_view_model.dart';
+import 'package:localaudioplayer/presentation/viewmodels/insights_view_model.dart';
 import 'package:localaudioplayer/data/library/playlist_service.dart';
 import 'package:localaudioplayer/data/library/library_indexer_service.dart';
 import 'package:localaudioplayer/data/library/artwork_service.dart';
@@ -195,6 +196,7 @@ void main() async {
     db: radioDb,
     syncManager: radioSyncManager,
   );
+  final insightsViewModel = InsightsViewModel(database);
 
   runApp(
     MultiProvider(
@@ -218,6 +220,7 @@ void main() async {
         ChangeNotifierProvider.value(value: libraryIndexerService),
         ChangeNotifierProvider.value(value: podcastViewModel),
         ChangeNotifierProvider.value(value: radioViewModel),
+        ChangeNotifierProvider.value(value: insightsViewModel),
       ],
       child: const LocalAudioPlayerApp(),
     ),

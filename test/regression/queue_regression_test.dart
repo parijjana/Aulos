@@ -112,6 +112,8 @@ void main() {
         path: 'path',
         folderId: 1,
         rating: 0,
+        isFavorite: false,
+        playCount: 0,
       );
       when(() => mockPlayerVM.currentTrack).thenReturn(track);
       when(() => mockPlayerVM.displayTitle).thenReturn('Song');

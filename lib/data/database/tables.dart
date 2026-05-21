@@ -13,6 +13,9 @@ class Artists extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().unique()();
   BlobColumn get photo => blob().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
 }
 
 class Albums extends Table {
@@ -20,6 +23,9 @@ class Albums extends Table {
   TextColumn get name => text()();
   IntColumn get artistId => integer().nullable().references(Artists, #id)();
   BlobColumn get coverArt => blob().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
 
   @override
   List<Set<Column>> get uniqueKeys => [
@@ -44,6 +50,9 @@ class Tracks extends Table {
   IntColumn get folderId => integer().references(Folders, #id)();
   IntColumn get rating => integer().withDefault(const Constant(0))();
   BlobColumn get coverArt => blob().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
 }
 
 class ArtistAlbumRelations extends Table {
@@ -87,6 +96,9 @@ class Podcasts extends Table {
   BlobColumn get image => blob().nullable()();
   DateTimeColumn get subscribedAt =>
       dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
 }
 
 class Episodes extends Table {
@@ -105,6 +117,15 @@ class Episodes extends Table {
   BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
   IntColumn get playbackPositionSeconds =>
       integer().withDefault(const Constant(0))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
+}
+
+class RadioListeningStats extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get stationUuid => text().unique()();
+  IntColumn get timeSpentSeconds => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastListened => dateTime().nullable()();
 }
 
 class Bookmarks extends Table {

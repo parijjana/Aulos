@@ -8,6 +8,7 @@ import 'tables.dart';
 import 'daos/library_dao.dart';
 import 'daos/playlist_dao.dart';
 import 'daos/podcast_dao.dart';
+import 'daos/analytics_dao.dart';
 
 export 'tables.dart';
 
@@ -27,11 +28,13 @@ part 'app_database.g.dart';
     Podcasts,
     Episodes,
     Bookmarks,
+    RadioListeningStats,
   ],
   daos: [
     LibraryDao,
     PlaylistDao,
     PodcastDao,
+    AnalyticsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -39,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -92,6 +95,23 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 13) {
         await m.createTable(bookmarks);
+      }
+      if (from < 14) {
+        await m.createTable(radioListeningStats);
+        await m.addColumn(tracks, tracks.isFavorite);
+        await m.addColumn(tracks, tracks.playCount);
+        await m.addColumn(tracks, tracks.lastPlayed);
+        await m.addColumn(artists, artists.isFavorite);
+        await m.addColumn(artists, artists.playCount);
+        await m.addColumn(artists, artists.lastPlayed);
+        await m.addColumn(albums, albums.isFavorite);
+        await m.addColumn(albums, albums.playCount);
+        await m.addColumn(albums, albums.lastPlayed);
+        await m.addColumn(podcasts, podcasts.isFavorite);
+        await m.addColumn(podcasts, podcasts.playCount);
+        await m.addColumn(podcasts, podcasts.lastPlayed);
+        await m.addColumn(episodes, episodes.playCount);
+        await m.addColumn(episodes, episodes.lastPlayed);
       }
     },
   );
@@ -158,6 +178,22 @@ class AppDatabase extends _$AppDatabase {
       );
 
   Future<int> saveBookmark(BookmarksCompanion companion) => into(bookmarks).insert(companion);
+
+  // Analytics Delegation
+  Future<void> setTrackFavorite(int id, bool favorite) => analyticsDao.setTrackFavorite(id, favorite);
+  Future<void> setArtistFavorite(int id, bool favorite) => analyticsDao.setArtistFavorite(id, favorite);
+  Future<void> setAlbumFavorite(int id, bool favorite) => analyticsDao.setAlbumFavorite(id, favorite);
+  Future<void> setPodcastFavorite(int id, bool favorite) => analyticsDao.setPodcastFavorite(id, favorite);
+  Future<void> recordTrackPlay(int id) => analyticsDao.recordTrackPlay(id);
+  Future<void> recordArtistPlay(int id) => analyticsDao.recordArtistPlay(id);
+  Future<void> recordAlbumPlay(int id) => analyticsDao.recordAlbumPlay(id);
+  Future<void> recordRadioListen(String uuid, int seconds) => analyticsDao.recordRadioListen(uuid, seconds);
+  Stream<List<Track>> watchFavoriteTracks() => analyticsDao.watchFavoriteTracks();
+  Stream<List<Artist>> watchFavoriteArtists() => analyticsDao.watchFavoriteArtists();
+  Stream<List<Album>> watchFavoriteAlbums() => analyticsDao.watchFavoriteAlbums();
+  Stream<List<Podcast>> watchFavoritePodcasts() => analyticsDao.watchFavoritePodcasts();
+  Stream<List<Track>> watchMostPlayedTracks({int limit = 20}) => analyticsDao.watchMostPlayedTracks(limit: limit);
+  Stream<List<RadioListeningStat>> watchRadioStats({int limit = 10}) => analyticsDao.watchRadioStats(limit: limit);
 }
 
 LazyDatabase _openConnection() {

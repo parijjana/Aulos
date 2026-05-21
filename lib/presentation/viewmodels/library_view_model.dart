@@ -338,7 +338,12 @@ class LibraryViewModel extends ChangeNotifier {
         case 'artists':
           _artists = items.map((e) {
             final map = e as Map<String, dynamic>;
-            return Artist(id: map['id'] as int, name: map['name'] as String);
+            return Artist(
+              id: map['id'] as int,
+              name: map['name'] as String,
+              isFavorite: false,
+              playCount: 0,
+            );
           }).toList();
           break;
         case 'albums':
@@ -349,6 +354,8 @@ class LibraryViewModel extends ChangeNotifier {
                   return Album(
                     id: map['id'] as int,
                     name: map['name'] as String,
+                    isFavorite: false,
+                    playCount: 0,
                     coverArt: map['coverArt'] != null
                         ? base64.decode(map['coverArt'] as String)
                         : null,
@@ -412,6 +419,8 @@ class LibraryViewModel extends ChangeNotifier {
                 return Album(
                   id: map['id'] as int,
                   name: map['name'] as String,
+                  isFavorite: false,
+                  playCount: 0,
                   coverArt: map['coverArt'] != null
                       ? base64.decode(map['coverArt'] as String)
                       : null,
@@ -432,6 +441,8 @@ class LibraryViewModel extends ChangeNotifier {
                   folderId: 0,
                   artistId: map['artistId'] as int? ?? 0,
                   rating: 0,
+                  isFavorite: false,
+                  playCount: 0,
                 );
               }
             )

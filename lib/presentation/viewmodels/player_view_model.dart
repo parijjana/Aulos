@@ -56,12 +56,15 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   }
 
   DateTime? _lastSkipTime;
+  Timer? _radioStatsTimer;
+  String? _lastRadioUuid;
 
   void _init() {
     _trackSub = _engine.currentTrackStream.listen((track) {
       _currentTrack = track;
       if (track != null) {
         log('PLAYER: Now playing "${track.title}"');
+        _recordPlayAnalytics(track);
         if (track.coverArt != null && track.coverArt!.isNotEmpty) {
            _extractColorFromMemory(track.coverArt!);
         } else if (_currentImageUrl != null) {
@@ -75,6 +78,13 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     _stateSub = _engine.playbackStateStream.listen((state) {
       _playbackState = state;
       _isPlaying = state == engine_domain.PlaybackState.playing;
+      
+      if (_isPlaying) {
+        _startAnalyticsTracking();
+      } else {
+        _stopAnalyticsTracking();
+      }
+
       if (state == engine_domain.PlaybackState.completed) {
         log('PLAYER: Track reached end. Skipping...');
         _debouncedSkipNext();
@@ -115,6 +125,36 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
         notifyListeners();
       }
     });
+  }
+
+  void _recordPlayAnalytics(Track track) {
+    if (!_connectionManager.isHost) return;
+
+    if (track.id > 0) {
+      // Music
+      unawaited(_db.recordTrackPlay(track.id));
+      if (track.artistId != null) unawaited(_db.recordArtistPlay(track.artistId!));
+      if (track.albumId != null) unawaited(_db.recordAlbumPlay(track.albumId!));
+    }
+    // Radio stats handled by timer
+  }
+
+  void _startAnalyticsTracking() {
+    if (!_connectionManager.isHost) return;
+    if (currentMediaType == MediaType.radio) {
+      final radioUuid = _currentTrack?.path; // For radio, we store UUID in path
+      if (radioUuid != null && radioUuid.isNotEmpty) {
+        _radioStatsTimer?.cancel();
+        _radioStatsTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+           unawaited(_db.recordRadioListen(radioUuid, 30));
+        });
+      }
+    }
+  }
+
+  void _stopAnalyticsTracking() {
+    _radioStatsTimer?.cancel();
+    _radioStatsTimer = null;
   }
 
   void _debouncedSkipNext() {
@@ -188,6 +228,8 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
       path: '',
       folderId: 0,
       rating: 0,
+      isFavorite: false,
+      playCount: 0,
     );
     _isPlaying = payload['isPlaying'] as bool? ?? false;
     _position = Duration(milliseconds: (payload['positionMs'] as num?)?.toInt() ?? 0);

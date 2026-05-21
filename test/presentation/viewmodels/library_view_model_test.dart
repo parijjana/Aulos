@@ -60,6 +60,8 @@ void main() {
           folderId: 1,
           artistId: 1,
           rating: 0,
+          isFavorite: false,
+          playCount: 0,
         ),
       ];
 

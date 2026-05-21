@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../widgets/music_library_view.dart';
 import '../widgets/podcast_library_view.dart';
 import '../widgets/radio_library_view.dart';
+import 'insights_screen.dart';
 
 class LibraryHubScreen extends StatefulWidget {
   const LibraryHubScreen({super.key});
@@ -21,9 +22,9 @@ class _LibraryHubScreenState extends State<LibraryHubScreen>
     super.initState();
     final viewModel = context.read<LibraryViewModel>();
     _hubTabController = TabController(
-      length: 3, 
+      length: 4, 
       vsync: this,
-      initialIndex: viewModel.libraryTabIndex,
+      initialIndex: viewModel.libraryTabIndex.clamp(0, 3),
     );
     _hubTabController.addListener(_handleTabChange);
   }
@@ -64,12 +65,14 @@ class _LibraryHubScreenState extends State<LibraryHubScreen>
                   labelColor: theme.colorScheme.onSurface,
                   unselectedLabelColor: onSurface.withValues(alpha: 0.38),
                   dividerColor: Colors.transparent,
+                  tabAlignment: TabAlignment.start,
                   labelStyle: const TextStyle(
                       fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5),
                   tabs: const [
                     Tab(text: 'MUSIC'),
                     Tab(text: 'PODCASTS'),
                     Tab(text: 'RADIO'),
+                    Tab(text: 'INSIGHTS'),
                   ],
                 ),
               ),
@@ -84,6 +87,7 @@ class _LibraryHubScreenState extends State<LibraryHubScreen>
               MusicLibraryView(),
               PodcastLibraryView(),
               RadioLibraryView(),
+              InsightsScreen(),
             ],
           ),
         ),

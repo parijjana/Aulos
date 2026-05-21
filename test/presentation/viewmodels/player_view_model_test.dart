@@ -21,7 +21,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(engine_domain.RepeatMode.off);
     registerFallbackValue(
-      Track(id: 0, path: '', title: '', artistId: 0, folderId: 0, rating: 0),
+      Track(id: 0, path: '', title: '', artistId: 0, folderId: 0, rating: 0, isFavorite: false, playCount: 0),
     );
     registerFallbackValue(const BookmarksCompanion());
   });
@@ -127,7 +127,7 @@ void main() {
     });
 
     test('bookmark() should save current position to database', () async {
-      final track = Track(id: 1, path: 'test.mp3', title: 'Test', artistId: 1, folderId: 1, rating: 0);
+      final track = Track(id: 1, path: 'test.mp3', title: 'Test', artistId: 1, folderId: 1, rating: 0, isFavorite: false, playCount: 0);
       when(() => mockEngine.currentTrackStream).thenAnswer((_) => Stream.value(track));
       when(() => mockEngine.loadTrack(any())).thenAnswer((_) async => {});
       when(() => mockEngine.play()).thenAnswer((_) async => {});

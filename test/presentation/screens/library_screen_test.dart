@@ -127,6 +127,8 @@ void main() {
           title: 'Song 1',
           folderId: 1,
           rating: 0,
+          isFavorite: false,
+          playCount: 0,
         ),
       ];
       when(() => mockLibraryVM.isAtRoot).thenReturn(false);
