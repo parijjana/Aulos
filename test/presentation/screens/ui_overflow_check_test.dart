@@ -75,6 +75,9 @@ void main() {
 
     when(() => playerVM.isPlaying).thenReturn(false);
     when(() => playerVM.isShuffle).thenReturn(false);
+    when(() => playerVM.volume).thenReturn(1.0);
+    when(() => playerVM.isMuted).thenReturn(false);
+    when(() => playerVM.state).thenReturn(domain.PlaybackState.idle);
     when(() => playerVM.repeatMode).thenReturn(domain.RepeatMode.off);
     when(() => playerVM.displayTitle).thenReturn('Test Track');
     when(() => playerVM.currentArtistName).thenReturn('Test Artist');

@@ -2,20 +2,17 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/queue_view_model.dart'
-    as qvm;
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart' as qvm;
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as engine_domain;
 import 'package:aulos/data/database/app_database.dart';
-
 import 'package:aulos/domain/network/connection_manager.dart';
 
 class MockPlaybackEngine extends Mock implements engine_domain.PlaybackEngine {}
-
 class MockQueueViewModel extends Mock implements qvm.QueueViewModel {}
-
 class MockConnectionManager extends Mock implements ConnectionManager {}
-
 class MockAppDatabase extends Mock implements AppDatabase {}
+class MockSettingsViewModel extends Mock implements SettingsViewModel {}
 
 void main() {
   setUpAll(() {
@@ -31,31 +28,21 @@ void main() {
   late MockQueueViewModel mockQueueVM;
   late MockConnectionManager mockConnectionManager;
   late MockAppDatabase mockDb;
+  late MockSettingsViewModel mockSettingsVM;
 
   setUp(() {
     mockEngine = MockPlaybackEngine();
     mockQueueVM = MockQueueViewModel();
     mockConnectionManager = MockConnectionManager();
     mockDb = MockAppDatabase();
+    mockSettingsVM = MockSettingsViewModel();
 
-    when(
-      () => mockEngine.playbackStateStream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockEngine.positionStream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockEngine.durationStream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockEngine.currentTrackStream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockEngine.externalCommandStream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockEngine.icyMetadataStream,
-    ).thenAnswer((_) => const Stream.empty());
+    when(() => mockEngine.playbackStateStream).thenAnswer((_) => const Stream.empty());
+    when(() => mockEngine.positionStream).thenAnswer((_) => const Stream.empty());
+    when(() => mockEngine.durationStream).thenAnswer((_) => const Stream.empty());
+    when(() => mockEngine.currentTrackStream).thenAnswer((_) => const Stream.empty());
+    when(() => mockEngine.externalCommandStream).thenAnswer((_) => const Stream.empty());
+    when(() => mockEngine.icyMetadataStream).thenAnswer((_) => const Stream.empty());
     when(() => mockEngine.setVolume(any())).thenAnswer((_) async => {});
     when(
       () => mockEngine.setMetadata(
@@ -65,28 +52,28 @@ void main() {
         art: any(named: 'art'),
       ),
     ).thenAnswer((_) async => {});
+    
     when(() => mockQueueVM.addListener(any())).thenReturn(null);
     when(() => mockQueueVM.removeListener(any())).thenReturn(null);
     when(() => mockQueueVM.currentTrack).thenReturn(null);
     when(() => mockQueueVM.currentQueue).thenReturn([]);
     when(() => mockQueueVM.repeatMode).thenReturn(engine_domain.RepeatMode.off);
-    when(
-      () => mockQueueVM.getArtistName(any()),
-    ).thenAnswer((_) async => 'Unknown Artist');
-    when(
-      () => mockQueueVM.getAlbumName(any()),
-    ).thenAnswer((_) async => 'Unknown Album');
-    when(
-      () => mockConnectionManager.remoteCommands,
-    ).thenAnswer((_) => const Stream.empty());
+    when(() => mockQueueVM.getArtistName(any())).thenAnswer((_) async => 'Unknown Artist');
+    when(() => mockQueueVM.getAlbumName(any())).thenAnswer((_) async => 'Unknown Album');
+    
+    when(() => mockConnectionManager.remoteCommands).thenAnswer((_) => const Stream.empty());
     when(() => mockConnectionManager.isHost).thenReturn(false);
     when(() => mockConnectionManager.isClient).thenReturn(false);
+
+    when(() => mockSettingsVM.addListener(any())).thenReturn(null);
+    when(() => mockSettingsVM.removeListener(any())).thenReturn(null);
 
     viewModel = PlayerViewModel(
       engine: mockEngine,
       queueVM: mockQueueVM,
       connectionManager: mockConnectionManager,
       db: mockDb,
+      settingsVM: mockSettingsVM,
     );
   });
 
@@ -105,9 +92,7 @@ void main() {
 
     test('should update state when engine state changes', () async {
       final stateController = StreamController<engine_domain.PlaybackState>();
-      when(
-        () => mockEngine.playbackStateStream,
-      ).thenAnswer((_) => stateController.stream);
+      when(() => mockEngine.playbackStateStream).thenAnswer((_) => stateController.stream);
 
       // Re-init to use the stream
       viewModel = PlayerViewModel(
@@ -115,6 +100,7 @@ void main() {
         queueVM: mockQueueVM,
         connectionManager: mockConnectionManager,
         db: mockDb,
+        settingsVM: mockSettingsVM,
       );
 
       stateController.add(engine_domain.PlaybackState.playing);
@@ -139,6 +125,7 @@ void main() {
         queueVM: mockQueueVM,
         connectionManager: mockConnectionManager,
         db: mockDb,
+        settingsVM: mockSettingsVM,
       );
       
       await viewModel.loadTrack(track);
