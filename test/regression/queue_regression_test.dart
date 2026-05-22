@@ -2,15 +2,15 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/features/main/screens/high_context_tabbed_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/connectivity_view_model.dart';
-import 'package:localaudioplayer/presentation/theme/obsidian_audio_theme.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as domain;
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/features/main/screens/high_context_tabbed_screen.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
+import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as domain;
+import 'package:aulos/data/database/app_database.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
@@ -75,7 +75,7 @@ void main() {
     when(() => mockDisplayVM.addListener(any())).thenReturn(null);
     when(() => mockDisplayVM.removeListener(any())).thenReturn(null);
 
-    when(() => mockSettingsVM.themeModel).thenReturn(ObsidianAudioTheme.model);
+    when(() => mockSettingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => mockSettingsVM.isDynamicTheme).thenReturn(false);
     when(() => mockSettingsVM.addListener(any())).thenReturn(null);
     when(() => mockSettingsVM.removeListener(any())).thenReturn(null);

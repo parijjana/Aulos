@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/features/main/screens/high_context_tabbed_screen.dart';
-import 'package:localaudioplayer/features/settings/screens/settings_screen.dart';
-import 'package:localaudioplayer/features/library/screens/library_hub_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/connectivity_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/data/library/library_indexer_service.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/data/library/discovery_sync_manager.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/radio_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/theme/obsidian_audio_theme.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as domain;
+import 'package:aulos/features/main/screens/high_context_tabbed_screen.dart';
+import 'package:aulos/features/settings/screens/settings_screen.dart';
+import 'package:aulos/features/library/widgets/music_library_view.dart';
+import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/data/library/library_indexer_service.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/data/library/discovery_sync_manager.dart';
+import 'package:aulos/domain/network/log_service.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/insights_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
+import 'package:drift/native.dart';
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
 class MockDisplayViewModel extends Mock implements DisplayViewModel {}
@@ -46,6 +50,8 @@ void main() {
   late MockPersistentLibraryService persistentLibrary;
   late MockDiscoverySyncManager discoverySyncManager;
   late MockMediaLogService logService;
+  late AppDatabase db;
+  late InsightsViewModel insightsVM;
 
   setUpAll(() {
     registerFallbackValue(domain.PlaybackState.idle);
@@ -64,6 +70,8 @@ void main() {
     persistentLibrary = MockPersistentLibraryService();
     discoverySyncManager = MockDiscoverySyncManager();
     logService = MockMediaLogService();
+    db = AppDatabase.testing(NativeDatabase.memory());
+    insightsVM = InsightsViewModel(db);
 
     when(() => playerVM.isPlaying).thenReturn(false);
     when(() => playerVM.isShuffle).thenReturn(false);
@@ -78,10 +86,14 @@ void main() {
     when(() => playerVM.extractedColor).thenReturn(null);
     when(() => playerVM.isHostMode).thenReturn(false);
     when(() => playerVM.isRemoteMode).thenReturn(false);
+    when(() => playerVM.currentMediaType).thenReturn(MediaType.music);
+    when(() => playerVM.currentShowNotes).thenReturn(null);
+    when(() => playerVM.currentStreamMetadata).thenReturn(null);
+    when(() => playerVM.currentImageUrl).thenReturn(null);
     when(() => playerVM.addListener(any())).thenReturn(null);
     when(() => playerVM.removeListener(any())).thenReturn(null);
 
-    when(() => settingsVM.themeModel).thenReturn(ObsidianAudioTheme.model);
+    when(() => settingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => settingsVM.isDynamicTheme).thenReturn(false);
     when(() => settingsVM.appName).thenReturn('Aulos Test');
     when(() => settingsVM.deviceId).thenReturn('test-device-id');
@@ -136,6 +148,7 @@ void main() {
 
     when(() => podcastVM.isLoading).thenReturn(false);
     when(() => podcastVM.podcasts).thenReturn([]);
+    when(() => podcastVM.episodes).thenReturn([]);
     when(() => podcastVM.searchResults).thenReturn([]);
     when(() => podcastVM.trendingResults).thenReturn([]);
     when(() => podcastVM.categoryResults).thenReturn({});
@@ -144,10 +157,16 @@ void main() {
     when(() => podcastVM.removeListener(any())).thenReturn(null);
 
     when(() => radioVM.favorites).thenReturn([]);
+    when(() => radioVM.browseResults).thenReturn([]);
+    when(() => radioVM.searchResults).thenReturn([]);
+    when(() => radioVM.categories).thenReturn([]);
+    when(() => radioVM.isLoading).thenReturn(false);
+    when(() => radioVM.error).thenReturn(null);
     when(() => radioVM.addListener(any())).thenReturn(null);
     when(() => radioVM.removeListener(any())).thenReturn(null);
 
     when(() => queueVM.currentQueue).thenReturn([]);
+    when(() => queueVM.currentIndex).thenReturn(0);
     when(() => queueVM.history).thenReturn([]);
     when(() => queueVM.addListener(any())).thenReturn(null);
     when(() => queueVM.removeListener(any())).thenReturn(null);
@@ -164,71 +183,43 @@ void main() {
     when(() => logService.removeListener(any())).thenReturn(null);
   });
 
-  Widget buildTestWidget({Size size = const Size(1280, 720)}) {
-    return MediaQuery(
-      data: MediaQueryData(size: size),
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider<PlayerViewModel>.value(value: playerVM),
-          ChangeNotifierProvider<DisplayViewModel>.value(value: displayVM),
-          ChangeNotifierProvider<ConnectivityViewModel>.value(value: connectivityVM),
-          ChangeNotifierProvider<SettingsViewModel>.value(value: settingsVM),
-          ChangeNotifierProvider<LibraryViewModel>.value(value: libraryVM),
-          ChangeNotifierProvider<LibraryIndexerService>.value(value: indexerService),
-          ChangeNotifierProvider<PodcastViewModel>.value(value: podcastVM),
-          ChangeNotifierProvider<QueueViewModel>.value(value: queueVM),
-          Provider<PersistentLibraryService>.value(value: persistentLibrary),
-          ChangeNotifierProvider<DiscoverySyncManager>.value(value: discoverySyncManager),
-          ChangeNotifierProvider<MediaLogService>.value(value: logService),
-        ],
-        child: const MaterialApp(
-          home: HighContextTabbedScreen(),
-        ),
-      ),
+  tearDown(() async {
+    await db.close();
+  });
+
+  Widget _wrap(Widget child) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<PlayerViewModel>.value(value: playerVM),
+        ChangeNotifierProvider<DisplayViewModel>.value(value: displayVM),
+        ChangeNotifierProvider<ConnectivityViewModel>.value(value: connectivityVM),
+        ChangeNotifierProvider<SettingsViewModel>.value(value: settingsVM),
+        ChangeNotifierProvider<LibraryViewModel>.value(value: libraryVM),
+        ChangeNotifierProvider<LibraryIndexerService>.value(value: indexerService),
+        ChangeNotifierProvider<PodcastViewModel>.value(value: podcastVM),
+        ChangeNotifierProvider<RadioViewModel>.value(value: radioVM),
+        ChangeNotifierProvider<QueueViewModel>.value(value: queueVM),
+        Provider<PersistentLibraryService>.value(value: persistentLibrary),
+        ChangeNotifierProvider<DiscoverySyncManager>.value(value: discoverySyncManager),
+        ChangeNotifierProvider<MediaLogService>.value(value: logService),
+        ChangeNotifierProvider<InsightsViewModel>.value(value: insightsVM),
+      ],
+      child: MaterialApp(home: Scaffold(body: child)),
     );
   }
 
   testWidgets('Overflow Check - Settings Screen', (tester) async {
-    tester.view.physicalSize = const Size(1280, 720);
-    tester.view.devicePixelRatio = 1.0;
-
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<SettingsViewModel>.value(value: settingsVM),
-          ChangeNotifierProvider<ConnectivityViewModel>.value(value: connectivityVM),
-          ChangeNotifierProvider<LibraryIndexerService>.value(value: indexerService),
-          ChangeNotifierProvider<PlayerViewModel>.value(value: playerVM),
-          Provider<PersistentLibraryService>.value(value: persistentLibrary),
-          ChangeNotifierProvider<DiscoverySyncManager>.value(value: discoverySyncManager),
-          ChangeNotifierProvider<MediaLogService>.value(value: logService),
-        ],
-        child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
-      ),
-    );
+    await tester.pumpWidget(_wrap(const SettingsScreen()));
     await tester.pumpAndSettle();
   });
 
-  testWidgets('Overflow Check - Library Hub Screen', (tester) async {
-    tester.view.physicalSize = const Size(1280, 720);
-    tester.view.devicePixelRatio = 1.0;
+  testWidgets('Overflow Check - Music Library View', (tester) async {
+    await tester.pumpWidget(_wrap(const MusicLibraryView()));
+    await tester.pumpAndSettle();
+  });
 
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<LibraryViewModel>.value(value: libraryVM),
-          ChangeNotifierProvider<PlayerViewModel>.value(value: playerVM),
-          ChangeNotifierProvider<QueueViewModel>.value(value: queueVM),
-          ChangeNotifierProvider<SettingsViewModel>.value(value: settingsVM),
-          ChangeNotifierProvider<DisplayViewModel>.value(value: displayVM),
-          ChangeNotifierProvider<PodcastViewModel>.value(value: podcastVM),
-          ChangeNotifierProvider<RadioViewModel>.value(value: radioVM),
-          ChangeNotifierProvider<DiscoverySyncManager>.value(value: discoverySyncManager),
-          ChangeNotifierProvider<MediaLogService>.value(value: logService),
-        ],
-        child: const MaterialApp(home: Scaffold(body: LibraryHubScreen())),
-      ),
-    );
-    await tester.pump();
+  testWidgets('Overflow Check - Now Playing Screen', (tester) async {
+    await tester.pumpWidget(_wrap(const NowPlayingScreen()));
+    await tester.pumpAndSettle();
   });
 }

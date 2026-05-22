@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/domain/library/library_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/domain/library/library_service.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
 

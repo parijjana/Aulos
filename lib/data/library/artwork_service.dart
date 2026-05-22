@@ -1,4 +1,4 @@
-import 'package:localaudioplayer/core/network/rate_limit_dispatcher.dart';
+import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:media_fetcher/media_fetcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audiotags/audiotags.dart' as tags;
 import 'dart:io';
 import 'dart:async';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 
 class ArtworkService with UniversalLog {
   final RateLimitDispatcher? _rateLimitDispatcher;

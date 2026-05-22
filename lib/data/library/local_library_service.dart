@@ -1,13 +1,13 @@
 import 'package:audiotags/audiotags.dart' as tags;
 import 'package:file/file.dart';
-import 'package:localaudioplayer/domain/library/library_service.dart';
+import 'package:aulos/domain/library/library_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:on_audio_query_pluse/on_audio_query.dart';
 import 'dart:developer' as developer;
 
 import 'package:platform/platform.dart';
 
-import 'package:localaudioplayer/domain/core/permission_service.dart';
+import 'package:aulos/domain/core/permission_service.dart';
 
 abstract class AudioTagsWrapper {
   Future<tags.Tag?> read(String path);

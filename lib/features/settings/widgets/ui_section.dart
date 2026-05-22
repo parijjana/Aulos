@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:themer_flutter/themer_flutter.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/features/settings/widgets/settings_shared.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/features/settings/widgets/settings_shared.dart';
 
 class UiSection extends StatelessWidget {
   final SettingsViewModel vm;

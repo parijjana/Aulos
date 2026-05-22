@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:provider/provider.dart';
 
 class RemoteControlGlow extends StatefulWidget {
@@ -52,7 +52,7 @@ class _RemoteControlGlowState extends State<RemoteControlGlow>
       animation: _controller,
       builder: (context, child) {
         return CustomPaint(
-          foregroundPainter: _ObsidianGlowPainter(
+          foregroundPainter: _AulosGlowPainter(
             progress: _controller.value,
             isHost: widget.isHost,
           ),
@@ -64,11 +64,11 @@ class _RemoteControlGlowState extends State<RemoteControlGlow>
   }
 }
 
-class _ObsidianGlowPainter extends CustomPainter {
+class _AulosGlowPainter extends CustomPainter {
   final double progress;
   final bool isHost;
 
-  _ObsidianGlowPainter({required this.progress, required this.isHost});
+  _AulosGlowPainter({required this.progress, required this.isHost});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -166,5 +166,5 @@ class _ObsidianGlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ObsidianGlowPainter oldDelegate) => true;
+  bool shouldRepaint(_AulosGlowPainter oldDelegate) => true;
 }

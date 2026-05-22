@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:async';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/presentation/viewmodels/connectivity_view_model.dart';
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
-import 'package:localaudioplayer/domain/network/discovery_service.dart';
-import 'package:localaudioplayer/domain/network/handshake_service.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
+import 'package:aulos/domain/network/discovery_service.dart';
+import 'package:aulos/domain/network/handshake_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 
 class MockConnectionManager extends Mock implements ConnectionManager {}
 

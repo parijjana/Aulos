@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 
 mixin LibraryUtilsMixin {
   int getCategoryId(dynamic item) {

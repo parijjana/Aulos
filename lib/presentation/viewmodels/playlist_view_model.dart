@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/data/library/playlist_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/data/library/playlist_service.dart';
 
 class PlaylistViewModel extends ChangeNotifier {
   final PersistentLibraryService _libraryService;

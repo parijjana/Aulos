@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/database/radio_database.dart';
-import 'package:localaudioplayer/data/library/radio_browser_service.dart';
-import 'package:localaudioplayer/data/library/radio_sync_manager.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/data/database/app_database.dart' as app_db;
+import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/data/library/radio_browser_service.dart';
+import 'package:aulos/data/library/radio_sync_manager.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/data/database/app_database.dart' as app_db;
 import 'package:drift/drift.dart';
 import 'dart:async';
 

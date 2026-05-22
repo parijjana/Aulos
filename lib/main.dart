@@ -1,48 +1,48 @@
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:localaudioplayer/data/playback/just_audio_playback_engine.dart';
-import 'package:localaudioplayer/data/playback/audio_service_handler.dart';
-import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/data/library/local_library_service.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/playlist_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/radio_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/insights_view_model.dart';
-import 'package:localaudioplayer/data/library/playlist_service.dart';
-import 'package:localaudioplayer/data/library/library_indexer_service.dart';
-import 'package:localaudioplayer/data/library/artwork_service.dart';
-import 'package:localaudioplayer/data/library/ensemble_artwork_service.dart';
-import 'package:localaudioplayer/data/library/rss_podcast_service.dart';
-import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
-import 'package:localaudioplayer/data/library/podcast_download_service.dart';
-import 'package:localaudioplayer/data/library/discovery_sync_manager.dart';
-import 'package:localaudioplayer/data/library/podcast_storage_manager.dart';
-import 'package:localaudioplayer/data/library/radio_browser_service.dart';
-import 'package:localaudioplayer/data/library/radio_sync_manager.dart';
-import 'package:localaudioplayer/domain/library/podcast_service.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/features/main/screens/high_context_tabbed_screen.dart';
-import 'package:localaudioplayer/presentation/screens/collapsed_player_screen.dart';
+import 'package:aulos/data/playback/just_audio_playback_engine.dart';
+import 'package:aulos/data/playback/audio_service_handler.dart';
+import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/data/library/local_library_service.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/playlist_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
+import 'package:aulos/presentation/viewmodels/insights_view_model.dart';
+import 'package:aulos/data/library/playlist_service.dart';
+import 'package:aulos/data/library/library_indexer_service.dart';
+import 'package:aulos/data/library/artwork_service.dart';
+import 'package:aulos/data/library/ensemble_artwork_service.dart';
+import 'package:aulos/data/library/rss_podcast_service.dart';
+import 'package:aulos/data/library/podcast_discovery_service.dart';
+import 'package:aulos/data/library/podcast_download_service.dart';
+import 'package:aulos/data/library/discovery_sync_manager.dart';
+import 'package:aulos/data/library/podcast_storage_manager.dart';
+import 'package:aulos/data/library/radio_browser_service.dart';
+import 'package:aulos/data/library/radio_sync_manager.dart';
+import 'package:aulos/domain/library/podcast_service.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/features/main/screens/high_context_tabbed_screen.dart';
+import 'package:aulos/presentation/screens/collapsed_player_screen.dart';
 import 'package:file/local.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/data/database/app_database.dart' as app_db;
-import 'package:localaudioplayer/data/database/discovery_database.dart';
-import 'package:localaudioplayer/data/database/radio_database.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/core/network/rate_limit_dispatcher.dart';
+import 'package:aulos/data/database/app_database.dart' as app_db;
+import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 
-import 'package:localaudioplayer/data/network/nsd_discovery_service.dart';
-import 'package:localaudioplayer/data/network/websocket_service.dart';
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
-import 'package:localaudioplayer/domain/network/handshake_service.dart';
-import 'package:localaudioplayer/presentation/viewmodels/connectivity_view_model.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/data/network/nsd_discovery_service.dart';
+import 'package:aulos/data/network/websocket_service.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
+import 'package:aulos/domain/network/handshake_service.dart';
+import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
+import 'package:aulos/domain/network/log_service.dart';
 import 'package:on_audio_query_pluse/on_audio_query.dart';
-import 'package:localaudioplayer/domain/core/permission_service.dart';
+import 'package:aulos/domain/core/permission_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:window_manager/window_manager.dart';
@@ -54,12 +54,12 @@ import 'dart:io';
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 
-Future<ObsidianAudioHandler> _initAudioService() async {
+Future<AulosAudioHandler> _initAudioService() async {
   return await AudioService.init(
-    builder: () => ObsidianAudioHandler(),
+    builder: () => AulosAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId:
-          'com.example.localaudioplayer.channel.audio',
+          'com.example.aulos.channel.audio',
       androidNotificationChannelName: 'Aulos Audio Playback',
       androidNotificationOngoing: true,
     ),
@@ -172,6 +172,7 @@ void main() async {
     queueVM: queueViewModel,
     connectionManager: connectionManager,
     db: database,
+    settingsVM: settingsViewModel,
   );
   final playlistViewModel = PlaylistViewModel(
     libraryService: persistentLibrary,
@@ -222,13 +223,13 @@ void main() async {
         ChangeNotifierProvider.value(value: radioViewModel),
         ChangeNotifierProvider.value(value: insightsViewModel),
       ],
-      child: const LocalAudioPlayerApp(),
+      child: const aulosApp(),
     ),
   );
 }
 
-class LocalAudioPlayerApp extends StatelessWidget {
-  const LocalAudioPlayerApp({super.key});
+class aulosApp extends StatelessWidget {
+  const aulosApp({super.key});
 
   @override
   Widget build(BuildContext context) {

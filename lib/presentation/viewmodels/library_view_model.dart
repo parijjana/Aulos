@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
-import 'package:localaudioplayer/domain/network/socket_service.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart'
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
+import 'package:aulos/domain/network/socket_service.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart'
     as settings;
 import 'dart:io' as io;
 import 'dart:async';

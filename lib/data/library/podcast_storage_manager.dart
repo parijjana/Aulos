@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/discovery_sync_manager.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/discovery_sync_manager.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:path/path.dart' as p;
 
 class PodcastStorageManager {

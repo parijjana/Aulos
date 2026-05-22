@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/data/database/discovery_database.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 

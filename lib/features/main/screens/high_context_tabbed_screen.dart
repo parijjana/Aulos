@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:localaudioplayer/features/library/widgets/music_library_view.dart';
-import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
-import 'package:localaudioplayer/features/podcasts/screens/podcast_root_screen.dart';
-import 'package:localaudioplayer/features/radio/screens/radio_root_screen.dart';
-import 'package:localaudioplayer/features/settings/screens/settings_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/features/library/widgets/music_library_view.dart';
+import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/features/podcasts/screens/podcast_root_screen.dart';
+import 'package:aulos/features/radio/screens/radio_root_screen.dart';
+import 'package:aulos/features/settings/screens/settings_screen.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
 import 'package:provider/provider.dart';
 
-import 'package:localaudioplayer/presentation/screens/widgets/remote_control_glow.dart';
+import 'package:aulos/presentation/screens/widgets/remote_control_glow.dart';
 import '../widgets/main_tab_header.dart';
 import '../widgets/persistent_player_bar.dart';
 

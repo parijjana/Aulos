@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/podcast_discovery_service.dart';
 
 class PodcastsScreen extends StatefulWidget {
   const PodcastsScreen({super.key});

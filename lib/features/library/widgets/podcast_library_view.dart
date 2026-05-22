@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
 import 'package:provider/provider.dart';
-import '../widgets/podcast_grid.dart';
-import '../widgets/podcast_detail_view.dart';
+import '../../podcasts/widgets/podcast_grid.dart';
+import '../../podcasts/widgets/podcast_detail_view.dart';
 
 class PodcastLibraryView extends StatefulWidget {
   const PodcastLibraryView({super.key});

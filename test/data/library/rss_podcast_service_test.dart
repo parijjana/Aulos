@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/data/library/rss_podcast_service.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/data/library/rss_podcast_service.dart';
+import 'package:aulos/data/database/app_database.dart';
 import 'package:drift/native.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:http/http.dart' as http;

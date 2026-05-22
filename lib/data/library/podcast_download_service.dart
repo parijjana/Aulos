@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/data/database/app_database.dart';
 import 'package:drift/drift.dart';
 import 'dart:async';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 
 class PodcastDownloadService with UniversalLog {
   final AppDatabase _db;

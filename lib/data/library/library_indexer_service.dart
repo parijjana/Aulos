@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/artwork_service.dart';
-import 'package:localaudioplayer/data/library/ensemble_artwork_service.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/artwork_service.dart';
+import 'package:aulos/data/library/ensemble_artwork_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
 

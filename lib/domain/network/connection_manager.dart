@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:localaudioplayer/domain/network/discovery_service.dart';
-import 'package:localaudioplayer/domain/network/handshake_service.dart';
-import 'package:localaudioplayer/domain/network/socket_service.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/domain/network/discovery_service.dart';
+import 'package:aulos/domain/network/handshake_service.dart';
+import 'package:aulos/domain/network/socket_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 

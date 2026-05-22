@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:localaudioplayer/domain/network/socket_service.dart';
+import 'package:aulos/domain/network/socket_service.dart';
 import 'package:flutter/foundation.dart';
 
 class WebSocketService implements SocketService {

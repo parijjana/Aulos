@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/data/library/library_indexer_service.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/artwork_service.dart';
-import 'package:localaudioplayer/data/library/ensemble_artwork_service.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
+import 'package:aulos/data/library/library_indexer_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/artwork_service.dart';
+import 'package:aulos/data/library/ensemble_artwork_service.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/native.dart';
 import 'dart:typed_data';

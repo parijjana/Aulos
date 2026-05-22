@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as domain;
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:window_manager/window_manager.dart';

@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/data/database/app_database.dart';
 
 abstract class PlaybackEngine {
   Future<void> play();

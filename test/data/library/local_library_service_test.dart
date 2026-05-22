@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:file/memory.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/data/library/local_library_service.dart';
+import 'package:aulos/data/library/local_library_service.dart';
 import 'package:audiotags/audiotags.dart' as tags;
 import 'dart:typed_data';
 import 'package:platform/platform.dart';
 
 import 'package:on_audio_query_pluse/on_audio_query.dart';
 
-import 'package:localaudioplayer/domain/core/permission_service.dart';
+import 'package:aulos/domain/core/permission_service.dart';
 
 class MockAudioTagsWrapper extends Mock implements AudioTagsWrapper {}
 

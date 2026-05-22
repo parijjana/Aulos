@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 import 'podcast_info_pane.dart';
 import 'podcast_episode_list.dart';

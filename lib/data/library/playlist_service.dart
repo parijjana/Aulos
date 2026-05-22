@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/data/database/app_database.dart';
 
 abstract class PlaylistService {
   Future<void> exportM3U(String path, List<Track> tracks);

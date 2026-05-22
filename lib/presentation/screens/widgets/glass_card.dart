@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/hatched_painter.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/ceramic_painter.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/hatched_painter.dart';
+import 'package:aulos/presentation/screens/widgets/ceramic_painter.dart';
 import 'package:provider/provider.dart';
 
 class GlassCard extends StatelessWidget {

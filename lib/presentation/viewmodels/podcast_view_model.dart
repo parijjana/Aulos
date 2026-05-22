@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/database/app_database.dart' as app_db;
-import 'package:localaudioplayer/data/database/discovery_database.dart';
-import 'package:localaudioplayer/domain/library/podcast_service.dart';
-import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
-import 'package:localaudioplayer/data/library/podcast_download_service.dart';
-import 'package:localaudioplayer/data/library/discovery_sync_manager.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/data/database/app_database.dart' as app_db;
+import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/domain/library/podcast_service.dart';
+import 'package:aulos/data/library/podcast_discovery_service.dart';
+import 'package:aulos/data/library/podcast_download_service.dart';
+import 'package:aulos/data/library/discovery_sync_manager.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'dart:async';
 
 class PodcastViewModel extends ChangeNotifier {

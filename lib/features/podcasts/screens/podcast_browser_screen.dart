@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
-import 'package:localaudioplayer/data/database/discovery_database.dart';
-import 'package:localaudioplayer/features/podcasts/screens/podcast_detail_screen.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/data/library/podcast_discovery_service.dart';
+import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/features/podcasts/screens/podcast_detail_screen.dart';
 import 'package:provider/provider.dart';
 
 class PodcastBrowserScreen extends StatefulWidget {

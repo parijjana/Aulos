@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/domain/network/log_service.dart';
 import 'package:provider/provider.dart';
 
 class LogsAboutSection extends StatelessWidget {

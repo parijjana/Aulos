@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:drift/native.dart';
-import 'package:localaudioplayer/data/database/discovery_database.dart';
+import 'package:aulos/data/database/discovery_database.dart';
 import 'package:path/path.dart' as p;
 
 void main() async {

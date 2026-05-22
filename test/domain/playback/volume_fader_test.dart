@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/domain/playback/volume_fader.dart';
+import 'package:aulos/domain/playback/volume_fader.dart';
 
 void main() {
   group('VolumeFader', () {

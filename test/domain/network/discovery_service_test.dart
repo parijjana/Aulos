@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/domain/network/discovery_service.dart';
+import 'package:aulos/domain/network/discovery_service.dart';
 
 class MockDiscoveryService extends Mock implements DiscoveryService {}
 

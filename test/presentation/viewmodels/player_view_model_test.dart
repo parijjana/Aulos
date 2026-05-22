@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart'
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart'
     as qvm;
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as engine_domain;
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as engine_domain;
+import 'package:aulos/data/database/app_database.dart';
 
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
 
 class MockPlaybackEngine extends Mock implements engine_domain.PlaybackEngine {}
 

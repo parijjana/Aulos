@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/obsidian_orbit.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/Aulos_orbit.dart';
 import 'package:provider/provider.dart';
 import 'library_art_widget.dart';
 import 'library_utils_mixin.dart';

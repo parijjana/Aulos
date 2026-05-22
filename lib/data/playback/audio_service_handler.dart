@@ -2,11 +2,11 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'dart:async';
 
-class ObsidianAudioHandler extends BaseAudioHandler with SeekHandler {
+class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final _customEventController = StreamController<String>.broadcast();
 
-  ObsidianAudioHandler() {
+  AulosAudioHandler() {
     _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
   }
 
@@ -23,6 +23,12 @@ class ObsidianAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() => _player.stop();
+
+  @override
+  Future<void> setVolume(double volume) => _player.setVolume(volume);
+
+  @override
+  Future<void> setSpeed(double speed) => _player.setSpeed(speed);
 
   @override
   Future<void> skipToNext() async {

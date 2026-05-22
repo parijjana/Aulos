@@ -1,24 +1,24 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:localaudioplayer/data/playback/just_audio_playback_engine.dart';
-import 'package:localaudioplayer/data/playback/audio_service_handler.dart';
+import 'package:aulos/data/playback/just_audio_playback_engine.dart';
+import 'package:aulos/data/playback/audio_service_handler.dart';
 
 class MockAudioPlayer extends Mock implements AudioPlayer {}
 
-class MockAudioHandler extends Mock implements ObsidianAudioHandler {}
+class MockAudioHandler extends Mock implements AulosAudioHandler {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late JustAudioPlaybackEngine engine;
-  late ObsidianAudioHandler handler;
+  late AulosAudioHandler handler;
 
   setUp(() {
-    handler = ObsidianAudioHandler();
+    handler = AulosAudioHandler();
 
     // We need to use the real handler but mock the underlying player to avoid platform calls
-    // However, ObsidianAudioHandler creates its own player.
+    // However, AulosAudioHandler creates its own player.
     // For this test, we'll verify the stream logic.
     engine = JustAudioPlaybackEngine(handler: handler);
   });

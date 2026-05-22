@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart' as settings;
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'package:provider/provider.dart';
 
 import '../widgets/library_header.dart';

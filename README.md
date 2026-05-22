@@ -1,4 +1,4 @@
-# Aulos Local Audio Player
+# Aulos Aulos
 
 A new Flutter project.
 

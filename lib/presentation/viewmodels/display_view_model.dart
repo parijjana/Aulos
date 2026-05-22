@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 
 enum UIContextMode { minimalist, highContext, collapsed }
 

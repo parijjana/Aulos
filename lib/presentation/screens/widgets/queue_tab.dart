@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 
-import 'package:localaudioplayer/presentation/viewmodels/playlist_view_model.dart';
+import 'package:aulos/presentation/viewmodels/playlist_view_model.dart';
 
 class QueueTab extends StatelessWidget {
   const QueueTab({super.key});

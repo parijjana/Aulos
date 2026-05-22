@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/data/network/websocket_service.dart';
-import 'package:localaudioplayer/domain/network/socket_service.dart';
+import 'package:aulos/data/network/websocket_service.dart';
+import 'package:aulos/domain/network/socket_service.dart';
 
 void main() {
   late WebSocketService service;

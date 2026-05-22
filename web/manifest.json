@@ -1,6 +1,6 @@
 {
-    "name": "localaudioplayer",
-    "short_name": "localaudioplayer",
+    "name": "aulos",
+    "short_name": "aulos",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

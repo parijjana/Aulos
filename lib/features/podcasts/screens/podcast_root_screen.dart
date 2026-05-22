@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/features/library/widgets/podcast_library_view.dart';
-import 'package:localaudioplayer/features/podcasts/screens/podcast_browser_screen.dart';
+import 'package:aulos/features/library/widgets/podcast_library_view.dart';
+import 'package:aulos/features/podcasts/screens/podcast_browser_screen.dart';
 
 class PodcastRootScreen extends StatefulWidget {
   const PodcastRootScreen({super.key});

@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
-import 'package:localaudioplayer/domain/network/socket_service.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as engine_domain;
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
+import 'package:aulos/domain/network/socket_service.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as engine_domain;
 import 'dart:async';
 
 class QueueViewModel extends ChangeNotifier {

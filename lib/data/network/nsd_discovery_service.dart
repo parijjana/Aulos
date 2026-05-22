@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:nsd/nsd.dart' as nsd;
-import 'package:localaudioplayer/domain/network/discovery_service.dart';
+import 'package:aulos/domain/network/discovery_service.dart';
 
 class NsdDiscoveryService implements DiscoveryService {
   static const String _serviceType = '_localaudio._tcp';

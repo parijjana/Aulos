@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 
 class AboutSection extends StatelessWidget {
   const AboutSection({super.key});

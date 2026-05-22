@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/insights_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/presentation/theme/obsidian_audio_theme.dart';
+import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/insights_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as engine_domain;
+import 'package:aulos/domain/playback/playback_engine.dart' as engine_domain;
 import 'package:drift/native.dart';
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
@@ -52,7 +52,7 @@ void main() {
     when(() => queueVM.currentQueue).thenReturn([]);
     when(() => queueVM.currentIndex).thenReturn(0);
 
-    when(() => settingsVM.themeModel).thenReturn(ObsidianAudioTheme.model);
+    when(() => settingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => settingsVM.isDynamicTheme).thenReturn(true);
   });
 

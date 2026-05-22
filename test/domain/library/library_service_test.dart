@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/domain/library/library_service.dart';
+import 'package:aulos/domain/library/library_service.dart';
 
 class MockLibraryService extends Mock implements LibraryService {}
 

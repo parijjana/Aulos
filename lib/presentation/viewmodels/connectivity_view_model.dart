@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
-import 'package:localaudioplayer/domain/network/discovery_service.dart';
-import 'package:localaudioplayer/domain/network/handshake_service.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
+import 'package:aulos/domain/network/discovery_service.dart';
+import 'package:aulos/domain/network/handshake_service.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
 import 'dart:io';
 
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 
 class ConnectivityViewModel extends ChangeNotifier {
   final ConnectionManager _connectionManager;

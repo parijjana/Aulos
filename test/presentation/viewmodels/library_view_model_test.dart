@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/domain/library/library_service.dart';
-import 'package:localaudioplayer/domain/network/connection_manager.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/domain/library/library_service.dart';
+import 'package:aulos/domain/network/connection_manager.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 
 class MockPersistentLibraryService extends Mock
     implements PersistentLibraryServiceImpl {}

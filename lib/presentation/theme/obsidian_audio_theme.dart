@@ -1,10 +1,10 @@
 import 'package:themer_flutter/themer_flutter.dart';
 
-class ObsidianAudioTheme {
+class AulosAudioTheme {
   static const String _json = '''
   {
     "version": "1",
-    "name": "Obsidian Audio",
+    "name": "Aulos Audio",
     "colors": {
       "primary": "#00F0FF",
       "onPrimary": "#001F22",

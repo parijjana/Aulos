@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/radio_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/data/database/radio_database.dart';
-import 'package:localaudioplayer/data/library/radio_browser_service.dart';
+import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/data/library/radio_browser_service.dart';
 import 'package:provider/provider.dart';
 
 class RadioBrowserScreen extends StatefulWidget {

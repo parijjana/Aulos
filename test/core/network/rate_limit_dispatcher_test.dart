@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/core/network/rate_limit_dispatcher.dart';
+import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockApiCall extends Mock {

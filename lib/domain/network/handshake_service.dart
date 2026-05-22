@@ -64,7 +64,7 @@ class HandshakeService {
       iterations: 100000,
       bits: 256,
     );
-    final salt = utf8.encode('ObsidianLocalAudioSalt');
+    final salt = utf8.encode('AulosLocalAudioSalt');
     return await pbkdf2.deriveKey(
       secretKey: SecretKey(utf8.encode(sharedSecret)),
       nonce: salt,

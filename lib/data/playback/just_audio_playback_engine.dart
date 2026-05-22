@@ -5,20 +5,20 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart'
+import 'package:aulos/domain/playback/playback_engine.dart'
     as domain;
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/data/playback/audio_service_handler.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/playback/audio_service_handler.dart';
+import 'package:aulos/domain/network/log_service.dart';
 
 class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
-  final ObsidianAudioHandler _handler;
+  final AulosAudioHandler _handler;
   final BehaviorSubject<domain.PlaybackState> _stateController =
       BehaviorSubject<domain.PlaybackState>.seeded(domain.PlaybackState.idle);
   final StreamController<Track?> _currentTrackController =
       StreamController<Track?>.broadcast();
 
-  JustAudioPlaybackEngine({required ObsidianAudioHandler handler})
+  JustAudioPlaybackEngine({required AulosAudioHandler handler})
       : _handler = handler {
     _init();
   }
@@ -106,7 +106,7 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
 
   @override
   Future<void> setVolume(double volume) async {
-    await _handler.customAction('setVolume', {'volume': volume});
+    await _handler.setVolume(volume);
   }
 
   @override

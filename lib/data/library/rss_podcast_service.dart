@@ -1,7 +1,7 @@
 import 'package:dart_rss/dart_rss.dart';
 import 'package:http/http.dart' as http;
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/domain/library/podcast_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/domain/library/podcast_service.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 

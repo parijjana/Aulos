@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/presentation/viewmodels/insights_view_model.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/presentation/viewmodels/insights_view_model.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:drift/native.dart';
 

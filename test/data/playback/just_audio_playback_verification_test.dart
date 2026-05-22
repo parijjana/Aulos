@@ -2,15 +2,15 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:localaudioplayer/data/playback/just_audio_playback_engine.dart';
-import 'package:localaudioplayer/data/playback/audio_service_handler.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as domain;
+import 'package:aulos/data/playback/just_audio_playback_engine.dart';
+import 'package:aulos/data/playback/audio_service_handler.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:audio_service/audio_service.dart';
 import 'package:rxdart/rxdart.dart';
 
 class MockAudioPlayer extends Mock implements AudioPlayer {}
 
-class MockAudioHandler extends Mock implements ObsidianAudioHandler {}
+class MockAudioHandler extends Mock implements AulosAudioHandler {}
 
 void main() {
   late JustAudioPlaybackEngine engine;

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'dart:async';
 

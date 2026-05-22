@@ -1,4 +1,4 @@
-package com.example.localaudioplayer
+package com.example.aulos
 
 import io.flutter.embedding.android.FlutterActivity
 

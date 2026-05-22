@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:localaudioplayer/core/network/rate_limit_dispatcher.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/core/network/rate_limit_dispatcher.dart';
+import 'package:aulos/domain/network/log_service.dart';
 
 class PodcastSearchResult {
   final String title;

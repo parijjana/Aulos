@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/features/podcasts/screens/podcast_browser_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/podcast_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
-import 'package:localaudioplayer/presentation/theme/obsidian_audio_theme.dart';
+import 'package:aulos/features/podcasts/screens/podcast_browser_screen.dart';
+import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/data/library/podcast_discovery_service.dart';
+import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 
@@ -35,7 +35,7 @@ void main() {
     when(() => mockVM.addListener(any())).thenReturn(null);
     when(() => mockVM.removeListener(any())).thenReturn(null);
 
-    when(() => mockSettingsVM.themeModel).thenReturn(ObsidianAudioTheme.model);
+    when(() => mockSettingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => mockSettingsVM.isDynamicTheme).thenReturn(false);
     when(() => mockSettingsVM.addListener(any())).thenReturn(null);
     when(() => mockSettingsVM.removeListener(any())).thenReturn(null);

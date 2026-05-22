@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/html_text.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/html_text.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
 
@@ -26,22 +26,37 @@ class NowPlayingContent extends StatelessWidget {
 
     if (mediaType == MediaType.radio) {
       return SliverToBoxAdapter(
-        child: Center(
-          child: Column(
-            children: [
-              const Icon(Icons.radio, size: 48, color: Colors.white10),
-              const SizedBox(height: 16),
-              Text(
-                playerVM.currentStreamMetadata ?? 'Live Stream: ${playerVM.displayTitle}', 
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Internet Radio',
-                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 12),
-              ),
-            ],
+        child: Padding(
+          padding: const EdgeInsets.only(top: 40),
+          child: Center(
+            child: Column(
+              children: [
+                const Icon(Icons.radio, size: 64, color: Colors.white10),
+                const SizedBox(height: 24),
+                Text(
+                  playerVM.currentStreamMetadata ?? 'Live Stream: ${playerVM.displayTitle}', 
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'INTERNET RADIO',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary, 
+                      fontSize: 10, 
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

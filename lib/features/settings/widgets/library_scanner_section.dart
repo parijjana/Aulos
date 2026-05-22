@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/data/library/library_indexer_service.dart';
-import 'package:localaudioplayer/data/library/persistent_library_service.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/data/library/library_indexer_service.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 

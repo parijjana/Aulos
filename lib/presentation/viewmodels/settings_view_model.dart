@@ -4,17 +4,17 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:themer_flutter/themer_flutter.dart';
-import 'package:localaudioplayer/presentation/theme/obsidian_audio_theme.dart';
-import 'package:localaudioplayer/presentation/theme/amber_glass_theme.dart';
-import 'package:localaudioplayer/presentation/theme/ceramic_trio_theme.dart';
-import 'package:localaudioplayer/presentation/theme/dynamic_flat_theme.dart';
-import 'package:localaudioplayer/presentation/theme/dynamic_glass_theme.dart';
-import 'package:localaudioplayer/presentation/theme/dynamic_hatched_theme.dart';
-import 'package:localaudioplayer/presentation/theme/flat_origami_theme.dart';
-import 'package:localaudioplayer/presentation/theme/hatched_monochrome_theme.dart';
-import 'package:localaudioplayer/presentation/theme/inverted_hatched_theme.dart';
-import 'package:localaudioplayer/presentation/theme/midnight_emerald_theme.dart';
-import 'package:localaudioplayer/presentation/theme/ruby_glass_theme.dart';
+import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/amber_glass_theme.dart';
+import 'package:aulos/presentation/theme/ceramic_trio_theme.dart';
+import 'package:aulos/presentation/theme/dynamic_flat_theme.dart';
+import 'package:aulos/presentation/theme/dynamic_glass_theme.dart';
+import 'package:aulos/presentation/theme/dynamic_hatched_theme.dart';
+import 'package:aulos/presentation/theme/flat_origami_theme.dart';
+import 'package:aulos/presentation/theme/hatched_monochrome_theme.dart';
+import 'package:aulos/presentation/theme/inverted_hatched_theme.dart';
+import 'package:aulos/presentation/theme/midnight_emerald_theme.dart';
+import 'package:aulos/presentation/theme/ruby_glass_theme.dart';
 
 enum ArtworkShape { square, circle }
 enum LibraryViewType { list, grid, orbit }
@@ -29,7 +29,7 @@ class SettingsViewModel extends ChangeNotifier {
   String _appName = 'Aulos';
   String _deviceId = const Uuid().v4();
   List<String> _monitoredFolders = [];
-  ThemerModel _themeModel = ObsidianAudioTheme.model; 
+  ThemerModel _themeModel = AulosAudioTheme.model; 
   bool _isDynamicTheme = true;
   ArtworkShape _artworkShape = ArtworkShape.square;
   LibraryViewType _libraryViewType = LibraryViewType.grid;
@@ -39,6 +39,10 @@ class SettingsViewModel extends ChangeNotifier {
 
   bool _showHostAnimation = true;
   bool _showRemoteAnimation = true;
+
+  // Last Played Session State
+  String? _lastRadioStationUuid;
+  int? _lastPodcastEpisodeId;
 
   // Podcast Settings
   String? _podcastStorageLocation;
@@ -59,13 +63,15 @@ class SettingsViewModel extends ChangeNotifier {
   int get libraryHubTabIndex => _libraryHubTabIndex;
   bool get showHostAnimation => _showHostAnimation;
   bool get showRemoteAnimation => _showRemoteAnimation;
+  String? get lastRadioStationUuid => _lastRadioStationUuid;
+  int? get lastPodcastEpisodeId => _lastPodcastEpisodeId;
   String? get podcastStorageLocation => _podcastStorageLocation;
   bool get autoDownloadNewEpisodes => _autoDownloadNewEpisodes;
   int get podcastKeepCount => _podcastKeepCount;
   int get podcastKeepDays => _podcastKeepDays;
 
   final List<ThemerModel> _availableThemes = [
-    ObsidianAudioTheme.model,
+    AulosAudioTheme.model,
     AmberGlassTheme.model,
     CeramicTrioTheme.model,
     DynamicFlatTheme.model,
@@ -93,6 +99,8 @@ class SettingsViewModel extends ChangeNotifier {
     _libraryHubTabIndex = _prefs.getInt('library_hub_tab_index') ?? 0;
     _showHostAnimation = _prefs.getBool('show_host_animation') ?? true;
     _showRemoteAnimation = _prefs.getBool('show_remote_animation') ?? true;
+    _lastRadioStationUuid = _prefs.getString('last_radio_station_uuid');
+    _lastPodcastEpisodeId = _prefs.getInt('last_podcast_episode_id');
     _podcastStorageLocation = _prefs.getString('podcast_storage_location');
     _autoDownloadNewEpisodes = _prefs.getBool('auto_download_podcasts') ?? false;
     _podcastKeepCount = _prefs.getInt('podcast_keep_count') ?? 5;
@@ -103,9 +111,29 @@ class SettingsViewModel extends ChangeNotifier {
       try {
         _themeModel = _availableThemes.firstWhere((t) => t.name == themeName);
       } catch (_) {
-        _themeModel = ObsidianAudioTheme.model;
+        _themeModel = AulosAudioTheme.model;
       }
     }
+  }
+
+  Future<void> setLastRadioStation(String? uuid) async {
+    _lastRadioStationUuid = uuid;
+    if (uuid == null) {
+      await _prefs.remove('last_radio_station_uuid');
+    } else {
+      await _prefs.setString('last_radio_station_uuid', uuid);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLastPodcastEpisode(int? id) async {
+    _lastPodcastEpisodeId = id;
+    if (id == null) {
+      await _prefs.remove('last_podcast_episode_id');
+    } else {
+      await _prefs.setInt('last_podcast_episode_id', id);
+    }
+    notifyListeners();
   }
 
   Future<void> setMainTabIndex(int index) async {

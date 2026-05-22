@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/features/library/screens/library_screen.dart';
-import 'package:localaudioplayer/presentation/screens/now_playing_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/queue_tab.dart';
+import 'package:aulos/features/library/screens/library_screen.dart';
+import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/screens/widgets/queue_tab.dart';
 import 'package:provider/provider.dart';
 
 class HighContextDashboardScreen extends StatefulWidget {

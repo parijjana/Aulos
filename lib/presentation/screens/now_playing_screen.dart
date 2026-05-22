@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/features/library/screens/insights_screen.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/features/library/screens/insights_screen.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:provider/provider.dart';
 
 import 'widgets/now_playing/now_playing_controls.dart';
@@ -155,6 +155,22 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
         children: [
+          if (vm.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  vm.errorMessage!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
           Text(vm.displayTitle,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: isCompact ? 22 : 32, fontWeight: FontWeight.w900, letterSpacing: -1.0),

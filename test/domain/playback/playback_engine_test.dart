@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart';
+import 'package:aulos/domain/playback/playback_engine.dart';
 
 class MockPlaybackEngine extends Mock implements PlaybackEngine {}
 

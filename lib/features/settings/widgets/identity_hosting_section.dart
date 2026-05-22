@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/presentation/screens/widgets/glass_card.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/connectivity_view_model.dart';
+import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
 
 class IdentityHostingSection extends StatelessWidget {
   final SettingsViewModel vm;

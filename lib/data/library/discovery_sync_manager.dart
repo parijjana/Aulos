@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:localaudioplayer/data/database/discovery_database.dart';
-import 'package:localaudioplayer/data/library/podcast_discovery_service.dart';
-import 'package:localaudioplayer/domain/network/log_service.dart';
+import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/data/library/podcast_discovery_service.dart';
+import 'package:aulos/domain/network/log_service.dart';
 import 'package:drift/drift.dart';
 import 'package:dart_rss/dart_rss.dart';
 

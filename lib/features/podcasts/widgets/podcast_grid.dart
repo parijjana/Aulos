@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/data/database/app_database.dart';
 
 class PodcastGrid extends StatelessWidget {
   final List<Podcast> podcasts;

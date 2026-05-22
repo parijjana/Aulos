@@ -2,15 +2,15 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
-import 'package:localaudioplayer/features/library/screens/library_screen.dart';
-import 'package:localaudioplayer/presentation/viewmodels/library_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/player_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/queue_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/display_view_model.dart';
-import 'package:localaudioplayer/presentation/viewmodels/settings_view_model.dart';
-import 'package:localaudioplayer/presentation/theme/obsidian_audio_theme.dart';
-import 'package:localaudioplayer/data/database/app_database.dart';
-import 'package:localaudioplayer/domain/playback/playback_engine.dart' as domain;
+import 'package:aulos/features/library/screens/library_screen.dart';
+import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:themer_flutter/themer_flutter.dart';
 
 class MockLibraryViewModel extends Mock implements LibraryViewModel {}
@@ -74,7 +74,7 @@ void main() {
     when(() => mockDisplayVM.addListener(any())).thenReturn(null);
     when(() => mockDisplayVM.removeListener(any())).thenReturn(null);
     
-    when(() => mockSettingsVM.themeModel).thenReturn(ObsidianAudioTheme.model);
+    when(() => mockSettingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => mockSettingsVM.isDynamicTheme).thenReturn(false);
     when(() => mockSettingsVM.artworkShape).thenReturn(ArtworkShape.square);
     when(() => mockSettingsVM.addListener(any())).thenReturn(null);
@@ -85,7 +85,7 @@ void main() {
     return MaterialApp(
       home: Scaffold(
         body: ThemerProvider(
-          theme: ObsidianAudioTheme.model,
+          theme: AulosAudioTheme.model,
           child: MultiProvider(
             providers: [
               ChangeNotifierProvider<LibraryViewModel>.value(

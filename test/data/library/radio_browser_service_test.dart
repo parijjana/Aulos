@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:localaudioplayer/data/library/radio_browser_service.dart';
+import 'package:aulos/data/library/radio_browser_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'dart:convert';

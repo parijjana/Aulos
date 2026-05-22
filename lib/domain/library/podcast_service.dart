@@ -1,4 +1,4 @@
-import 'package:localaudioplayer/data/database/app_database.dart';
+import 'package:aulos/data/database/app_database.dart';
 
 abstract class PodcastService {
   Future<Podcast> subscribeToFeed(String url);

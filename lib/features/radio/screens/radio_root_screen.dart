@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:localaudioplayer/features/library/widgets/radio_library_view.dart';
-import 'package:localaudioplayer/features/radio/screens/radio_browser_screen.dart';
+import 'package:aulos/features/library/widgets/radio_library_view.dart';
+import 'package:aulos/features/radio/screens/radio_browser_screen.dart';
 
 class RadioRootScreen extends StatefulWidget {
   const RadioRootScreen({super.key});

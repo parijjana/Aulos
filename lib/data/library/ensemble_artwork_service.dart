@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-import 'package:localaudioplayer/data/library/artwork_service.dart';
+import 'package:aulos/data/library/artwork_service.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
 
