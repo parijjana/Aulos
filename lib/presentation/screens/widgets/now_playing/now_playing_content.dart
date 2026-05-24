@@ -3,6 +3,7 @@ import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/screens/widgets/html_text.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:typed_data';
 
 class NowPlayingContent extends StatelessWidget {
@@ -25,20 +26,36 @@ class NowPlayingContent extends StatelessWidget {
     }
 
     if (mediaType == MediaType.radio) {
+      // Parse homepage from description (Format: UUID|HOMEPAGE)
+      final metadata = playerVM.currentShowNotes?.split('|');
+      final homepage = (metadata != null && metadata.length > 1) ? metadata[1] : null;
+
       return SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.only(top: 40),
+          padding: const EdgeInsets.fromLTRB(32, 40, 32, 40),
           child: Center(
             child: Column(
               children: [
                 const Icon(Icons.radio, size: 64, color: Colors.white10),
+                const SizedBox(height: 32),
+                if (playerVM.currentStreamMetadata != null)
+                  Text(
+                    playerVM.currentStreamMetadata!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900, 
+                      fontSize: 20, 
+                      color: theme.colorScheme.primary,
+                      letterSpacing: -0.5,
+                    ),
+                  )
+                else
+                  Text(
+                    'Live Stream: ${playerVM.displayTitle}', 
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 const SizedBox(height: 24),
-                Text(
-                  playerVM.currentStreamMetadata ?? 'Live Stream: ${playerVM.displayTitle}', 
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
@@ -55,6 +72,19 @@ class NowPlayingContent extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (homepage != null && homepage.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(homepage)),
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('VISIT STATION HOMEPAGE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                      foregroundColor: theme.colorScheme.onSurface,
+                      elevation: 0,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

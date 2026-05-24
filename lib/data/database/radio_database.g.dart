@@ -151,6 +151,51 @@ class $RadioStationsTable extends RadioStations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isHiddenMeta = const VerificationMeta(
+    'isHidden',
+  );
+  @override
+  late final GeneratedColumn<bool> isHidden = GeneratedColumn<bool>(
+    'is_hidden',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_hidden" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isAvailableMeta = const VerificationMeta(
+    'isAvailable',
+  );
+  @override
+  late final GeneratedColumn<bool> isAvailable = GeneratedColumn<bool>(
+    'is_available',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_available" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _lastCheckMeta = const VerificationMeta(
     'lastCheck',
   );
@@ -177,6 +222,9 @@ class $RadioStationsTable extends RadioStations
     bitrate,
     codec,
     isFavorite,
+    isPinned,
+    isHidden,
+    isAvailable,
     lastCheck,
   ];
   @override
@@ -275,6 +323,27 @@ class $RadioStationsTable extends RadioStations
         isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
       );
     }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
+    if (data.containsKey('is_hidden')) {
+      context.handle(
+        _isHiddenMeta,
+        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
+      );
+    }
+    if (data.containsKey('is_available')) {
+      context.handle(
+        _isAvailableMeta,
+        isAvailable.isAcceptableOrUnknown(
+          data['is_available']!,
+          _isAvailableMeta,
+        ),
+      );
+    }
     if (data.containsKey('last_check')) {
       context.handle(
         _lastCheckMeta,
@@ -342,6 +411,18 @@ class $RadioStationsTable extends RadioStations
         DriftSqlType.bool,
         data['${effectivePrefix}is_favorite'],
       )!,
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
+      isHidden: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_hidden'],
+      )!,
+      isAvailable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_available'],
+      )!,
       lastCheck: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_check'],
@@ -369,6 +450,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
   final int bitrate;
   final String? codec;
   final bool isFavorite;
+  final bool isPinned;
+  final bool isHidden;
+  final bool isAvailable;
   final DateTime? lastCheck;
   const RadioStation({
     required this.id,
@@ -384,6 +468,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
     required this.bitrate,
     this.codec,
     required this.isFavorite,
+    required this.isPinned,
+    required this.isHidden,
+    required this.isAvailable,
     this.lastCheck,
   });
   @override
@@ -414,6 +501,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
       map['codec'] = Variable<String>(codec);
     }
     map['is_favorite'] = Variable<bool>(isFavorite);
+    map['is_pinned'] = Variable<bool>(isPinned);
+    map['is_hidden'] = Variable<bool>(isHidden);
+    map['is_available'] = Variable<bool>(isAvailable);
     if (!nullToAbsent || lastCheck != null) {
       map['last_check'] = Variable<DateTime>(lastCheck);
     }
@@ -445,6 +535,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
           ? const Value.absent()
           : Value(codec),
       isFavorite: Value(isFavorite),
+      isPinned: Value(isPinned),
+      isHidden: Value(isHidden),
+      isAvailable: Value(isAvailable),
       lastCheck: lastCheck == null && nullToAbsent
           ? const Value.absent()
           : Value(lastCheck),
@@ -470,6 +563,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
       bitrate: serializer.fromJson<int>(json['bitrate']),
       codec: serializer.fromJson<String?>(json['codec']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
+      isHidden: serializer.fromJson<bool>(json['isHidden']),
+      isAvailable: serializer.fromJson<bool>(json['isAvailable']),
       lastCheck: serializer.fromJson<DateTime?>(json['lastCheck']),
     );
   }
@@ -490,6 +586,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
       'bitrate': serializer.toJson<int>(bitrate),
       'codec': serializer.toJson<String?>(codec),
       'isFavorite': serializer.toJson<bool>(isFavorite),
+      'isPinned': serializer.toJson<bool>(isPinned),
+      'isHidden': serializer.toJson<bool>(isHidden),
+      'isAvailable': serializer.toJson<bool>(isAvailable),
       'lastCheck': serializer.toJson<DateTime?>(lastCheck),
     };
   }
@@ -508,6 +607,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
     int? bitrate,
     Value<String?> codec = const Value.absent(),
     bool? isFavorite,
+    bool? isPinned,
+    bool? isHidden,
+    bool? isAvailable,
     Value<DateTime?> lastCheck = const Value.absent(),
   }) => RadioStation(
     id: id ?? this.id,
@@ -523,6 +625,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
     bitrate: bitrate ?? this.bitrate,
     codec: codec.present ? codec.value : this.codec,
     isFavorite: isFavorite ?? this.isFavorite,
+    isPinned: isPinned ?? this.isPinned,
+    isHidden: isHidden ?? this.isHidden,
+    isAvailable: isAvailable ?? this.isAvailable,
     lastCheck: lastCheck.present ? lastCheck.value : this.lastCheck,
   );
   RadioStation copyWithCompanion(RadioStationsCompanion data) {
@@ -544,6 +649,11 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
           : this.isFavorite,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
+      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      isAvailable: data.isAvailable.present
+          ? data.isAvailable.value
+          : this.isAvailable,
       lastCheck: data.lastCheck.present ? data.lastCheck.value : this.lastCheck,
     );
   }
@@ -564,6 +674,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
           ..write('bitrate: $bitrate, ')
           ..write('codec: $codec, ')
           ..write('isFavorite: $isFavorite, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('isAvailable: $isAvailable, ')
           ..write('lastCheck: $lastCheck')
           ..write(')'))
         .toString();
@@ -584,6 +697,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
     bitrate,
     codec,
     isFavorite,
+    isPinned,
+    isHidden,
+    isAvailable,
     lastCheck,
   );
   @override
@@ -603,6 +719,9 @@ class RadioStation extends DataClass implements Insertable<RadioStation> {
           other.bitrate == this.bitrate &&
           other.codec == this.codec &&
           other.isFavorite == this.isFavorite &&
+          other.isPinned == this.isPinned &&
+          other.isHidden == this.isHidden &&
+          other.isAvailable == this.isAvailable &&
           other.lastCheck == this.lastCheck);
 }
 
@@ -620,6 +739,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
   final Value<int> bitrate;
   final Value<String?> codec;
   final Value<bool> isFavorite;
+  final Value<bool> isPinned;
+  final Value<bool> isHidden;
+  final Value<bool> isAvailable;
   final Value<DateTime?> lastCheck;
   const RadioStationsCompanion({
     this.id = const Value.absent(),
@@ -635,6 +757,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
     this.bitrate = const Value.absent(),
     this.codec = const Value.absent(),
     this.isFavorite = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.isAvailable = const Value.absent(),
     this.lastCheck = const Value.absent(),
   });
   RadioStationsCompanion.insert({
@@ -651,6 +776,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
     this.bitrate = const Value.absent(),
     this.codec = const Value.absent(),
     this.isFavorite = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.isAvailable = const Value.absent(),
     this.lastCheck = const Value.absent(),
   }) : stationUuid = Value(stationUuid),
        name = Value(name),
@@ -669,6 +797,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
     Expression<int>? bitrate,
     Expression<String>? codec,
     Expression<bool>? isFavorite,
+    Expression<bool>? isPinned,
+    Expression<bool>? isHidden,
+    Expression<bool>? isAvailable,
     Expression<DateTime>? lastCheck,
   }) {
     return RawValuesInsertable({
@@ -685,6 +816,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
       if (bitrate != null) 'bitrate': bitrate,
       if (codec != null) 'codec': codec,
       if (isFavorite != null) 'is_favorite': isFavorite,
+      if (isPinned != null) 'is_pinned': isPinned,
+      if (isHidden != null) 'is_hidden': isHidden,
+      if (isAvailable != null) 'is_available': isAvailable,
       if (lastCheck != null) 'last_check': lastCheck,
     });
   }
@@ -703,6 +837,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
     Value<int>? bitrate,
     Value<String?>? codec,
     Value<bool>? isFavorite,
+    Value<bool>? isPinned,
+    Value<bool>? isHidden,
+    Value<bool>? isAvailable,
     Value<DateTime?>? lastCheck,
   }) {
     return RadioStationsCompanion(
@@ -719,6 +856,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
       bitrate: bitrate ?? this.bitrate,
       codec: codec ?? this.codec,
       isFavorite: isFavorite ?? this.isFavorite,
+      isPinned: isPinned ?? this.isPinned,
+      isHidden: isHidden ?? this.isHidden,
+      isAvailable: isAvailable ?? this.isAvailable,
       lastCheck: lastCheck ?? this.lastCheck,
     );
   }
@@ -765,6 +905,15 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
     if (isFavorite.present) {
       map['is_favorite'] = Variable<bool>(isFavorite.value);
     }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
+    if (isHidden.present) {
+      map['is_hidden'] = Variable<bool>(isHidden.value);
+    }
+    if (isAvailable.present) {
+      map['is_available'] = Variable<bool>(isAvailable.value);
+    }
     if (lastCheck.present) {
       map['last_check'] = Variable<DateTime>(lastCheck.value);
     }
@@ -787,6 +936,9 @@ class RadioStationsCompanion extends UpdateCompanion<RadioStation> {
           ..write('bitrate: $bitrate, ')
           ..write('codec: $codec, ')
           ..write('isFavorite: $isFavorite, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('isAvailable: $isAvailable, ')
           ..write('lastCheck: $lastCheck')
           ..write(')'))
         .toString();
@@ -1078,6 +1230,9 @@ typedef $$RadioStationsTableCreateCompanionBuilder =
       Value<int> bitrate,
       Value<String?> codec,
       Value<bool> isFavorite,
+      Value<bool> isPinned,
+      Value<bool> isHidden,
+      Value<bool> isAvailable,
       Value<DateTime?> lastCheck,
     });
 typedef $$RadioStationsTableUpdateCompanionBuilder =
@@ -1095,6 +1250,9 @@ typedef $$RadioStationsTableUpdateCompanionBuilder =
       Value<int> bitrate,
       Value<String?> codec,
       Value<bool> isFavorite,
+      Value<bool> isPinned,
+      Value<bool> isHidden,
+      Value<bool> isAvailable,
       Value<DateTime?> lastCheck,
     });
 
@@ -1169,6 +1327,21 @@ class $$RadioStationsTableFilterComposer
 
   ColumnFilters<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isAvailable => $composableBuilder(
+    column: $table.isAvailable,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1252,6 +1425,21 @@ class $$RadioStationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isAvailable => $composableBuilder(
+    column: $table.isAvailable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastCheck => $composableBuilder(
     column: $table.lastCheck,
     builder: (column) => ColumnOrderings(column),
@@ -1310,6 +1498,17 @@ class $$RadioStationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
+  GeneratedColumn<bool> get isHidden =>
+      $composableBuilder(column: $table.isHidden, builder: (column) => column);
+
+  GeneratedColumn<bool> get isAvailable => $composableBuilder(
+    column: $table.isAvailable,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get lastCheck =>
       $composableBuilder(column: $table.lastCheck, builder: (column) => column);
 }
@@ -1360,6 +1559,9 @@ class $$RadioStationsTableTableManager
                 Value<int> bitrate = const Value.absent(),
                 Value<String?> codec = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<bool> isAvailable = const Value.absent(),
                 Value<DateTime?> lastCheck = const Value.absent(),
               }) => RadioStationsCompanion(
                 id: id,
@@ -1375,6 +1577,9 @@ class $$RadioStationsTableTableManager
                 bitrate: bitrate,
                 codec: codec,
                 isFavorite: isFavorite,
+                isPinned: isPinned,
+                isHidden: isHidden,
+                isAvailable: isAvailable,
                 lastCheck: lastCheck,
               ),
           createCompanionCallback:
@@ -1392,6 +1597,9 @@ class $$RadioStationsTableTableManager
                 Value<int> bitrate = const Value.absent(),
                 Value<String?> codec = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<bool> isAvailable = const Value.absent(),
                 Value<DateTime?> lastCheck = const Value.absent(),
               }) => RadioStationsCompanion.insert(
                 id: id,
@@ -1407,6 +1615,9 @@ class $$RadioStationsTableTableManager
                 bitrate: bitrate,
                 codec: codec,
                 isFavorite: isFavorite,
+                isPinned: isPinned,
+                isHidden: isHidden,
+                isAvailable: isAvailable,
                 lastCheck: lastCheck,
               ),
           withReferenceMapper: (p0) => p0

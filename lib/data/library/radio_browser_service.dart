@@ -41,6 +41,9 @@ class RadioStationResult {
       bitrate: bitrate,
       codec: codec,
       isFavorite: false,
+      isPinned: false,
+      isHidden: false,
+      isAvailable: true,
     );
   }
 
@@ -109,6 +112,38 @@ class RadioBrowserService with UniversalLog {
     final url = '$_baseUrl/stations/bytag/${Uri.encodeComponent(tag)}?limit=$limit&order=votes&reverse=true';
     final results = await _dispatch(url);
     return results.map((r) => r.toStation()).toList();
+  }
+
+  Future<List<RadioStation>> getByCountry(String country, int limit) async {
+    final url = '$_baseUrl/stations/bycountry/${Uri.encodeComponent(country)}?limit=$limit&order=votes&reverse=true';
+    final results = await _dispatch(url);
+    return results.map((r) => r.toStation()).toList();
+  }
+
+  Future<List<RadioStation>> getByLanguage(String language, int limit) async {
+    final url = '$_baseUrl/stations/bylanguage/${Uri.encodeComponent(language)}?limit=$limit&order=votes&reverse=true';
+    final results = await _dispatch(url);
+    return results.map((r) => r.toStation()).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getAllCountries() async {
+    final url = '$_baseUrl/countries?order=stationcount&reverse=true';
+    final response = await _client.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    }
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getAllLanguages() async {
+    final url = '$_baseUrl/languages?order=stationcount&reverse=true';
+    final response = await _client.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    }
+    return [];
   }
 
   Future<List<Map<String, dynamic>>> getTopTags(int limit) async {

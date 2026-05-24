@@ -1,27 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/display_view_model.dart';
-import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:aulos/data/database/radio_database.dart';
-import 'package:aulos/data/library/radio_browser_service.dart';
 import 'package:provider/provider.dart';
 
 class RadioBrowserScreen extends StatefulWidget {
-  const RadioBrowserScreen({super.key});
+  final VoidCallback? onBack;
+  const RadioBrowserScreen({super.key, this.onBack});
 
   @override
   State<RadioBrowserScreen> createState() => _RadioBrowserScreenState();
 }
 
+enum _DiscoveryTab { genre, country, language }
+
 class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+  
   bool _isSearching = false;
-  String? _selectedTag;
+  bool _searchExpanded = false;
+  _DiscoveryTab _activeTab = _DiscoveryTab.genre;
+  
+  String? _selectedDetailTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients && _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final vm = context.read<RadioViewModel>();
+      if (!vm.isLoading) {
+        vm.checkMoreUnavailableHealth();
+      }
+    }
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -34,10 +57,11 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
-            _buildSearchHeader(radioVM, theme),
+            const SizedBox(height: 16),
+            _buildTopBar(radioVM, theme),
             const SizedBox(height: 16),
             Expanded(
               child: _buildBody(radioVM, playerVM, theme),
@@ -48,170 +72,257 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
     );
   }
 
-  Widget _buildBody(RadioViewModel vm, PlayerViewModel playerVM, ThemeData theme) {
-    if (vm.isLoading && vm.categories.isEmpty && vm.browseResults.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (vm.error != null && vm.categories.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text('Failed to load stations', style: TextStyle(color: theme.colorScheme.error)),
-            const SizedBox(height: 8),
-            ElevatedButton(onPressed: vm.refresh, child: const Text('RETRY')),
-          ],
-        ),
-      );
-    }
-    
-    return RefreshIndicator(
-      onRefresh: vm.refresh,
-      child: _selectedTag != null
-          ? _buildCategoryDetailView(vm, playerVM, theme)
-          : _isSearching
-              ? _buildSearchResults(vm, playerVM, theme)
-              : _buildDiscoveryHome(vm, theme),
-    );
-  }
+  Widget _buildTopBar(RadioViewModel vm, ThemeData theme) {
+    final bool showTabs = !_searchExpanded && !_isSearching && _selectedDetailTitle == null;
 
-  Widget _buildSearchHeader(RadioViewModel vm, ThemeData theme) {
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            if (_isSearching || _selectedTag != null)
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  setState(() {
-                    _isSearching = false;
-                    _selectedTag = null;
-                  });
-                  _searchController.clear();
-                },
-              ),
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search 40,000+ stations...',
-                  border: InputBorder.none,
-                  prefixIcon: (_isSearching || _selectedTag != null) ? null : const Icon(Icons.search, size: 20),
-                ),
-                style: TextStyle(color: theme.colorScheme.onSurface),
-                onChanged: (val) {
-                  if (!_isSearching && val.isNotEmpty) {
-                    setState(() => _isSearching = true);
-                  }
-                },
-                onSubmitted: (val) => vm.search(val),
-              ),
-            ),
+    return SizedBox(
+      height: 40,
+      child: Row(
+        children: [
+          // 1. Back/Context Toggle (Left side)
+          if (_selectedDetailTitle != null || _isSearching)
             IconButton(
-              icon: Icon(Icons.add_link, color: theme.colorScheme.primary),
-              onPressed: () => _showManualStationDialog(vm, theme),
-              tooltip: 'Add Manual URL',
+              icon: const Icon(Icons.arrow_back_ios, size: 16),
+              onPressed: () => setState(() {
+                _selectedDetailTitle = null;
+                _isSearching = false;
+                _searchExpanded = false;
+                _searchController.clear();
+              }),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            )
+          else if (showTabs)
+            Text(
+              'EXPLORE RADIO',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                letterSpacing: 1.5,
+              ),
             ),
+          
+          const SizedBox(width: 16),
+
+          // 2. Tabs (Responsive Row)
+          if (showTabs) ...[
+            _buildTabButton('GENRE', _DiscoveryTab.genre, theme),
+            const SizedBox(width: 4),
+            _buildTabButton('REGION', _DiscoveryTab.country, theme),
+            const SizedBox(width: 4),
+            _buildTabButton('LANG', _DiscoveryTab.language, theme),
           ],
-        ),
+          
+          const Spacer(),
+          
+          // 3. Expandable Search
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: _searchExpanded ? 180 : 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.search, size: 16, color: _searchExpanded ? theme.colorScheme.primary : null),
+                  onPressed: () => setState(() {
+                    _searchExpanded = !_searchExpanded;
+                    if (_searchExpanded) _searchFocus.requestFocus();
+                  }),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                if (_searchExpanded) ...[
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocus,
+                      decoration: const InputDecoration(
+                        hintText: 'Search...',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      style: const TextStyle(fontSize: 12),
+                      onSubmitted: (val) {
+                        if (val.isNotEmpty) {
+                          setState(() => _isSearching = true);
+                          vm.search(val);
+                        }
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 14),
+                    onPressed: () {
+                      if (_searchController.text.isNotEmpty) {
+                        setState(() => _searchController.clear());
+                      } else {
+                        setState(() {
+                          _isSearching = false;
+                          _searchExpanded = false;
+                          _searchController.clear();
+                          _searchFocus.unfocus();
+                        });
+                      }
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // 4. Manual Add
+          IconButton(
+            icon: const Icon(Icons.add_link, size: 20),
+            onPressed: () => _showManualStationDialog(vm, theme),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            tooltip: 'Add Manual URL',
+          ),
+
+          const SizedBox(width: 12),
+
+          // 5. Global BACK button (Replaces FIND MORE position)
+          if (widget.onBack != null && !(_selectedDetailTitle != null || _isSearching))
+            TextButton.icon(
+              onPressed: widget.onBack,
+              icon: const Icon(Icons.library_music_outlined, size: 16),
+              label: const Text('LIBRARY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildDiscoveryHome(RadioViewModel vm, ThemeData theme) {
-    return ListView(
-      children: [
-        _buildSectionHeader(theme, 'BROWSE BY GENRE'),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.2,
-          ),
-          itemCount: vm.categories.length,
-          itemBuilder: (context, index) {
-            final cat = vm.categories[index];
-            return _buildCategoryChip(cat, theme, vm);
-          },
-        ),
-        const SizedBox(height: 32),
-        _buildSectionHeader(theme, 'TOP RATED STATIONS'),
-        _buildTopStationsGrid(vm, theme),
-      ],
-    );
-  }
-
-  Widget _buildCategoryChip(RadioCategory cat, ThemeData theme, RadioViewModel vm) {
+  Widget _buildTabButton(String label, _DiscoveryTab tab, ThemeData theme) {
+    final isActive = _activeTab == tab;
     return InkWell(
-      onTap: () {
-        setState(() => _selectedTag = cat.name);
-        vm.browseCategory(cat.name);
-      },
+      onTap: () => setState(() => _activeTab = tab),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+          color: isActive ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: isActive ? null : Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
         ),
         child: Text(
-          cat.name.toUpperCase(),
-          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.0,
+            color: isActive ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTopStationsGrid(RadioViewModel vm, ThemeData theme) {
-    if (vm.browseResults.isEmpty && !vm.isLoading) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32),
-          child: Column(
-            children: [
-              const Icon(Icons.search_off, size: 48, color: Colors.white10),
-              const SizedBox(height: 16),
-              Text(
-                'No stations found.',
-                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.38)),
-              ),
-            ],
-          ),
-        ),
-      );
+  Widget _buildBody(RadioViewModel vm, PlayerViewModel playerVM, ThemeData theme) {
+    if (vm.isLoading && vm.browseResults.isEmpty && vm.searchResults.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // For simplicity, showing a list here. Can be changed to grid.
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: vm.browseResults.length > 20 ? 20 : vm.browseResults.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+    if (_isSearching) {
+      return _buildStationList(vm.searchResults, theme, vm, 'SEARCH RESULTS');
+    }
+
+    if (_selectedDetailTitle != null) {
+      return _buildStationList(vm.browseResults, theme, vm, _selectedDetailTitle!);
+    }
+
+    switch (_activeTab) {
+      case _DiscoveryTab.genre:
+        return _buildGrid(
+          vm.categories.map((c) => c.name).toList(),
+          theme,
+          (val) {
+            setState(() => _selectedDetailTitle = 'GENRE: ${val.toUpperCase()}');
+            vm.browseCategory(val).then((_) => vm.checkHealthForBrowseResults());
+          }
+        );
+      case _DiscoveryTab.country:
+        return _buildGrid(
+          vm.allCountries.map((c) => c['name'] as String).toList(),
+          theme,
+          (val) {
+            setState(() => _selectedDetailTitle = 'COUNTRY: ${val.toUpperCase()}');
+            vm.browseByCountry(val).then((_) => vm.checkHealthForBrowseResults());
+          }
+        );
+      case _DiscoveryTab.language:
+        return _buildGrid(
+          vm.allLanguages.map((l) => l['name'] as String).toList(),
+          theme,
+          (val) {
+            setState(() => _selectedDetailTitle = 'LANGUAGE: ${val.toUpperCase()}');
+            vm.browseByLanguage(val).then((_) => vm.checkHealthForBrowseResults());
+          }
+        );
+    }
+  }
+
+  Widget _buildGrid(List<String> items, ThemeData theme, ValueChanged<String> onTap) {
+    return GridView.builder(
+      key: PageStorageKey('radio_grid_${_activeTab.name}'),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 2.2,
+      ),
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final station = vm.browseResults[index];
-        return _buildStationTile(station, theme, vm);
+        final item = items[index];
+        return InkWell(
+          onTap: () => onTap(item),
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+            ),
+            child: Text(
+              item.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+            ),
+          ),
+        );
       },
     );
   }
 
-  Widget _buildCategoryDetailView(RadioViewModel vm, PlayerViewModel playerVM, ThemeData theme) {
+  Widget _buildStationList(List<RadioStation> stations, ThemeData theme, RadioViewModel vm, String title) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader(theme, 'GENRE: ${_selectedTag!.toUpperCase()}'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.primary, letterSpacing: 1.5)),
+        ),
         Expanded(
           child: ListView.separated(
-            itemCount: vm.browseResults.length,
+            controller: _scrollController,
+            itemCount: stations.length,
             separatorBuilder: (_, __) => Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
             itemBuilder: (context, index) {
-              final station = vm.browseResults[index];
+              final station = stations[index];
               return _buildStationTile(station, theme, vm);
             },
           ),
@@ -222,60 +333,73 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
 
   Widget _buildStationTile(RadioStation station, ThemeData theme, RadioViewModel vm) {
     final playerVM = context.read<PlayerViewModel>();
-    return ListTile(
-      dense: true,
-      leading: _buildFavicon(station.favicon, theme),
-      title: Text(station.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-      subtitle: Text('${station.country ?? "Global"} • ${station.bitrate}kbps', style: const TextStyle(fontSize: 10)),
-      trailing: IconButton(
-        icon: Icon(station.isFavorite ? Icons.favorite : Icons.favorite_border, 
-             color: station.isFavorite ? Colors.pinkAccent : null, size: 18),
-        onPressed: () => vm.toggleFavorite(station),
-      ),
-      onTap: () => vm.playStation(station, playerVM),
-    );
-  }
-
-  Widget _buildSearchResults(RadioViewModel vm, PlayerViewModel playerVM, ThemeData theme) {
-    return ListView.separated(
-      itemCount: vm.searchResults.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-      itemBuilder: (context, index) {
-        final station = vm.searchResults[index];
-        return _buildStationTile(station, theme, vm);
-      },
-    );
-  }
-
-  Widget _buildFavicon(String? url, ThemeData theme) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: url != null && url.isNotEmpty
-            ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.radio, size: 16))
-            : const Icon(Icons.radio, size: 16),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(ThemeData theme, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: theme.colorScheme.primary.withValues(alpha: 0.7),
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.5,
+    final bool isAvailable = station.isAvailable;
+    
+    return Opacity(
+      opacity: isAvailable ? 1.0 : 0.4,
+      child: ListTile(
+        dense: true,
+        leading: _buildFavicon(station, theme),
+        title: Text(
+          station.name, 
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            fontSize: 13,
+            decoration: isAvailable ? null : TextDecoration.lineThrough,
+          )
         ),
+        subtitle: Row(
+          children: [
+            Text('${station.country ?? "Global"} • ${station.bitrate}kbps', style: const TextStyle(fontSize: 10)),
+            const Spacer(),
+            const Icon(Icons.thumb_up_alt_outlined, size: 10, color: Colors.white38),
+            const SizedBox(width: 4),
+            Text(station.votes.toString(), style: const TextStyle(fontSize: 10, color: Colors.white38)),
+          ],
+        ),
+        trailing: IconButton(
+          icon: Icon(station.isFavorite ? Icons.library_add_check : Icons.library_add, 
+               color: station.isFavorite ? theme.colorScheme.primary : null, size: 18),
+          onPressed: () => vm.toggleFavorite(station),
+        ),
+        onTap: () => vm.playStation(station, playerVM),
       ),
+    );
+  }
+
+  Widget _buildFavicon(RadioStation station, ThemeData theme) {
+    final url = station.favicon;
+    return Stack(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: url != null && url.isNotEmpty
+                ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.radio, size: 16))
+                : const Icon(Icons.radio, size: 16),
+          ),
+        ),
+        if (station.lastCheck != null)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: station.isAvailable ? Colors.greenAccent : Colors.redAccent,
+                shape: BoxShape.circle,
+                border: Border.all(color: theme.colorScheme.surface, width: 1),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

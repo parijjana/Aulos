@@ -81,7 +81,7 @@ void main() async {
     await windowManager.ensureInitialized();
     final WindowOptions windowOptions = const WindowOptions(
       size: Size(1280, 720),
-      minimumSize: Size(640, 48),
+      minimumSize: Size(400, 600),
       center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
@@ -172,6 +172,7 @@ void main() async {
     queueVM: queueViewModel,
     connectionManager: connectionManager,
     db: database,
+    radioDb: radioDb,
     settingsVM: settingsViewModel,
   );
   final playlistViewModel = PlaylistViewModel(

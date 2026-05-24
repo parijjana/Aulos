@@ -3,6 +3,7 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/presentation/screens/widgets/html_text.dart';
+import 'package:aulos/presentation/screens/widgets/bookmarks_view.dart';
 import 'package:provider/provider.dart';
 
 class PodcastNotesPane extends StatelessWidget {
@@ -36,33 +37,55 @@ class PodcastNotesPane extends StatelessWidget {
     }
 
     final ep = selectedEpisode!;
-    return Column(
-      children: [
-        _buildNotesHeader(ep, theme),
-        const Divider(height: 1),
-        Expanded(
-          child: SingleChildScrollView(
-            key: PageStorageKey('podcast_notes_scroll_${ep.id}'),
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          _buildNotesHeader(ep, theme),
+          TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            indicatorSize: TabBarIndicatorSize.label,
+            dividerColor: Colors.transparent,
+            labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+            tabs: const [
+              Tab(text: 'SHOW NOTES'),
+              Tab(text: 'SAVED CLIPS'),
+            ],
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: TabBarView(
               children: [
-                Text(ep.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.2)),
-                const SizedBox(height: 8),
-                Text(
-                  ep.pubDate?.toString().split(' ')[0] ?? 'Unknown Date',
-                  style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                SingleChildScrollView(
+                  key: PageStorageKey('podcast_notes_scroll_${ep.id}'),
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(ep.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.2)),
+                      const SizedBox(height: 8),
+                      Text(
+                        ep.pubDate?.toString().split(' ')[0] ?? 'Unknown Date',
+                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(height: 32),
+                      HtmlText(
+                        ep.description ?? 'No notes available.',
+                        onTimestampTap: (duration) => playerVM.seek(duration),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
-                HtmlText(
-                  ep.description ?? 'No notes available.',
-                  onTimestampTap: (duration) => playerVM.seek(duration),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: BookmarksView(trackPath: ep.localFilePath ?? ep.audioUrl),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

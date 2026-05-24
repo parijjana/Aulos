@@ -4841,16 +4841,27 @@ class $BookmarksTable extends Bookmarks
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _positionMsMeta = const VerificationMeta(
-    'positionMs',
+  static const VerificationMeta _startTimeMsMeta = const VerificationMeta(
+    'startTimeMs',
   );
   @override
-  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
-    'position_ms',
+  late final GeneratedColumn<int> startTimeMs = GeneratedColumn<int>(
+    'start_time_ms',
     aliasedName,
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endTimeMsMeta = const VerificationMeta(
+    'endTimeMs',
+  );
+  @override
+  late final GeneratedColumn<int> endTimeMs = GeneratedColumn<int>(
+    'end_time_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -4869,7 +4880,8 @@ class $BookmarksTable extends Bookmarks
     id,
     trackPath,
     title,
-    positionMs,
+    startTimeMs,
+    endTimeMs,
     createdAt,
   ];
   @override
@@ -4903,13 +4915,22 @@ class $BookmarksTable extends Bookmarks
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
-    if (data.containsKey('position_ms')) {
+    if (data.containsKey('start_time_ms')) {
       context.handle(
-        _positionMsMeta,
-        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+        _startTimeMsMeta,
+        startTimeMs.isAcceptableOrUnknown(
+          data['start_time_ms']!,
+          _startTimeMsMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_positionMsMeta);
+      context.missing(_startTimeMsMeta);
+    }
+    if (data.containsKey('end_time_ms')) {
+      context.handle(
+        _endTimeMsMeta,
+        endTimeMs.isAcceptableOrUnknown(data['end_time_ms']!, _endTimeMsMeta),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -4938,10 +4959,14 @@ class $BookmarksTable extends Bookmarks
         DriftSqlType.string,
         data['${effectivePrefix}title'],
       )!,
-      positionMs: attachedDatabase.typeMapping.read(
+      startTimeMs: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}position_ms'],
+        data['${effectivePrefix}start_time_ms'],
       )!,
+      endTimeMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_time_ms'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -4959,13 +4984,15 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   final int id;
   final String trackPath;
   final String title;
-  final int positionMs;
+  final int startTimeMs;
+  final int? endTimeMs;
   final DateTime createdAt;
   const Bookmark({
     required this.id,
     required this.trackPath,
     required this.title,
-    required this.positionMs,
+    required this.startTimeMs,
+    this.endTimeMs,
     required this.createdAt,
   });
   @override
@@ -4974,7 +5001,10 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     map['id'] = Variable<int>(id);
     map['track_path'] = Variable<String>(trackPath);
     map['title'] = Variable<String>(title);
-    map['position_ms'] = Variable<int>(positionMs);
+    map['start_time_ms'] = Variable<int>(startTimeMs);
+    if (!nullToAbsent || endTimeMs != null) {
+      map['end_time_ms'] = Variable<int>(endTimeMs);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -4984,7 +5014,10 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       id: Value(id),
       trackPath: Value(trackPath),
       title: Value(title),
-      positionMs: Value(positionMs),
+      startTimeMs: Value(startTimeMs),
+      endTimeMs: endTimeMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endTimeMs),
       createdAt: Value(createdAt),
     );
   }
@@ -4998,7 +5031,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       id: serializer.fromJson<int>(json['id']),
       trackPath: serializer.fromJson<String>(json['trackPath']),
       title: serializer.fromJson<String>(json['title']),
-      positionMs: serializer.fromJson<int>(json['positionMs']),
+      startTimeMs: serializer.fromJson<int>(json['startTimeMs']),
+      endTimeMs: serializer.fromJson<int?>(json['endTimeMs']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -5009,7 +5043,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       'id': serializer.toJson<int>(id),
       'trackPath': serializer.toJson<String>(trackPath),
       'title': serializer.toJson<String>(title),
-      'positionMs': serializer.toJson<int>(positionMs),
+      'startTimeMs': serializer.toJson<int>(startTimeMs),
+      'endTimeMs': serializer.toJson<int?>(endTimeMs),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -5018,13 +5053,15 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     int? id,
     String? trackPath,
     String? title,
-    int? positionMs,
+    int? startTimeMs,
+    Value<int?> endTimeMs = const Value.absent(),
     DateTime? createdAt,
   }) => Bookmark(
     id: id ?? this.id,
     trackPath: trackPath ?? this.trackPath,
     title: title ?? this.title,
-    positionMs: positionMs ?? this.positionMs,
+    startTimeMs: startTimeMs ?? this.startTimeMs,
+    endTimeMs: endTimeMs.present ? endTimeMs.value : this.endTimeMs,
     createdAt: createdAt ?? this.createdAt,
   );
   Bookmark copyWithCompanion(BookmarksCompanion data) {
@@ -5032,9 +5069,10 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       id: data.id.present ? data.id.value : this.id,
       trackPath: data.trackPath.present ? data.trackPath.value : this.trackPath,
       title: data.title.present ? data.title.value : this.title,
-      positionMs: data.positionMs.present
-          ? data.positionMs.value
-          : this.positionMs,
+      startTimeMs: data.startTimeMs.present
+          ? data.startTimeMs.value
+          : this.startTimeMs,
+      endTimeMs: data.endTimeMs.present ? data.endTimeMs.value : this.endTimeMs,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -5045,14 +5083,16 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           ..write('id: $id, ')
           ..write('trackPath: $trackPath, ')
           ..write('title: $title, ')
-          ..write('positionMs: $positionMs, ')
+          ..write('startTimeMs: $startTimeMs, ')
+          ..write('endTimeMs: $endTimeMs, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, trackPath, title, positionMs, createdAt);
+  int get hashCode =>
+      Object.hash(id, trackPath, title, startTimeMs, endTimeMs, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5060,7 +5100,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           other.id == this.id &&
           other.trackPath == this.trackPath &&
           other.title == this.title &&
-          other.positionMs == this.positionMs &&
+          other.startTimeMs == this.startTimeMs &&
+          other.endTimeMs == this.endTimeMs &&
           other.createdAt == this.createdAt);
 }
 
@@ -5068,36 +5109,41 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   final Value<int> id;
   final Value<String> trackPath;
   final Value<String> title;
-  final Value<int> positionMs;
+  final Value<int> startTimeMs;
+  final Value<int?> endTimeMs;
   final Value<DateTime> createdAt;
   const BookmarksCompanion({
     this.id = const Value.absent(),
     this.trackPath = const Value.absent(),
     this.title = const Value.absent(),
-    this.positionMs = const Value.absent(),
+    this.startTimeMs = const Value.absent(),
+    this.endTimeMs = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   BookmarksCompanion.insert({
     this.id = const Value.absent(),
     required String trackPath,
     required String title,
-    required int positionMs,
+    required int startTimeMs,
+    this.endTimeMs = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : trackPath = Value(trackPath),
        title = Value(title),
-       positionMs = Value(positionMs);
+       startTimeMs = Value(startTimeMs);
   static Insertable<Bookmark> custom({
     Expression<int>? id,
     Expression<String>? trackPath,
     Expression<String>? title,
-    Expression<int>? positionMs,
+    Expression<int>? startTimeMs,
+    Expression<int>? endTimeMs,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (trackPath != null) 'track_path': trackPath,
       if (title != null) 'title': title,
-      if (positionMs != null) 'position_ms': positionMs,
+      if (startTimeMs != null) 'start_time_ms': startTimeMs,
+      if (endTimeMs != null) 'end_time_ms': endTimeMs,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -5106,14 +5152,16 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     Value<int>? id,
     Value<String>? trackPath,
     Value<String>? title,
-    Value<int>? positionMs,
+    Value<int>? startTimeMs,
+    Value<int?>? endTimeMs,
     Value<DateTime>? createdAt,
   }) {
     return BookmarksCompanion(
       id: id ?? this.id,
       trackPath: trackPath ?? this.trackPath,
       title: title ?? this.title,
-      positionMs: positionMs ?? this.positionMs,
+      startTimeMs: startTimeMs ?? this.startTimeMs,
+      endTimeMs: endTimeMs ?? this.endTimeMs,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -5130,8 +5178,11 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
-    if (positionMs.present) {
-      map['position_ms'] = Variable<int>(positionMs.value);
+    if (startTimeMs.present) {
+      map['start_time_ms'] = Variable<int>(startTimeMs.value);
+    }
+    if (endTimeMs.present) {
+      map['end_time_ms'] = Variable<int>(endTimeMs.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -5145,7 +5196,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
           ..write('id: $id, ')
           ..write('trackPath: $trackPath, ')
           ..write('title: $title, ')
-          ..write('positionMs: $positionMs, ')
+          ..write('startTimeMs: $startTimeMs, ')
+          ..write('endTimeMs: $endTimeMs, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -10376,7 +10428,8 @@ typedef $$BookmarksTableCreateCompanionBuilder =
       Value<int> id,
       required String trackPath,
       required String title,
-      required int positionMs,
+      required int startTimeMs,
+      Value<int?> endTimeMs,
       Value<DateTime> createdAt,
     });
 typedef $$BookmarksTableUpdateCompanionBuilder =
@@ -10384,7 +10437,8 @@ typedef $$BookmarksTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> trackPath,
       Value<String> title,
-      Value<int> positionMs,
+      Value<int> startTimeMs,
+      Value<int?> endTimeMs,
       Value<DateTime> createdAt,
     });
 
@@ -10412,8 +10466,13 @@ class $$BookmarksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get positionMs => $composableBuilder(
-    column: $table.positionMs,
+  ColumnFilters<int> get startTimeMs => $composableBuilder(
+    column: $table.startTimeMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endTimeMs => $composableBuilder(
+    column: $table.endTimeMs,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10447,8 +10506,13 @@ class $$BookmarksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get positionMs => $composableBuilder(
-    column: $table.positionMs,
+  ColumnOrderings<int> get startTimeMs => $composableBuilder(
+    column: $table.startTimeMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endTimeMs => $composableBuilder(
+    column: $table.endTimeMs,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -10476,10 +10540,13 @@ class $$BookmarksTableAnnotationComposer
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
-  GeneratedColumn<int> get positionMs => $composableBuilder(
-    column: $table.positionMs,
+  GeneratedColumn<int> get startTimeMs => $composableBuilder(
+    column: $table.startTimeMs,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get endTimeMs =>
+      $composableBuilder(column: $table.endTimeMs, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -10516,13 +10583,15 @@ class $$BookmarksTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> trackPath = const Value.absent(),
                 Value<String> title = const Value.absent(),
-                Value<int> positionMs = const Value.absent(),
+                Value<int> startTimeMs = const Value.absent(),
+                Value<int?> endTimeMs = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BookmarksCompanion(
                 id: id,
                 trackPath: trackPath,
                 title: title,
-                positionMs: positionMs,
+                startTimeMs: startTimeMs,
+                endTimeMs: endTimeMs,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -10530,13 +10599,15 @@ class $$BookmarksTableTableManager
                 Value<int> id = const Value.absent(),
                 required String trackPath,
                 required String title,
-                required int positionMs,
+                required int startTimeMs,
+                Value<int?> endTimeMs = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BookmarksCompanion.insert(
                 id: id,
                 trackPath: trackPath,
                 title: title,
-                positionMs: positionMs,
+                startTimeMs: startTimeMs,
+                endTimeMs: endTimeMs,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

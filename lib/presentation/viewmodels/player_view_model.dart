@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/domain/playback/playback_engine.dart'
     as engine_domain;
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/radio_database.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/domain/network/connection_manager.dart';
@@ -20,7 +21,9 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   final QueueViewModel _queueVM;
   final ConnectionManager _connectionManager;
   final AppDatabase _db;
+  final RadioDatabase _radioDb;
   final SettingsViewModel _settingsVM;
+  final http.Client _httpClient = http.Client();
 
   Track? _currentTrack;
   Duration _position = Duration.zero;
@@ -34,6 +37,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   String? _currentShowNotes;
   String? _currentStreamMetadata;
   String? _currentImageUrl;
+  bool _isCurrentStationFavorite = false;
 
   Color? _extractedColor;
   PaletteGenerator? _currentPalette;
@@ -45,16 +49,21 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   StreamSubscription<MediaCommand>? _remoteSub;
   StreamSubscription<String?>? _icySub;
 
+  int? _bookmarkEndMs;
+  MediaType? _forcedMediaType;
+
   PlayerViewModel({
     required engine_domain.PlaybackEngine engine,
     required QueueViewModel queueVM,
     required ConnectionManager connectionManager,
     required AppDatabase db,
+    required RadioDatabase radioDb,
     required SettingsViewModel settingsVM,
   }) : _engine = engine,
        _queueVM = queueVM,
        _connectionManager = connectionManager,
        _db = db,
+       _radioDb = radioDb,
        _settingsVM = settingsVM {
     _init();
     _remoteSub = _connectionManager.remoteCommands.listen(_handleRemoteCommand);
@@ -66,6 +75,8 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+
+  bool get isCurrentStationFavorite => _isCurrentStationFavorite;
 
   void _init() {
     _trackSub = _engine.currentTrackStream.listen((track) {
@@ -109,6 +120,14 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
     _posSub = _engine.positionStream.listen((pos) {
       _position = pos;
+
+      // BOUNDED PLAYBACK CHECK: Stop if we're playing a bookmark clip
+      if (_bookmarkEndMs != null && pos.inMilliseconds >= _bookmarkEndMs!) {
+        log('PLAYER: Bounded bookmark reached end time. Stopping.');
+        _bookmarkEndMs = null; // Clear the bound
+        pause();
+      }
+
       notifyListeners();
     });
 
@@ -187,28 +206,46 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     
     _currentArtistName = artistName ?? 'Loading...';
     _currentAlbumName = albumName ?? 'Loading...';
+    
+    // CONTEXT LOCK: Capture the intended type before potential health check failure
+    final intendedType = _getMediaTypeForTrack(track);
+    _forcedMediaType = null; // Clear existing
+    _isCurrentStationFavorite = false;
     notifyListeners();
 
     // HEALTH CHECK: For Radio and Podcasts
     if (track.path.startsWith('http')) {
       final isAlive = await _performHealthCheck(track.path);
       if (!isAlive) {
-        String type = 'Media';
-        if (currentMediaType == MediaType.radio) type = 'Station';
-        if (currentMediaType == MediaType.podcast) type = 'Podcast';
-        _errorMessage = '$type currently unavailable';
+        String typeStr = 'Media';
+        if (intendedType == MediaType.radio) typeStr = 'Station';
+        if (intendedType == MediaType.podcast) typeStr = 'Podcast';
+        
+        log('PLAYER: Health check failed for ${track.path}. Stopping engine.');
+        await _engine.stop(); // CRITICAL: Stop previous stream on failure
+        
+        _errorMessage = '$typeStr currently unavailable';
         _playbackState = engine_domain.PlaybackState.error;
         _currentArtistName = 'Unavailable';
+        _forcedMediaType = intendedType; // Lock UI to intended type
         notifyListeners();
         return;
       }
     }
 
-    // SESSION PERSISTENCE
-    if (currentMediaType == MediaType.radio) {
-       // For radio, path is the station UUID
-       unawaited(_settingsVM.setLastRadioStation(track.path));
-    } else if (currentMediaType == MediaType.podcast) {
+    // SESSION PERSISTENCE & FAVORITE RESOLUTION
+    if (intendedType == MediaType.radio) {
+       // Format: UUID|HOMEPAGE
+       final parts = description?.split('|');
+       final uuid = (parts != null && parts.isNotEmpty) ? parts[0] : null;
+       
+       if (uuid != null) {
+         unawaited(_settingsVM.setLastRadioStation(uuid));
+         // Resolve library status
+         final station = await (_radioDb.select(_radioDb.radioStations)..where((t) => t.stationUuid.equals(uuid))).getSingleOrNull();
+         _isCurrentStationFavorite = station?.isFavorite ?? false;
+       }
+    } else if (intendedType == MediaType.podcast) {
        // For podcast episodes, we store by ID (absolute value)
        unawaited(_settingsVM.setLastPodcastEpisode(track.id.abs()));
     }
@@ -279,6 +316,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   }
 
   MediaType get currentMediaType {
+    if (_forcedMediaType != null) return _forcedMediaType!;
     if (_currentTrack == null) return MediaType.music;
     if (_currentTrack!.id < -1000000) return MediaType.audiobook;
     if (_currentTrack!.id < 0) return MediaType.podcast;
@@ -318,7 +356,15 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   
   void seek(Duration position) {
     log('PLAYER: Seeking to ${_formatDuration(position)}');
+    _bookmarkEndMs = null; // Clear bounds on manual seek
     _engine.seek(position);
+  }
+
+  void playBookmark(Bookmark bookmark) {
+    log('PLAYER: Playing bookmark "${bookmark.title}" from ${_formatDuration(Duration(milliseconds: bookmark.startTimeMs))}');
+    _bookmarkEndMs = bookmark.endTimeMs;
+    _engine.seek(Duration(milliseconds: bookmark.startTimeMs));
+    play();
   }
   
   void setVolume(double volume) {
@@ -334,14 +380,30 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     notifyListeners();
   }
 
-  Future<void> bookmark() async {
+  Future<void> toggleCurrentStationFavorite() async {
+    if (currentMediaType != MediaType.radio || _currentTrack == null) return;
+    final parts = _currentShowNotes?.split('|');
+    final uuid = (parts != null && parts.isNotEmpty) ? parts[0] : null;
+    if (uuid == null) return;
+
+    _isCurrentStationFavorite = !_isCurrentStationFavorite;
+    await _radioDb.setFavorite(uuid, _isCurrentStationFavorite);
+    notifyListeners();
+  }
+
+  Future<void> saveBookmark({
+    required String title,
+    required int startMs,
+    int? endMs,
+  }) async {
     if (_currentTrack == null) return;
-    log('PLAYER: Saving bookmark for "${_currentTrack!.title}" at ${_formatDuration(_position)}');
+    log('PLAYER: Saving bookmark "$title" at ${_formatDuration(Duration(milliseconds: startMs))} - ${_formatDuration(Duration(milliseconds: endMs ?? 0))}');
     try {
       await _db.saveBookmark(BookmarksCompanion.insert(
         trackPath: _currentTrack!.path,
-        title: _currentTrack!.title,
-        positionMs: _position.inMilliseconds,
+        title: title,
+        startTimeMs: startMs,
+        endTimeMs: Value(endMs),
       ));
       log('PLAYER: Bookmark saved.');
     } catch (e) {
@@ -362,31 +424,52 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   }
 
   void skipNext() {
-    // SCOPE LOCK: If Radio, do not skip to local music queue
-    if (currentMediaType == MediaType.radio) {
-      log('PLAYER: SkipNext ignored in Radio scope');
-      return; 
-    }
-
-    log('PLAYER: Skipping to next track');
+    final originalType = currentMediaType;
+    log('PLAYER: Skipping to next track (Context: $originalType)');
+    
     _lastSkipTime = DateTime.now();
     _queueVM.skipNext();
     final next = _queueVM.currentTrack;
-    if (next != null) loadTrack(next);
+    
+    if (next != null) {
+      // SCOPE LOCK: Ensure we don't cross-pollinate media types during auto-skip or manual skip
+      // This is especially important for Podcasts which have specific UI/behavior
+      final nextType = _getMediaTypeForTrack(next);
+      if (originalType == MediaType.podcast && nextType != MediaType.podcast) {
+        log('PLAYER: SkipNext blocked - crossing from Podcast to $nextType');
+        _queueVM.skipPrevious(); // Rollback
+        stop();
+        return;
+      }
+      
+      loadTrack(next);
+    }
   }
 
   void skipPrevious() {
-    // SCOPE LOCK: If Radio, do not skip to local music queue
-    if (currentMediaType == MediaType.radio) {
-      log('PLAYER: SkipPrevious ignored in Radio scope');
-      return; 
-    }
-
-    log('PLAYER: Skipping to previous track');
+    final originalType = currentMediaType;
+    log('PLAYER: Skipping to previous track (Context: $originalType)');
+    
     _lastSkipTime = DateTime.now();
     _queueVM.skipPrevious();
     final prev = _queueVM.currentTrack;
-    if (prev != null) loadTrack(prev);
+    
+    if (prev != null) {
+      final prevType = _getMediaTypeForTrack(prev);
+      if (originalType == MediaType.podcast && prevType != MediaType.podcast) {
+        log('PLAYER: SkipPrevious blocked - crossing from Podcast to $prevType');
+        _queueVM.skipNext(); // Rollback
+        return;
+      }
+      loadTrack(prev);
+    }
+  }
+
+  MediaType _getMediaTypeForTrack(Track track) {
+    if (track.id < -1000000) return MediaType.audiobook;
+    if (track.id < 0) return MediaType.podcast;
+    if (track.id == 0) return MediaType.radio;
+    return MediaType.music;
   }
 
   void toggleShuffle() {
@@ -468,6 +551,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
         maximumColorCount: 10,
       );
       _extractedColor =
+          _extractedColor =
           _currentPalette?.vibrantColor?.color ??
           _currentPalette?.dominantColor?.color;
       notifyListeners();
@@ -509,7 +593,10 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   void _startAnalyticsTracking() {
     if (!_connectionManager.isHost) return;
     if (currentMediaType == MediaType.radio) {
-      final radioUuid = _currentTrack?.path; // For radio, we store UUID in path
+      // Parse UUID from metadata description (Format: UUID|HOMEPAGE)
+      final parts = _currentShowNotes?.split('|');
+      final radioUuid = (parts != null && parts.isNotEmpty) ? parts[0] : null;
+
       if (radioUuid != null && radioUuid.isNotEmpty) {
         _radioStatsTimer?.cancel();
         _radioStatsTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
@@ -532,6 +619,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     _trackSub?.cancel();
     _remoteSub?.cancel();
     _icySub?.cancel();
+    _httpClient.close();
     super.dispose();
   }
 }

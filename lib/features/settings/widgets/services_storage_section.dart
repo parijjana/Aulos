@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
+import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
 import 'package:aulos/data/library/library_indexer_service.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/features/settings/widgets/settings_shared.dart';
@@ -86,8 +87,60 @@ class ServicesStorageSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildRetentionSettings(theme, onSurface),
+
+            const Divider(height: 32, color: Colors.white10),
+
+            // --- Radio Database Area ---
+            const SettingsLabel('RADIO DISCOVERY CACHE'),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final radioVM = context.read<RadioViewModel>();
+                      _showConfirmClear(context, radioVM);
+                    },
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 14),
+                    label: const Text('CLEAN RADIO CACHE', style: TextStyle(fontSize: 9)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent.withValues(alpha: 0.7),
+                      side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.2)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Removes cached discovery results. Your favorites are preserved.',
+              style: TextStyle(fontSize: 8, color: onSurface.withValues(alpha: 0.24)),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showConfirmClear(BuildContext context, RadioViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Radio Cache?'),
+        content: const Text('This will delete all discovered stations and categories. Your favorite stations in the library will not be deleted.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () {
+              vm.clearRadioCache();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Radio cache cleared.')),
+              );
+            },
+            child: const Text('CLEAR', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
       ),
     );
   }

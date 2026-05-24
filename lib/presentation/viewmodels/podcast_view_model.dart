@@ -8,6 +8,8 @@ import 'package:aulos/data/library/discovery_sync_manager.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'dart:async';
+import 'dart:io';
+import 'package:path/path.dart' as p;
 
 class PodcastViewModel extends ChangeNotifier {
   final PodcastService _podcastService;
@@ -319,9 +321,45 @@ class PodcastViewModel extends ChangeNotifier {
 
   Future<void> togglePin(app_db.Episode episode) async {
     try {
+      String? newPath = episode.localFilePath;
+      
+      // Physically move the file if it exists
+      if (episode.downloadState == 2 && episode.localFilePath != null) {
+        final storage = _settingsVM.podcastStorageLocation;
+        if (storage != null) {
+          final file = File(episode.localFilePath!);
+          if (await file.exists()) {
+            final fileName = p.basename(episode.localFilePath!);
+            final favoritesDir = Directory(p.join(storage, 'favorites'));
+            if (!favoritesDir.existsSync()) await favoritesDir.create(recursive: true);
+
+            final podcast = _podcasts.firstWhere((p) => p.id == episode.podcastId);
+            final podcastName = _sanitize(podcast.title);
+
+            if (!episode.isPinned) {
+              // PINNING: Move to favorites
+              final targetPath = p.join(favoritesDir.path, '${podcastName}_$fileName');
+              await file.rename(targetPath);
+              newPath = targetPath;
+            } else {
+              // UNPINNING: Move back to podcast-specific folder
+              final podDir = Directory(p.join(storage, podcastName));
+              if (!podDir.existsSync()) await podDir.create(recursive: true);
+              
+              // Remove the podcast prefix if we added it
+              final cleanName = fileName.replaceFirst('${podcastName}_', '');
+              final targetPath = p.join(podDir.path, cleanName);
+              await file.rename(targetPath);
+              newPath = targetPath;
+            }
+          }
+        }
+      }
+
       await _podcastService.updateEpisodePlayback(
         episode.id,
         isPinned: !episode.isPinned,
+        localFilePath: newPath,
       );
       _episodes = await _podcastService.getEpisodes(episode.podcastId);
       notifyListeners();
@@ -329,6 +367,10 @@ class PodcastViewModel extends ChangeNotifier {
       _error = 'Failed to update pin status: $e';
       notifyListeners();
     }
+  }
+
+  String _sanitize(String name) {
+    return name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
   }
 
   Future<void> unsubscribe(int podcastId) async {

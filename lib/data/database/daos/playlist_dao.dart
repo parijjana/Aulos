@@ -37,6 +37,15 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase> with _$PlaylistDaoMixin 
   }
 
   Future<List<Track>> getTracksForPlaylist(int playlistId) async {
+    final playlist = await (select(playlists)..where((t) => t.id.equals(playlistId))).getSingleOrNull();
+    if (playlist != null && playlist.isSmart) {
+      if (playlist.name == 'Likes') {
+        return (select(tracks)..where((t) => t.isFavorite.equals(true))).get();
+      } else if (playlist.name == 'Dislikes') {
+        return (select(tracks)..where((t) => t.rating.equals(-1))).get();
+      }
+    }
+
     final query = select(playlistTracks).join([
       innerJoin(tracks, tracks.id.equalsExp(playlistTracks.trackId)),
     ])

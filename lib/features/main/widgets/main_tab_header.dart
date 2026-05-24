@@ -103,6 +103,14 @@ class MainTabHeader extends StatelessWidget {
           ),
         if (isDesktop && !isMac) ...[
           IconButton(
+            icon: Icon(Icons.fullscreen_rounded, color: controlColor, size: 18),
+            onPressed: () async {
+              final bool isFullScreen = await windowManager.isFullScreen();
+              await windowManager.setFullScreen(!isFullScreen);
+            },
+            tooltip: 'Toggle Full Screen',
+          ),
+          IconButton(
             icon: Icon(Icons.remove, color: controlColor, size: 18),
             onPressed: () => windowManager.minimize(),
           ),

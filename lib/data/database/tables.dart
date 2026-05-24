@@ -132,6 +132,7 @@ class Bookmarks extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get trackPath => text()();
   TextColumn get title => text()();
-  IntColumn get positionMs => integer()();
+  IntColumn get startTimeMs => integer()();
+  IntColumn get endTimeMs => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }

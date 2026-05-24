@@ -129,7 +129,7 @@ void main() {
       );
       
       await viewModel.loadTrack(track);
-      await viewModel.bookmark();
+      await viewModel.saveBookmark(title: 'Test', startMs: 0);
       
       verify(() => mockDb.saveBookmark(any())).called(1);
     });

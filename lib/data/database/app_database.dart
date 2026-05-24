@@ -42,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +113,9 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(episodes, episodes.playCount);
         await m.addColumn(episodes, episodes.lastPlayed);
       }
+      if (from < 15) {
+        await m.addColumn(bookmarks, bookmarks.endTimeMs);
+      }
     },
   );
 
@@ -178,6 +181,8 @@ class AppDatabase extends _$AppDatabase {
       );
 
   Future<int> saveBookmark(BookmarksCompanion companion) => into(bookmarks).insert(companion);
+  Future<List<Bookmark>> getBookmarksForTrack(String path) => (select(bookmarks)..where((t) => t.trackPath.equals(path))).get();
+  Future<void> deleteBookmark(int id) => (delete(bookmarks)..where((t) => t.id.equals(id))).go();
 
   // Analytics Delegation
   Future<void> setTrackFavorite(int id, bool favorite) => analyticsDao.setTrackFavorite(id, favorite);

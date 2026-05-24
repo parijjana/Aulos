@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
+import 'package:aulos/presentation/screens/widgets/now_playing/create_bookmark_sheet.dart';
 import 'package:provider/provider.dart';
 
 class NowPlayingControls extends StatelessWidget {
@@ -26,16 +27,26 @@ class NowPlayingControls extends StatelessWidget {
     }
 
     if (mediaType == MediaType.podcast || mediaType == MediaType.audiobook) {
-      return _buildPodcastControls(theme, vm, buttonSize, primaryButtonSize, mediaType);
+      return _buildPodcastControls(context, theme, vm, buttonSize, primaryButtonSize, mediaType);
     }
 
-    return _buildMusicControls(theme, vm, queueVM, buttonSize, primaryButtonSize);
+    return _buildMusicControls(context, theme, vm, queueVM, buttonSize, primaryButtonSize);
   }
 
   Widget _buildRadioControls(ThemeData theme, PlayerViewModel vm, double size) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        IconButton(
+          icon: Icon(
+            vm.isCurrentStationFavorite ? Icons.library_add_check : Icons.library_add,
+            color: vm.isCurrentStationFavorite ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+            size: 24,
+          ),
+          onPressed: vm.toggleCurrentStationFavorite,
+          tooltip: vm.isCurrentStationFavorite ? 'In Library' : 'Add to Library',
+        ),
+        const SizedBox(width: 24),
         IconButton(
           onPressed: vm.isPlaying ? vm.stop : vm.play,
           padding: EdgeInsets.zero,
@@ -57,11 +68,13 @@ class NowPlayingControls extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(width: 24),
+        const SizedBox(width: 48), // Spacer to balance the library toggle
       ],
     );
   }
 
-  Widget _buildPodcastControls(ThemeData theme, PlayerViewModel vm, double buttonSize, double primarySize, MediaType type) {
+  Widget _buildPodcastControls(BuildContext context, ThemeData theme, PlayerViewModel vm, double buttonSize, double primarySize, MediaType type) {
     final bool isAudiobook = type == MediaType.audiobook;
     return FittedBox(
       fit: BoxFit.scaleDown,
@@ -84,13 +97,23 @@ class NowPlayingControls extends StatelessWidget {
             _buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize * 0.9, theme),
           ],
           const SizedBox(width: 16),
-          _buildCircularButton(Icons.bookmark_add_outlined, vm.bookmark, buttonSize, theme),
+          _buildCircularButton(
+            Icons.bookmark_add_outlined, 
+            () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => CreateBookmarkSheet(playerVM: vm),
+            ), 
+            buttonSize, 
+            theme
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMusicControls(ThemeData theme, PlayerViewModel vm, QueueViewModel queueVM, double buttonSize, double primarySize) {
+  Widget _buildMusicControls(BuildContext context, ThemeData theme, PlayerViewModel vm, QueueViewModel queueVM, double buttonSize, double primarySize) {
     final currentTrack = vm.currentTrack;
     return FittedBox(
       fit: BoxFit.scaleDown,

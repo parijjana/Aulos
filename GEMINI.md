@@ -8,8 +8,9 @@
 - **OOP & Clean Code:** Maintain modular, role-agnostic logic (Host/Client symmetry).
 
 ### Documentation Standards
-- **Progress Log:** Maintain a surgical, append-only `PROGRESS_LOG.md` tracking high-level status: `[YYYY-MM-DD] ID: Name - [Status]`.
-- **Architecture Map:** Maintain `ARCHITECTURE.md` for system-wide rules and structural mapping.
+- **Daily Progress Logs:** Maintain date-stamped logs in the `progress_logs/` directory (e.g., `progress_logs/YYYY-MM-DD.md`). Always check the previous day's log at session start.
+- **Design Features:** Maintain individual feature definitions in the `design_features/` directory. Each file should contain the summary, rationale, and expected behavior. This includes both functional services (e.g., Radio) and critical UX behaviors (e.g., View State Retention). Update files with descoping reasons if applicable.
+- **Architecture Map:** Maintain `ARCHITECTURE.md` as the source of truth for structural mapping and system rules.
 - **Lean Context:** Do NOT maintain a detailed "Development Matrix" or "Files Touched" lists in Markdown.
 
 ### Verification
@@ -17,7 +18,7 @@
 - **Health Checks:** Run the full test suite upon explicit request or before session handoff.
 
 ## Project Mandates (2026-05-08)
-1. **Surgical Progress Log:** Maintain `PROGRESS_LOG.md` in the lean format.
+1. **Daily Progress Logs:** Maintain granular, date-stamped logs in the `progress_logs/` directory.
 2. **Arch Map:** Maintain `ARCHITECTURE.md`.
 3. **TDD Mandate:** TDD is the primary source of truth for feature completion.
 4. **OOP Preference:** Prefer clean OOP for core logic.

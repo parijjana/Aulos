@@ -38,21 +38,11 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
       children: [
         Scaffold(
           backgroundColor: Colors.transparent,
-          body: Column(
-            children: [
-              _buildHeader('FAVORITE STATIONS', onExplore: _navigateToExplore),
-              const Expanded(child: RadioLibraryView()),
-            ],
-          ),
+          body: RadioLibraryView(onExplore: _navigateToExplore),
         ),
         Scaffold(
           backgroundColor: Colors.transparent,
-          body: Column(
-            children: [
-              _buildHeader('EXPLORE RADIO', onBack: _navigateToLibrary),
-              const Expanded(child: RadioBrowserScreen()),
-            ],
-          ),
+          body: RadioBrowserScreen(onBack: _navigateToLibrary),
         ),
       ],
     );
