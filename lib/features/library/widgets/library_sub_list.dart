@@ -19,15 +19,74 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
   @override
   Widget build(BuildContext context) {
     final playerVM = context.read<PlayerViewModel>();
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
 
-    final combined = getCombinedItems(viewModel);
+    final item = viewModel.selectedItem;
+    final bool isArtist = item is Artist;
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isNarrow = constraints.maxWidth < 900;
+
+        if (isArtist && isNarrow) {
+          return DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  dividerColor: Colors.transparent,
+                  labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                  tabs: const [
+                    Tab(text: 'ALBUMS'),
+                    Tab(text: 'ALL TRACKS'),
+                  ],
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildAlbumList(viewModel.subAlbums, theme),
+                      _buildTrackList(viewModel.tracks, playerVM, onSurface),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final combined = getCombinedItems(viewModel);
+        return _buildTrackList(combined, playerVM, onSurface);
+      },
+    );
+  }
+
+  Widget _buildAlbumList(List<Album> albums, ThemeData theme) {
+    return ListView.separated(
+      itemCount: albums.length,
+      separatorBuilder: (_, __) => Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+      itemBuilder: (context, index) {
+        final album = albums[index];
+        return ListTile(
+          leading: LibraryArtWidget(item: album, viewModel: viewModel, size: 40),
+          title: Text(album.name, style: TextStyle(color: theme.colorScheme.onSurface)),
+          trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.24)),
+          onTap: () => viewModel.selectItem(album),
+        );
+      },
+    );
+  }
+
+  Widget _buildTrackList(List<dynamic> items, PlayerViewModel playerVM, Color onSurface) {
     return ListView.builder(
       controller: scrollController,
-      itemCount: combined.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = combined[index];
+        final item = items[index];
         if (item is Track) {
           return ListTile(
             leading: LibraryArtWidget(item: item, viewModel: viewModel, size: 40),
@@ -41,10 +100,10 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
               maxLines: 1,
             ),
             onTap: () async {
-              await playerVM.setQueueAndPlay(
-                viewModel.tracks,
-                viewModel.tracks.indexOf(item),
-              );
+              // Ensure we are playing from the correct list
+              final tracks = items.whereType<Track>().toList();
+              final trackIndex = tracks.indexOf(item);
+              await playerVM.setQueueAndPlay(tracks, trackIndex);
             },
           );
         }

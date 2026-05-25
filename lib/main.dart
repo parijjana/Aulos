@@ -203,6 +203,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<app_db.AppDatabase>.value(value: database),
         ChangeNotifierProvider<MediaLogService>.value(value: logService),
         Provider<RateLimitDispatcher>.value(value: rateLimitDispatcher),
         Provider<DiscoveryDatabase>.value(value: discoveryDb),

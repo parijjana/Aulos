@@ -9,6 +9,9 @@ class RssPodcastService implements PodcastService {
   final AppDatabase _db;
   final http.Client _client;
 
+  @override
+  AppDatabase get db => _db;
+
   RssPodcastService({required AppDatabase db, http.Client? client})
       : _db = db,
         _client = client ?? http.Client();

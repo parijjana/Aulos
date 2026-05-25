@@ -4863,6 +4863,24 @@ class $BookmarksTable extends Bookmarks
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4882,6 +4900,8 @@ class $BookmarksTable extends Bookmarks
     title,
     startTimeMs,
     endTimeMs,
+    tags,
+    notes,
     createdAt,
   ];
   @override
@@ -4932,6 +4952,18 @@ class $BookmarksTable extends Bookmarks
         endTimeMs.isAcceptableOrUnknown(data['end_time_ms']!, _endTimeMsMeta),
       );
     }
+    if (data.containsKey('tags')) {
+      context.handle(
+        _tagsMeta,
+        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4967,6 +4999,14 @@ class $BookmarksTable extends Bookmarks
         DriftSqlType.int,
         data['${effectivePrefix}end_time_ms'],
       ),
+      tags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -4986,6 +5026,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   final String title;
   final int startTimeMs;
   final int? endTimeMs;
+  final String? tags;
+  final String? notes;
   final DateTime createdAt;
   const Bookmark({
     required this.id,
@@ -4993,6 +5035,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     required this.title,
     required this.startTimeMs,
     this.endTimeMs,
+    this.tags,
+    this.notes,
     required this.createdAt,
   });
   @override
@@ -5004,6 +5048,12 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     map['start_time_ms'] = Variable<int>(startTimeMs);
     if (!nullToAbsent || endTimeMs != null) {
       map['end_time_ms'] = Variable<int>(endTimeMs);
+    }
+    if (!nullToAbsent || tags != null) {
+      map['tags'] = Variable<String>(tags);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -5018,6 +5068,10 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       endTimeMs: endTimeMs == null && nullToAbsent
           ? const Value.absent()
           : Value(endTimeMs),
+      tags: tags == null && nullToAbsent ? const Value.absent() : Value(tags),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
       createdAt: Value(createdAt),
     );
   }
@@ -5033,6 +5087,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       title: serializer.fromJson<String>(json['title']),
       startTimeMs: serializer.fromJson<int>(json['startTimeMs']),
       endTimeMs: serializer.fromJson<int?>(json['endTimeMs']),
+      tags: serializer.fromJson<String?>(json['tags']),
+      notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -5045,6 +5101,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       'title': serializer.toJson<String>(title),
       'startTimeMs': serializer.toJson<int>(startTimeMs),
       'endTimeMs': serializer.toJson<int?>(endTimeMs),
+      'tags': serializer.toJson<String?>(tags),
+      'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -5055,6 +5113,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     String? title,
     int? startTimeMs,
     Value<int?> endTimeMs = const Value.absent(),
+    Value<String?> tags = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
     DateTime? createdAt,
   }) => Bookmark(
     id: id ?? this.id,
@@ -5062,6 +5122,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     title: title ?? this.title,
     startTimeMs: startTimeMs ?? this.startTimeMs,
     endTimeMs: endTimeMs.present ? endTimeMs.value : this.endTimeMs,
+    tags: tags.present ? tags.value : this.tags,
+    notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt ?? this.createdAt,
   );
   Bookmark copyWithCompanion(BookmarksCompanion data) {
@@ -5073,6 +5135,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           ? data.startTimeMs.value
           : this.startTimeMs,
       endTimeMs: data.endTimeMs.present ? data.endTimeMs.value : this.endTimeMs,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -5085,14 +5149,24 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           ..write('title: $title, ')
           ..write('startTimeMs: $startTimeMs, ')
           ..write('endTimeMs: $endTimeMs, ')
+          ..write('tags: $tags, ')
+          ..write('notes: $notes, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, trackPath, title, startTimeMs, endTimeMs, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    trackPath,
+    title,
+    startTimeMs,
+    endTimeMs,
+    tags,
+    notes,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5102,6 +5176,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           other.title == this.title &&
           other.startTimeMs == this.startTimeMs &&
           other.endTimeMs == this.endTimeMs &&
+          other.tags == this.tags &&
+          other.notes == this.notes &&
           other.createdAt == this.createdAt);
 }
 
@@ -5111,6 +5187,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   final Value<String> title;
   final Value<int> startTimeMs;
   final Value<int?> endTimeMs;
+  final Value<String?> tags;
+  final Value<String?> notes;
   final Value<DateTime> createdAt;
   const BookmarksCompanion({
     this.id = const Value.absent(),
@@ -5118,6 +5196,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     this.title = const Value.absent(),
     this.startTimeMs = const Value.absent(),
     this.endTimeMs = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   BookmarksCompanion.insert({
@@ -5126,6 +5206,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     required String title,
     required int startTimeMs,
     this.endTimeMs = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : trackPath = Value(trackPath),
        title = Value(title),
@@ -5136,6 +5218,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     Expression<String>? title,
     Expression<int>? startTimeMs,
     Expression<int>? endTimeMs,
+    Expression<String>? tags,
+    Expression<String>? notes,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -5144,6 +5228,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
       if (title != null) 'title': title,
       if (startTimeMs != null) 'start_time_ms': startTimeMs,
       if (endTimeMs != null) 'end_time_ms': endTimeMs,
+      if (tags != null) 'tags': tags,
+      if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -5154,6 +5240,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     Value<String>? title,
     Value<int>? startTimeMs,
     Value<int?>? endTimeMs,
+    Value<String?>? tags,
+    Value<String?>? notes,
     Value<DateTime>? createdAt,
   }) {
     return BookmarksCompanion(
@@ -5162,6 +5250,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
       title: title ?? this.title,
       startTimeMs: startTimeMs ?? this.startTimeMs,
       endTimeMs: endTimeMs ?? this.endTimeMs,
+      tags: tags ?? this.tags,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -5184,6 +5274,12 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     if (endTimeMs.present) {
       map['end_time_ms'] = Variable<int>(endTimeMs.value);
     }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -5198,6 +5294,8 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
           ..write('title: $title, ')
           ..write('startTimeMs: $startTimeMs, ')
           ..write('endTimeMs: $endTimeMs, ')
+          ..write('tags: $tags, ')
+          ..write('notes: $notes, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -5526,6 +5624,262 @@ class RadioListeningStatsCompanion extends UpdateCompanion<RadioListeningStat> {
   }
 }
 
+class $PlaybackPositionsTable extends PlaybackPositions
+    with TableInfo<$PlaybackPositionsTable, PlaybackPosition> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlaybackPositionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _trackIdMeta = const VerificationMeta(
+    'trackId',
+  );
+  @override
+  late final GeneratedColumn<int> trackId = GeneratedColumn<int>(
+    'track_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _positionMsMeta = const VerificationMeta(
+    'positionMs',
+  );
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+    'position_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [trackId, positionMs, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'playback_positions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlaybackPosition> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('track_id')) {
+      context.handle(
+        _trackIdMeta,
+        trackId.isAcceptableOrUnknown(data['track_id']!, _trackIdMeta),
+      );
+    }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+        _positionMsMeta,
+        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMsMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {trackId};
+  @override
+  PlaybackPosition map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlaybackPosition(
+      trackId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}track_id'],
+      )!,
+      positionMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position_ms'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PlaybackPositionsTable createAlias(String alias) {
+    return $PlaybackPositionsTable(attachedDatabase, alias);
+  }
+}
+
+class PlaybackPosition extends DataClass
+    implements Insertable<PlaybackPosition> {
+  final int trackId;
+  final int positionMs;
+  final DateTime updatedAt;
+  const PlaybackPosition({
+    required this.trackId,
+    required this.positionMs,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['track_id'] = Variable<int>(trackId);
+    map['position_ms'] = Variable<int>(positionMs);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PlaybackPositionsCompanion toCompanion(bool nullToAbsent) {
+    return PlaybackPositionsCompanion(
+      trackId: Value(trackId),
+      positionMs: Value(positionMs),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PlaybackPosition.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlaybackPosition(
+      trackId: serializer.fromJson<int>(json['trackId']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'trackId': serializer.toJson<int>(trackId),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PlaybackPosition copyWith({
+    int? trackId,
+    int? positionMs,
+    DateTime? updatedAt,
+  }) => PlaybackPosition(
+    trackId: trackId ?? this.trackId,
+    positionMs: positionMs ?? this.positionMs,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PlaybackPosition copyWithCompanion(PlaybackPositionsCompanion data) {
+    return PlaybackPosition(
+      trackId: data.trackId.present ? data.trackId.value : this.trackId,
+      positionMs: data.positionMs.present
+          ? data.positionMs.value
+          : this.positionMs,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackPosition(')
+          ..write('trackId: $trackId, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(trackId, positionMs, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlaybackPosition &&
+          other.trackId == this.trackId &&
+          other.positionMs == this.positionMs &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PlaybackPositionsCompanion extends UpdateCompanion<PlaybackPosition> {
+  final Value<int> trackId;
+  final Value<int> positionMs;
+  final Value<DateTime> updatedAt;
+  const PlaybackPositionsCompanion({
+    this.trackId = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  PlaybackPositionsCompanion.insert({
+    this.trackId = const Value.absent(),
+    required int positionMs,
+    this.updatedAt = const Value.absent(),
+  }) : positionMs = Value(positionMs);
+  static Insertable<PlaybackPosition> custom({
+    Expression<int>? trackId,
+    Expression<int>? positionMs,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (trackId != null) 'track_id': trackId,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  PlaybackPositionsCompanion copyWith({
+    Value<int>? trackId,
+    Value<int>? positionMs,
+    Value<DateTime>? updatedAt,
+  }) {
+    return PlaybackPositionsCompanion(
+      trackId: trackId ?? this.trackId,
+      positionMs: positionMs ?? this.positionMs,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (trackId.present) {
+      map['track_id'] = Variable<int>(trackId.value);
+    }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackPositionsCompanion(')
+          ..write('trackId: $trackId, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5544,6 +5898,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BookmarksTable bookmarks = $BookmarksTable(this);
   late final $RadioListeningStatsTable radioListeningStats =
       $RadioListeningStatsTable(this);
+  late final $PlaybackPositionsTable playbackPositions =
+      $PlaybackPositionsTable(this);
   late final LibraryDao libraryDao = LibraryDao(this as AppDatabase);
   late final PlaylistDao playlistDao = PlaylistDao(this as AppDatabase);
   late final PodcastDao podcastDao = PodcastDao(this as AppDatabase);
@@ -5566,6 +5922,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     episodes,
     bookmarks,
     radioListeningStats,
+    playbackPositions,
   ];
 }
 
@@ -10430,6 +10787,8 @@ typedef $$BookmarksTableCreateCompanionBuilder =
       required String title,
       required int startTimeMs,
       Value<int?> endTimeMs,
+      Value<String?> tags,
+      Value<String?> notes,
       Value<DateTime> createdAt,
     });
 typedef $$BookmarksTableUpdateCompanionBuilder =
@@ -10439,6 +10798,8 @@ typedef $$BookmarksTableUpdateCompanionBuilder =
       Value<String> title,
       Value<int> startTimeMs,
       Value<int?> endTimeMs,
+      Value<String?> tags,
+      Value<String?> notes,
       Value<DateTime> createdAt,
     });
 
@@ -10473,6 +10834,16 @@ class $$BookmarksTableFilterComposer
 
   ColumnFilters<int> get endTimeMs => $composableBuilder(
     column: $table.endTimeMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10516,6 +10887,16 @@ class $$BookmarksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10547,6 +10928,12 @@ class $$BookmarksTableAnnotationComposer
 
   GeneratedColumn<int> get endTimeMs =>
       $composableBuilder(column: $table.endTimeMs, builder: (column) => column);
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -10585,6 +10972,8 @@ class $$BookmarksTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<int> startTimeMs = const Value.absent(),
                 Value<int?> endTimeMs = const Value.absent(),
+                Value<String?> tags = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BookmarksCompanion(
                 id: id,
@@ -10592,6 +10981,8 @@ class $$BookmarksTableTableManager
                 title: title,
                 startTimeMs: startTimeMs,
                 endTimeMs: endTimeMs,
+                tags: tags,
+                notes: notes,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -10601,6 +10992,8 @@ class $$BookmarksTableTableManager
                 required String title,
                 required int startTimeMs,
                 Value<int?> endTimeMs = const Value.absent(),
+                Value<String?> tags = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BookmarksCompanion.insert(
                 id: id,
@@ -10608,6 +11001,8 @@ class $$BookmarksTableTableManager
                 title: title,
                 startTimeMs: startTimeMs,
                 endTimeMs: endTimeMs,
+                tags: tags,
+                notes: notes,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -10829,6 +11224,177 @@ typedef $$RadioListeningStatsTableProcessedTableManager =
       RadioListeningStat,
       PrefetchHooks Function()
     >;
+typedef $$PlaybackPositionsTableCreateCompanionBuilder =
+    PlaybackPositionsCompanion Function({
+      Value<int> trackId,
+      required int positionMs,
+      Value<DateTime> updatedAt,
+    });
+typedef $$PlaybackPositionsTableUpdateCompanionBuilder =
+    PlaybackPositionsCompanion Function({
+      Value<int> trackId,
+      Value<int> positionMs,
+      Value<DateTime> updatedAt,
+    });
+
+class $$PlaybackPositionsTableFilterComposer
+    extends Composer<_$AppDatabase, $PlaybackPositionsTable> {
+  $$PlaybackPositionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PlaybackPositionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PlaybackPositionsTable> {
+  $$PlaybackPositionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PlaybackPositionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlaybackPositionsTable> {
+  $$PlaybackPositionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get trackId =>
+      $composableBuilder(column: $table.trackId, builder: (column) => column);
+
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$PlaybackPositionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PlaybackPositionsTable,
+          PlaybackPosition,
+          $$PlaybackPositionsTableFilterComposer,
+          $$PlaybackPositionsTableOrderingComposer,
+          $$PlaybackPositionsTableAnnotationComposer,
+          $$PlaybackPositionsTableCreateCompanionBuilder,
+          $$PlaybackPositionsTableUpdateCompanionBuilder,
+          (
+            PlaybackPosition,
+            BaseReferences<
+              _$AppDatabase,
+              $PlaybackPositionsTable,
+              PlaybackPosition
+            >,
+          ),
+          PlaybackPosition,
+          PrefetchHooks Function()
+        > {
+  $$PlaybackPositionsTableTableManager(
+    _$AppDatabase db,
+    $PlaybackPositionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlaybackPositionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlaybackPositionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlaybackPositionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> trackId = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => PlaybackPositionsCompanion(
+                trackId: trackId,
+                positionMs: positionMs,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> trackId = const Value.absent(),
+                required int positionMs,
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => PlaybackPositionsCompanion.insert(
+                trackId: trackId,
+                positionMs: positionMs,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PlaybackPositionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PlaybackPositionsTable,
+      PlaybackPosition,
+      $$PlaybackPositionsTableFilterComposer,
+      $$PlaybackPositionsTableOrderingComposer,
+      $$PlaybackPositionsTableAnnotationComposer,
+      $$PlaybackPositionsTableCreateCompanionBuilder,
+      $$PlaybackPositionsTableUpdateCompanionBuilder,
+      (
+        PlaybackPosition,
+        BaseReferences<
+          _$AppDatabase,
+          $PlaybackPositionsTable,
+          PlaybackPosition
+        >,
+      ),
+      PlaybackPosition,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10859,4 +11425,6 @@ class $AppDatabaseManager {
       $$BookmarksTableTableManager(_db, _db.bookmarks);
   $$RadioListeningStatsTableTableManager get radioListeningStats =>
       $$RadioListeningStatsTableTableManager(_db, _db.radioListeningStats);
+  $$PlaybackPositionsTableTableManager get playbackPositions =>
+      $$PlaybackPositionsTableTableManager(_db, _db.playbackPositions);
 }

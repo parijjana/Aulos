@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
@@ -40,6 +41,12 @@ class LibraryCategoryList extends StatelessWidget with LibraryUtilsMixin {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (viewModel.mode == LibraryMode.playlists && (item as Playlist).isSmart)
+                Icon(
+                  Icons.lock_outline,
+                  color: onSurface.withValues(alpha: 0.1),
+                  size: 14,
+                ),
               IconButton(
                 icon: Icon(
                   Icons.playlist_add,

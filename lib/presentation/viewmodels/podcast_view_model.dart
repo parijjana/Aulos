@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart' as app_db;
 import 'package:aulos/data/database/discovery_database.dart';
 import 'package:aulos/domain/library/podcast_service.dart';
@@ -40,6 +40,8 @@ class PodcastViewModel extends ChangeNotifier {
   // UI State Persistence
   Map<String, dynamic>? _selectedDiscoveryCategory;
   Map<String, dynamic>? _activeDiscoveryDetail;
+  app_db.Podcast? _activePodcast;
+  String _libraryFilter = 'ALL SHOWS';
 
   PodcastViewModel({
     required PodcastService podcastService,
@@ -77,6 +79,30 @@ class PodcastViewModel extends ChangeNotifier {
   
   Map<String, dynamic>? get selectedDiscoveryCategory => _selectedDiscoveryCategory;
   Map<String, dynamic>? get activeDiscoveryDetail => _activeDiscoveryDetail;
+  app_db.Podcast? get activePodcast => _activePodcast;
+  String get libraryFilter => _libraryFilter;
+
+  List<app_db.Podcast> get filteredPodcasts {
+    var list = List<app_db.Podcast>.from(_podcasts);
+    
+    if (_libraryFilter == 'RECENT') {
+      list.sort((a, b) {
+        final dateA = a.lastPlayed ?? DateTime(1970);
+        final dateB = b.lastPlayed ?? DateTime(1970);
+        return dateB.compareTo(dateA);
+      });
+    } else if (_libraryFilter == 'DOWNLOADED') {
+      // Return shows with at least one play or download (placeholder for complex query)
+      return _podcasts.where((p) => p.playCount > 0).toList();
+    }
+    
+    return list;
+  }
+
+  void setLibraryFilter(String filter) {
+    _libraryFilter = filter;
+    notifyListeners();
+  }
 
   void setSelectedDiscoveryCategory(Map<String, dynamic>? cat) {
     _selectedDiscoveryCategory = cat;
@@ -85,6 +111,11 @@ class PodcastViewModel extends ChangeNotifier {
 
   void setActiveDiscoveryDetail(Map<String, dynamic>? detail) {
     _activeDiscoveryDetail = detail;
+    notifyListeners();
+  }
+
+  void setActivePodcast(app_db.Podcast? podcast) {
+    _activePodcast = podcast;
     notifyListeners();
   }
 
@@ -250,7 +281,7 @@ class PodcastViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> playEpisode(app_db.Episode episode, PlayerViewModel playerVM) async {
+  Future<void> playEpisode(app_db.Episode episode, PlayerViewModel playerVM, {bool isAvailable = true}) async {
     final storage = _settingsVM.podcastStorageLocation;
     if (episode.downloadState != 2 && storage != null) {
        unawaited(downloadEpisode(episode));
@@ -277,14 +308,16 @@ class PodcastViewModel extends ChangeNotifier {
       artistName: episode.title,
       albumName: podcast.title,
       imageUrl: podcast.imageUrl,
+      isAvailable: isAvailable,
     );
   }
 
   Future<void> playDiscoveredEpisode(
     DiscoveredEpisode ep, 
     String podcastTitle,
-    PlayerViewModel playerVM,
-  ) async {
+    PlayerViewModel playerVM, {
+    bool isAvailable = true,
+  }) async {
     final track = app_db.Track(
       id: -ep.id, // Negative ID to indicate virtual/remote track
       path: ep.audioUrl,
@@ -305,6 +338,7 @@ class PodcastViewModel extends ChangeNotifier {
       artistName: ep.title,
       albumName: podcastTitle,
       imageUrl: podcast?.imageUrl,
+      isAvailable: isAvailable,
     );
   }
 
@@ -315,6 +349,58 @@ class PodcastViewModel extends ChangeNotifier {
       await _syncManager.runGlobalSync();
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteEpisode(app_db.Episode episode, BuildContext context) async {
+    final path = episode.localFilePath ?? '';
+    final bookmarks = await _podcastService.db.getBookmarksForTrack(path);
+    
+    if (bookmarks.isNotEmpty) {
+      if (!context.mounted) return;
+      final result = await showDialog<int>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Episode?'),
+          content: Text('This episode has ${bookmarks.length} saved clips. What would you like to do?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, 0), child: const Text('CANCEL')),
+            TextButton(onPressed: () => Navigator.pop(context, 1), child: const Text('DELETE ALL', style: TextStyle(color: Colors.redAccent))),
+            TextButton(onPressed: () => Navigator.pop(context, 2), child: const Text('PRESERVE CLIPS')),
+          ],
+        ),
+      );
+
+      if (result == 0 || result == null) return;
+      if (result == 1) {
+        // Option 2: Delete episode + bookmarks
+        await _podcastService.db.deleteBookmarksForTrack(path);
+      } else if (result == 2) {
+        // Option 3: Preserve bookmarks (Move to Remote URL)
+        await _podcastService.db.updateBookmarkPaths(path, episode.audioUrl);
+      }
+    }
+
+    try {
+      // CLEANUP RESUME DATA
+      await _podcastService.db.deletePlaybackPosition(episode.id);
+
+      if (episode.localFilePath != null) {
+        final file = File(episode.localFilePath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+      await _podcastService.updateEpisodePlayback(
+        episode.id,
+        downloadState: 0,
+        localFilePath: null,
+      );
+      _episodes = await _podcastService.getEpisodes(episode.podcastId);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to delete episode: $e';
       notifyListeners();
     }
   }

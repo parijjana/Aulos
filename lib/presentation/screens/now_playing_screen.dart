@@ -122,20 +122,26 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
           child: GlassCard(
             padding: EdgeInsets.zero,
             borderRadius: BorderRadius.circular(40),
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(40),
-                image: vm.currentTrack?.coverArt != null
-                    ? DecorationImage(image: MemoryImage(vm.currentTrack!.coverArt!), fit: BoxFit.cover)
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(40),
+              child: Container(
+                width: size,
+                height: size,
+                color: Colors.transparent,
+                child: vm.currentTrack?.coverArt != null
+                    ? Image.memory(
+                        vm.currentTrack!.coverArt!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.music_note, size: 80, color: Colors.white10),
+                      )
                     : vm.currentImageUrl != null
-                        ? DecorationImage(image: NetworkImage(vm.currentImageUrl!), fit: BoxFit.cover)
-                        : null,
+                        ? Image.network(
+                            vm.currentImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.music_note, size: 80, color: Colors.white10),
+                          )
+                        : const Icon(Icons.music_note, size: 80, color: Colors.white10),
               ),
-              child: vm.currentTrack?.coverArt == null && vm.currentImageUrl == null
-                  ? const Icon(Icons.music_note, size: 80, color: Colors.white10)
-                  : null,
             ),
           ),
         ),
@@ -218,6 +224,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
             decoration: BoxDecoration(
               color: primary.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+              border: Border.all(color: primary.withValues(alpha: 0.1)),
             ),
             child: Icon(Icons.insights, size: 16, color: primary.withValues(alpha: 0.5)),
           ),

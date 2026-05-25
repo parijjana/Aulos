@@ -134,5 +134,16 @@ class Bookmarks extends Table {
   TextColumn get title => text()();
   IntColumn get startTimeMs => integer()();
   IntColumn get endTimeMs => integer().nullable()();
+  TextColumn get tags => text().nullable()();
+  TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class PlaybackPositions extends Table {
+  IntColumn get trackId => integer()();
+  IntColumn get positionMs => integer()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {trackId};
 }

@@ -31,6 +31,7 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
   String? _error;
   bool _isShowingHidden = false;
   int _nextUnavailableCheckIndex = 0;
+  String _libraryFilter = 'ALL STATIONS';
 
   RadioViewModel({
     required RadioBrowserService api,
@@ -59,6 +60,28 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
   bool get isLoading => _isLoading || _syncManager.isSyncing;
   String? get error => _error;
   bool get isShowingHidden => _isShowingHidden;
+  String get libraryFilter => _libraryFilter;
+
+  List<RadioStation> get filteredFavorites {
+    var list = List<RadioStation>.from(_favorites);
+    
+    if (_libraryFilter == 'RECENT') {
+      list.sort((a, b) {
+        final dateA = a.lastCheck ?? DateTime(1970);
+        final dateB = b.lastCheck ?? DateTime(1970);
+        return dateB.compareTo(dateA);
+      });
+    } else if (_libraryFilter == 'AVAILABLE') {
+      return list.where((s) => s.isAvailable).toList();
+    }
+    
+    return list;
+  }
+
+  void setLibraryFilter(String filter) {
+    _libraryFilter = filter;
+    notifyListeners();
+  }
 
   Future<void> _init() async {
     _isLoading = true;
@@ -97,7 +120,6 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
       _categories = cats;
       notifyListeners();
     });
-    // REMOVED: _browseSub here was overwriting specific results with generic 'Top Stations'
   }
 
   Future<void> loadDiscoveryHome() async {
@@ -307,7 +329,7 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
     )]);
   }
 
-  Future<void> playStation(RadioStation station, PlayerViewModel playerVM) async {
+  Future<void> playStation(RadioStation station, PlayerViewModel playerVM, {bool isAvailable = true}) async {
     final track = app_db.Track(
       id: 0, 
       path: station.url,
@@ -326,6 +348,7 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
       track,
       imageUrl: station.favicon,
       description: metadataStr,
+      isAvailable: isAvailable,
     );
   }
 

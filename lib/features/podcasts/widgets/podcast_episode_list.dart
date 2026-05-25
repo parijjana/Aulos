@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
+import 'package:provider/provider.dart';
 
 class PodcastEpisodeList extends StatelessWidget {
   final List<Episode> episodes;
@@ -52,7 +53,33 @@ class PodcastEpisodeList extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(ep.pubDate?.toString().split(' ')[0] ?? '', style: const TextStyle(fontSize: 10)),
-                trailing: _buildDownloadIcon(ep, theme),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildDownloadIcon(ep, theme),
+                    if (ep.downloadState == 2)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, size: 16),
+                        onSelected: (val) {
+                          if (val == 'delete') {
+                            context.read<PodcastViewModel>().deleteEpisode(ep, context);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                SizedBox(width: 12),
+                                Text('Delete Download', style: TextStyle(color: Colors.redAccent)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
                 onTap: () => onEpisodeSelected(ep),
               );
             },

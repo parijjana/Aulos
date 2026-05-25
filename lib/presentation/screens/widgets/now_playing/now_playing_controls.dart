@@ -2,8 +2,8 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
-import 'package:aulos/presentation/screens/widgets/now_playing/create_bookmark_sheet.dart';
 import 'package:provider/provider.dart';
+import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 
 class NowPlayingControls extends StatelessWidget {
   final bool isOverlay;
@@ -69,7 +69,7 @@ class NowPlayingControls extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 24),
-        const SizedBox(width: 48), // Spacer to balance the library toggle
+        const SizedBox(width: 48), 
       ],
     );
   }
@@ -98,15 +98,17 @@ class NowPlayingControls extends StatelessWidget {
           ],
           const SizedBox(width: 16),
           _buildCircularButton(
-            Icons.bookmark_add_outlined, 
-            () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) => CreateBookmarkSheet(playerVM: vm),
-            ), 
+            vm.isBookmarkMode ? Icons.check_circle : Icons.bookmark_add_outlined, 
+            () {
+              if (vm.isBookmarkMode) {
+                _showRichBookmarkDialog(context, vm, theme);
+              } else {
+                vm.toggleBookmarkMode();
+              }
+            }, 
             buttonSize, 
-            theme
+            theme,
+            color: vm.isBookmarkMode ? theme.colorScheme.primary : null,
           ),
         ],
       ),
@@ -166,6 +168,55 @@ class NowPlayingControls extends StatelessWidget {
     );
   }
 
+  void _showRichBookmarkDialog(BuildContext context, PlayerViewModel vm, ThemeData theme) {
+    final titleController = TextEditingController(text: 'Clip from ${vm.displayTitle}');
+    final tagsController = TextEditingController();
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('SAVE AUDIO CLIP', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: 'Name', hintText: 'Interesting insight...'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: tagsController,
+              decoration: const InputDecoration(labelText: 'Tags', hintText: 'funny, informative, research'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Thoughts / Notes', hintText: 'Key takeaway from this section...'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () {
+              vm.saveBookmark(
+                title: titleController.text,
+                tags: tagsController.text,
+                notes: notesController.text,
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('SAVE CLIP'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAulosPlayButton(PlayerViewModel vm, ThemeData theme, double size) {
     final primary = theme.colorScheme.primary;
     return IconButton(
@@ -198,7 +249,7 @@ class NowPlayingControls extends StatelessWidget {
     );
   }
 
-  Widget _buildCircularButton(IconData icon, VoidCallback onPressed, double size, ThemeData theme) {
+  Widget _buildCircularButton(IconData icon, VoidCallback onPressed, double size, ThemeData theme, {Color? color}) {
     return IconButton(
       onPressed: onPressed,
       padding: EdgeInsets.zero,
@@ -207,10 +258,10 @@ class NowPlayingControls extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isOverlay ? Colors.white10 : theme.colorScheme.onSurface.withValues(alpha: 0.05),
-          border: Border.all(color: isOverlay ? Colors.white24 : theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+          color: isOverlay ? Colors.white10 : (color?.withValues(alpha: 0.1) ?? theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+          border: Border.all(color: color?.withValues(alpha: 0.3) ?? (isOverlay ? Colors.white24 : theme.colorScheme.onSurface.withValues(alpha: 0.1))),
         ),
-        child: Icon(icon, color: isOverlay ? Colors.white : theme.colorScheme.onSurface, size: size * 0.5),
+        child: Icon(icon, color: color ?? (isOverlay ? Colors.white : theme.colorScheme.onSurface), size: size * 0.5),
       ),
     );
   }
@@ -239,5 +290,12 @@ class NowPlayingControls extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 }

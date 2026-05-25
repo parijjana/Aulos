@@ -40,19 +40,29 @@ class LibraryArtWidget extends StatelessWidget {
         color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: isCircle ? null : BorderRadius.circular(size == null ? 12 : 4),
         shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
-        image: art != null && art.isNotEmpty
-            ? DecorationImage(image: MemoryImage(art), fit: BoxFit.cover)
-            : null,
       ),
-      child: art == null || art.isEmpty
-          ? Center(
-              child: _getCategoryIcon(
-                viewModel.mode,
-                theme,
-                size: size == null ? 64 : 20,
+      child: ClipRRect(
+        borderRadius: isCircle ? BorderRadius.circular(size ?? 100) : BorderRadius.circular(size == null ? 12 : 4),
+        child: art != null && art.isNotEmpty
+            ? Image.memory(
+                art,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: _getCategoryIcon(
+                    viewModel.mode,
+                    theme,
+                    size: size == null ? 64 : 20,
+                  ),
+                ),
+              )
+            : Center(
+                child: _getCategoryIcon(
+                  viewModel.mode,
+                  theme,
+                  size: size == null ? 64 : 20,
+                ),
               ),
-            )
-          : null,
+      ),
     );
   }
 

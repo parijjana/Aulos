@@ -40,6 +40,7 @@ class LibraryViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool _isPartialView = false;
   bool _wasRevealed = false;
+  String _searchQuery = '';
 
   StreamSubscription<MediaCommand>? _remoteSub;
 
@@ -69,6 +70,13 @@ class LibraryViewModel extends ChangeNotifier {
   }
 
   int get libraryTabIndex => _libraryTabIndex;
+  String get searchQuery => _searchQuery;
+  bool get isSearching => _searchQuery.isNotEmpty;
+
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
 
   void setLibraryTabIndex(int index) {
     _libraryTabIndex = index;
@@ -511,16 +519,41 @@ class LibraryViewModel extends ChangeNotifier {
     return _scrollOffsets[currentScrollKey] ?? 0.0;
   }
 
-  List<Folder> get folders => _folders;
-  List<Artist> get artists => _artists;
-  List<Album> get albums => _albums;
-  List<Genre> get genres => _genres;
-  List<int> get years => _years;
-  List<Playlist> get playlists => _playlists;
+  List<Folder> get folders => _searchQuery.isEmpty 
+      ? _folders 
+      : _folders.where((f) => f.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  
+  List<Artist> get artists => _searchQuery.isEmpty 
+      ? _artists 
+      : _artists.where((a) => a.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  
+  List<Album> get albums => _searchQuery.isEmpty 
+      ? _albums 
+      : _albums.where((a) => a.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  
+  List<Genre> get genres => _searchQuery.isEmpty 
+      ? _genres 
+      : _genres.where((g) => g.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  
+  List<int> get years => _searchQuery.isEmpty 
+      ? _years 
+      : _years.where((y) => y.toString().contains(_searchQuery)).toList();
+  
+  List<Playlist> get playlists => _searchQuery.isEmpty 
+      ? _playlists 
+      : _playlists.where((p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
-  List<Track> get tracks => _tracks;
-  List<Album> get subAlbums => _subAlbums;
-  List<Folder> get subFolders => _subFolders;
+  List<Track> get tracks => _searchQuery.isEmpty 
+      ? _tracks 
+      : _tracks.where((t) => t.title.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  
+  List<Album> get subAlbums => _searchQuery.isEmpty 
+      ? _subAlbums 
+      : _subAlbums.where((a) => a.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  
+  List<Folder> get subFolders => _searchQuery.isEmpty 
+      ? _subFolders 
+      : _subFolders.where((f) => f.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
   dynamic get selectedItem => _navStack.isNotEmpty ? _navStack.last : null;
   bool get isLoading => _isLoading;
@@ -544,6 +577,7 @@ class LibraryViewModel extends ChangeNotifier {
     _subFolders = [];
     _isPartialView = false;
     _wasRevealed = false;
+    _searchQuery = ''; // Reset search on mode change
 
     if (_connectionManager?.isClient ?? false) {
       _isLoading = true;
@@ -592,17 +626,7 @@ class LibraryViewModel extends ChangeNotifier {
         _years = await _libraryService.getYears();
         break;
       case LibraryMode.playlists:
-        final all = await _libraryService.getPlaylists();
-        final List<Playlist> visible = [];
-        for (var p in all) {
-          if (p.isSmart) {
-            final t = await _libraryService.getTracksForPlaylist(p.id);
-            if (t.isNotEmpty) visible.add(p);
-          } else {
-            visible.add(p);
-          }
-        }
-        _playlists = visible;
+        _playlists = await _libraryService.getPlaylists();
         break;
     }
 
@@ -625,6 +649,7 @@ class LibraryViewModel extends ChangeNotifier {
     _subAlbums = [];
     _subFolders = [];
     _wasRevealed = false;
+    _searchQuery = ''; // Reset search on drill down
     notifyListeners();
 
     if (_connectionManager?.isClient ?? false) {
@@ -700,6 +725,28 @@ class LibraryViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> selectSmartPlaylist(String name) async {
+    _isLoading = true;
+    _navStack.clear(); 
+    _navStack.add(Playlist(id: 0, name: name, isSmart: true, createdAt: DateTime.now()));
+    _tracks = [];
+    _subAlbums = [];
+    _subFolders = [];
+    _searchQuery = '';
+    notifyListeners();
+
+    try {
+      final allPlaylists = await _libraryService.getPlaylists();
+      final smartPlaylist = allPlaylists.firstWhere((p) => p.name == name && p.isSmart);
+      _tracks = await _libraryService.getTracksForPlaylist(smartPlaylist.id);
+    } catch (e) {
+      debugPrint('LibraryVM: Failed to load smart playlist $name: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> revealFullAlbum() async {
     if (selectedItem is Album && _isPartialView) {
       _isLoading = true;
@@ -742,6 +789,7 @@ class LibraryViewModel extends ChangeNotifier {
       _navStack.removeLast();
       _isPartialView = false;
       _wasRevealed = false;
+      _searchQuery = ''; // Reset search on back
       if (_navStack.isNotEmpty) {
         final prevItem = _navStack.removeLast();
         await selectItem(prevItem);

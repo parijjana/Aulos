@@ -50,7 +50,18 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   StreamSubscription<String?>? _icySub;
 
   int? _bookmarkEndMs;
+  bool _isResumingBookmark = false;
   MediaType? _forcedMediaType;
+  bool _isBookmarkMode = false;
+  double _bookmarkStartMs = 0;
+  double _bookmarkEndMsVal = 0;
+
+  DateTime? _lastSkipTime;
+  Timer? _radioStatsTimer;
+  Timer? _resumeSaveTimer;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
 
   PlayerViewModel({
     required engine_domain.PlaybackEngine engine,
@@ -67,16 +78,21 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
        _settingsVM = settingsVM {
     _init();
     _remoteSub = _connectionManager.remoteCommands.listen(_handleRemoteCommand);
+    
+    // START RESUME TIMER: Periodic save for Spoken Word content
+    _resumeSaveTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (_isPlaying && (currentMediaType == MediaType.podcast || currentMediaType == MediaType.audiobook)) {
+        if (_currentTrack != null) {
+          unawaited(_db.savePlaybackPosition(_currentTrack!.id, _position.inMilliseconds));
+        }
+      }
+    });
   }
 
-  DateTime? _lastSkipTime;
-  Timer? _radioStatsTimer;
-  String? _lastRadioUuid;
-
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
-
   bool get isCurrentStationFavorite => _isCurrentStationFavorite;
+  bool get isBookmarkMode => _isBookmarkMode;
+  double get bookmarkStartMs => _bookmarkStartMs;
+  double get bookmarkEndMsVal => _bookmarkEndMsVal;
 
   void _init() {
     _trackSub = _engine.currentTrackStream.listen((track) {
@@ -85,6 +101,8 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
         log('PLAYER: Now playing "${track.title}"');
         _errorMessage = null; // Clear error on new track
         _recordPlayAnalytics(track);
+        
+        // ASYNC COLOR EXTRACTION: Don't block UI or playback
         if (track.coverArt != null && track.coverArt!.isNotEmpty) {
            _extractColorFromMemory(track.coverArt!);
         } else if (_currentImageUrl != null) {
@@ -122,10 +140,12 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
       _position = pos;
 
       // BOUNDED PLAYBACK CHECK: Stop if we're playing a bookmark clip
-      if (_bookmarkEndMs != null && pos.inMilliseconds >= _bookmarkEndMs!) {
-        log('PLAYER: Bounded bookmark reached end time. Stopping.');
-        _bookmarkEndMs = null; // Clear the bound
-        pause();
+      if (_bookmarkEndMs != null && !_isResumingBookmark) {
+        if (pos.inMilliseconds >= _bookmarkEndMs!) {
+          log('PLAYER: Bounded bookmark reached end time (${pos.inMilliseconds}ms >= $_bookmarkEndMs). Stopping.');
+          _bookmarkEndMs = null; // Clear the bound
+          pause();
+        }
       }
 
       notifyListeners();
@@ -174,7 +194,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   Future<bool> _performHealthCheck(String url) async {
     try {
       log('HEALTH: Checking stream availability: $url');
-      final response = await http.head(Uri.parse(url))
+      final response = await _httpClient.head(Uri.parse(url))
           .timeout(const Duration(seconds: 5));
       if (response.statusCode >= 400) {
         log('HEALTH_FAIL: Stream returned status ${response.statusCode}');
@@ -194,6 +214,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     String? artistName,
     String? albumName,
     String? imageUrl,
+    bool isAvailable = true,
   }) async {
     _lastSkipTime = DateTime.now();
     _position = Duration.zero;
@@ -211,9 +232,22 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     final intendedType = _getMediaTypeForTrack(track);
     _forcedMediaType = null; // Clear existing
     _isCurrentStationFavorite = false;
+    _isBookmarkMode = false;
     notifyListeners();
 
-    // HEALTH CHECK: For Radio and Podcasts
+    // 0. AVAILABILITY GUARD: Block verified dead streams
+    if (!isAvailable) {
+      log('PLAYER: Blocking playback for verified unavailable stream: ${track.path}');
+      await _engine.stop();
+      _errorMessage = 'Media verified unavailable';
+      _playbackState = engine_domain.PlaybackState.error;
+      _currentArtistName = 'Unavailable';
+      _forcedMediaType = intendedType;
+      notifyListeners();
+      return;
+    }
+
+    // HEALTH CHECK: For Radio and Podcasts (Manual check for newly selected items)
     if (track.path.startsWith('http')) {
       final isAlive = await _performHealthCheck(track.path);
       if (!isAlive) {
@@ -248,31 +282,63 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     } else if (intendedType == MediaType.podcast) {
        // For podcast episodes, we store by ID (absolute value)
        unawaited(_settingsVM.setLastPodcastEpisode(track.id.abs()));
+    } else if (intendedType == MediaType.music) {
+      // METADATA RESOLUTION: Fetch artist/album names if not provided
+      if (artistName == null && track.artistId != null) {
+        final artist = await (_db.select(_db.artists)..where((a) => a.id.equals(track.artistId!))).getSingleOrNull();
+        if (artist != null) _currentArtistName = artist.name;
+      }
+      if (albumName == null && track.albumId != null) {
+        final album = await (_db.select(_db.albums)..where((a) => a.id.equals(track.albumId!))).getSingleOrNull();
+        if (album != null) _currentAlbumName = album.name;
+      }
     }
 
     try {
-      await _engine.loadTrack(track);
-      if (track.id < 0 && artistName == null) {
-        _currentArtistName = 'Podcast Episode';
-        _currentAlbumName = 'Podcast';
-      } else if (track.id == 0 && artistName == null) {
-        _currentArtistName = 'Radio Station';
-        _currentAlbumName = 'Internet Radio';
-      } else if (artistName == null) {
-        _currentArtistName = 'Artist';
-        _currentAlbumName = 'Album';
-      }
+      // 1. STOP PREVIOUS: Ensure no overlap and clear state
+      await _engine.stop();
 
+      // 2. ASYNC COLOR EXTRACTION: Start immediately but don't await
       if (track.coverArt != null && track.coverArt!.isNotEmpty) {
-        await _extractColorFromMemory(track.coverArt!);
+        unawaited(_extractColorFromMemory(track.coverArt!));
       } else if (imageUrl != null && imageUrl.isNotEmpty) {
-        await _extractColorFromUrl(imageUrl);
+        unawaited(_extractColorFromUrl(imageUrl));
       } else {
         _extractedColor = null;
-        notifyListeners();
       }
 
+      // 3. SEQUENTIAL LOADING: Tell engine to prepare the track
+      await _engine.loadTrack(track);
+      
+      // 4. IMMEDIATE PLAY: Audio starts now
       play();
+
+      // 5. ASYNC RESUME & METADATA: Handle these in background
+      unawaited(() async {
+        // RESUME LOGIC: For Spoken Word content
+        if (intendedType == MediaType.podcast || intendedType == MediaType.audiobook) {
+          final saved = await _db.getPlaybackPosition(track.id);
+          if (saved != null && saved.positionMs > 5000) {
+            log('PLAYER: Resuming from saved position: ${saved.positionMs}ms');
+            await _engine.seek(Duration(milliseconds: saved.positionMs));
+          }
+        }
+
+        // Update UI strings if still on this track
+        if (_currentTrack?.id == track.id) {
+          if (track.id < 0 && _currentArtistName == 'Loading...') {
+            _currentArtistName = artistName ?? 'Podcast Episode';
+            _currentAlbumName = albumName ?? 'Podcast';
+          } else if (track.id == 0 && _currentArtistName == 'Loading...') {
+            _currentArtistName = artistName ?? 'Radio Station';
+            _currentAlbumName = albumName ?? 'Internet Radio';
+          } else if (_currentArtistName == 'Loading...') {
+            _currentArtistName = artistName ?? 'Artist';
+            _currentAlbumName = albumName ?? 'Album';
+          }
+          notifyListeners();
+        }
+      }());
     } catch (e) {
       log('PLAYER_ERROR: Failed to load track: $e');
       _errorMessage = 'Failed to load media';
@@ -318,13 +384,19 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   MediaType get currentMediaType {
     if (_forcedMediaType != null) return _forcedMediaType!;
     if (_currentTrack == null) return MediaType.music;
-    if (_currentTrack!.id < -1000000) return MediaType.audiobook;
-    if (_currentTrack!.id < 0) return MediaType.podcast;
-    if (_currentTrack!.id == 0) return MediaType.radio;
-    return MediaType.music;
+    
+    final type = _getMediaTypeForTrack(_currentTrack!);
+    return type;
   }
 
-  Track? get currentTrack => _currentTrack;
+  Track? get currentTrack {
+    if (_currentTrack == null) return null;
+    final qt = _queueVM.currentTrack;
+    if (qt != null && qt.id == _currentTrack!.id && qt.id != 0) {
+      return qt;
+    }
+    return _currentTrack;
+  }
   Duration get position => _position;
   Duration get duration => _duration;
   bool get isPlaying => _isPlaying;
@@ -360,11 +432,19 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     _engine.seek(position);
   }
 
-  void playBookmark(Bookmark bookmark) {
-    log('PLAYER: Playing bookmark "${bookmark.title}" from ${_formatDuration(Duration(milliseconds: bookmark.startTimeMs))}');
+  void playBookmark(Bookmark bookmark) async {
+    log('PLAYER: Playing bookmark "${bookmark.title}" from ${_formatDuration(Duration(milliseconds: bookmark.startTimeMs))} to ${_formatDuration(Duration(milliseconds: bookmark.endTimeMs ?? 0))}');
+    
     _bookmarkEndMs = bookmark.endTimeMs;
-    _engine.seek(Duration(milliseconds: bookmark.startTimeMs));
+    _isResumingBookmark = true; // Block end-check during seek
+    
+    await _engine.seek(Duration(milliseconds: bookmark.startTimeMs));
     play();
+    
+    // Safety: Allow 500ms for engine to stabilize before allowing the end-check
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _isResumingBookmark = false;
+    });
   }
   
   void setVolume(double volume) {
@@ -393,22 +473,55 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
   Future<void> saveBookmark({
     required String title,
-    required int startMs,
-    int? endMs,
+    String? tags,
+    String? notes,
   }) async {
     if (_currentTrack == null) return;
-    log('PLAYER: Saving bookmark "$title" at ${_formatDuration(Duration(milliseconds: startMs))} - ${_formatDuration(Duration(milliseconds: endMs ?? 0))}');
+    final startMs = _bookmarkStartMs.toInt();
+    final endMs = _bookmarkEndMsVal.toInt();
+
+    log('PLAYER: Saving rich bookmark "$title" at ${_formatDuration(Duration(milliseconds: startMs))} - ${_formatDuration(Duration(milliseconds: endMs))}');
     try {
       await _db.saveBookmark(BookmarksCompanion.insert(
         trackPath: _currentTrack!.path,
         title: title,
         startTimeMs: startMs,
         endTimeMs: Value(endMs),
+        tags: Value(tags),
+        notes: Value(notes),
       ));
+      
+      // AUTO-PIN PODCASTS
+      if (currentMediaType == MediaType.podcast) {
+        log('PLAYER: Auto-pinning podcast episode due to bookmark creation.');
+        await _db.updateEpisodePlayback(_currentTrack!.id.abs(), isPinned: true);
+      }
+
+      _isBookmarkMode = false;
       log('PLAYER: Bookmark saved.');
     } catch (e) {
       log('PLAYER_ERROR: Failed to save bookmark: $e');
+    } finally {
+      notifyListeners();
     }
+  }
+
+  void setBookmarkRange(double start, double end) {
+    _bookmarkStartMs = start;
+    _bookmarkEndMsVal = end;
+    notifyListeners();
+  }
+
+  void toggleBookmarkMode() {
+    _isBookmarkMode = !_isBookmarkMode;
+    if (_isBookmarkMode) {
+      // Initial range: -10s to +20s
+      final pos = _position.inMilliseconds.toDouble();
+      final dur = _duration.inMilliseconds.toDouble();
+      _bookmarkStartMs = (pos - 10000).clamp(0, dur);
+      _bookmarkEndMsVal = (pos + 20000).clamp(0, dur);
+    }
+    notifyListeners();
   }
 
   void skipForward() {
@@ -619,6 +732,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     _trackSub?.cancel();
     _remoteSub?.cancel();
     _icySub?.cancel();
+    _resumeSaveTimer?.cancel();
     _httpClient.close();
     super.dispose();
   }

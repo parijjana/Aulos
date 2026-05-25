@@ -1,6 +1,7 @@
 import 'package:aulos/data/database/app_database.dart';
 
 abstract class PodcastService {
+  AppDatabase get db;
   Future<Podcast> subscribeToFeed(String url);
   Future<List<Episode>> refreshPodcast(int podcastId);
   Future<List<Podcast>> getSubscribedPodcasts();

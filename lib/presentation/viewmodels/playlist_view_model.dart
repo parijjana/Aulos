@@ -35,6 +35,11 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   Future<void> deletePlaylist(int id) async {
+    final playlist = _playlists.firstWhere((p) => p.id == id);
+    if (playlist.isSmart) {
+      debugPrint('PlaylistVM: Cannot delete smart playlist.');
+      return;
+    }
     await _libraryService.deletePlaylist(id);
     await _loadPlaylists();
   }

@@ -9,7 +9,8 @@
 
 ### Documentation Standards
 - **Daily Progress Logs:** Maintain date-stamped logs in the `progress_logs/` directory (e.g., `progress_logs/YYYY-MM-DD.md`). Always check the previous day's log at session start.
-- **Design Features:** Maintain individual feature definitions in the `design_features/` directory. Each file should contain the summary, rationale, and expected behavior. This includes both functional services (e.g., Radio) and critical UX behaviors (e.g., View State Retention). Update files with descoping reasons if applicable.
+- **Design Philosophy:** Maintain high-level UX and aesthetic guiding principles in the `design_philosophy/` directory. This captures the "how and why" behind interface and behavioral decisions (e.g., Responsive Tabbing).
+- **Design Features:** Maintain functional feature and service definitions in the `design_features/` directory. Each file should contain the summary, rationale, and expected behavior.
 - **Architecture Map:** Maintain `ARCHITECTURE.md` as the source of truth for structural mapping and system rules.
 - **Lean Context:** Do NOT maintain a detailed "Development Matrix" or "Files Touched" lists in Markdown.
 

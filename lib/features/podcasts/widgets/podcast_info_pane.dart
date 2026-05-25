@@ -6,18 +6,20 @@ import 'package:provider/provider.dart';
 class PodcastInfoPane extends StatelessWidget {
   final Podcast podcast;
   final VoidCallback onUnsubscribe;
+  final double? width;
 
   const PodcastInfoPane({
     super.key,
     required this.podcast,
     required this.onUnsubscribe,
+    this.width = 300,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 300,
+      width: width,
       padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(
         key: const PageStorageKey('podcast_info_scroll'),

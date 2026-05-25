@@ -34,39 +34,97 @@ class _PodcastDetailViewState extends State<PodcastDetailView> {
       children: [
         _buildBreadcrumb(theme),
         Expanded(
-          child: Row(
-            children: [
-              PodcastInfoPane(
-                podcast: widget.podcast,
-                onUnsubscribe: () {
-                  podcastVM.unsubscribe(widget.podcast.id);
-                  widget.onBack();
-                },
-              ),
-              VerticalDivider(width: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-              Expanded(
-                flex: 4,
-                child: PodcastEpisodeList(
-                  episodes: podcastVM.episodes,
-                  selectedEpisode: _selectedEpisode,
-                  onEpisodeSelected: (ep) => setState(() => _selectedEpisode = ep),
-                ),
-              ),
-              VerticalDivider(width: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-              Expanded(
-                flex: 5,
-                child: PodcastNotesPane(
-                  selectedEpisode: _selectedEpisode,
-                  onTogglePin: (ep) {
-                    podcastVM.togglePin(ep);
-                    setState(() {
-                      _selectedEpisode = ep.copyWith(isPinned: !ep.isPinned);
-                    });
-                  },
-                  onPlay: (ep) => podcastVM.playEpisode(ep, playerVM),
-                ),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isNarrow = constraints.maxWidth < 900;
+              
+              if (isNarrow) {
+                return DefaultTabController(
+                  length: 3,
+                  child: Column(
+                    children: [
+                      TabBar(
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        indicatorSize: TabBarIndicatorSize.label,
+                        dividerColor: Colors.transparent,
+                        labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                        tabs: const [
+                          Tab(text: 'INFO'),
+                          Tab(text: 'EPISODES'),
+                          Tab(text: 'NOTES & CLIPS'),
+                        ],
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            PodcastInfoPane(
+                              width: null, // Full width
+                              podcast: widget.podcast,
+                              onUnsubscribe: () {
+                                podcastVM.unsubscribe(widget.podcast.id);
+                                widget.onBack();
+                              },
+                            ),
+                            PodcastEpisodeList(
+                              episodes: podcastVM.episodes,
+                              selectedEpisode: _selectedEpisode,
+                              onEpisodeSelected: (ep) => setState(() => _selectedEpisode = ep),
+                            ),
+                            PodcastNotesPane(
+                              selectedEpisode: _selectedEpisode,
+                              onTogglePin: (ep) {
+                                podcastVM.togglePin(ep);
+                                setState(() {
+                                  _selectedEpisode = ep.copyWith(isPinned: !ep.isPinned);
+                                });
+                              },
+                              onPlay: (ep) => podcastVM.playEpisode(ep, playerVM),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Row(
+                children: [
+                  PodcastInfoPane(
+                    podcast: widget.podcast,
+                    onUnsubscribe: () {
+                      podcastVM.unsubscribe(widget.podcast.id);
+                      widget.onBack();
+                    },
+                  ),
+                  VerticalDivider(width: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+                  Expanded(
+                    flex: 4,
+                    child: PodcastEpisodeList(
+                      episodes: podcastVM.episodes,
+                      selectedEpisode: _selectedEpisode,
+                      onEpisodeSelected: (ep) => setState(() => _selectedEpisode = ep),
+                    ),
+                  ),
+                  VerticalDivider(width: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+                  Expanded(
+                    flex: 5,
+                    child: PodcastNotesPane(
+                      selectedEpisode: _selectedEpisode,
+                      onTogglePin: (ep) {
+                        podcastVM.togglePin(ep);
+                        setState(() {
+                          _selectedEpisode = ep.copyWith(isPinned: !ep.isPinned);
+                        });
+                      },
+                      onPlay: (ep) => podcastVM.playEpisode(ep, playerVM),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],

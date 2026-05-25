@@ -29,6 +29,7 @@ part 'app_database.g.dart';
     Episodes,
     Bookmarks,
     RadioListeningStats,
+    PlaybackPositions,
   ],
   daos: [
     LibraryDao,
@@ -42,7 +43,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -116,6 +117,14 @@ class AppDatabase extends _$AppDatabase {
       if (from < 15) {
         await m.addColumn(bookmarks, bookmarks.endTimeMs);
       }
+      if (from < 16) {
+        // RESET: Drop and recreate bookmarks due to previous schema corruption
+        await m.deleteTable(bookmarks.actualTableName);
+        await m.createTable(bookmarks);
+      }
+      if (from < 17) {
+        await m.createTable(playbackPositions);
+      }
     },
   );
 
@@ -183,6 +192,32 @@ class AppDatabase extends _$AppDatabase {
   Future<int> saveBookmark(BookmarksCompanion companion) => into(bookmarks).insert(companion);
   Future<List<Bookmark>> getBookmarksForTrack(String path) => (select(bookmarks)..where((t) => t.trackPath.equals(path))).get();
   Future<void> deleteBookmark(int id) => (delete(bookmarks)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteBookmarksForTrack(String path) => (delete(bookmarks)..where((t) => t.trackPath.equals(path))).go();
+  Future<void> updateBookmarkPaths(String oldPath, String newPath) {
+    return (update(bookmarks)..where((t) => t.trackPath.equals(oldPath)))
+        .write(BookmarksCompanion(trackPath: Value(newPath)));
+  }
+
+  // Playback Positions
+  Future<void> savePlaybackPosition(int trackId, int positionMs) {
+    return into(playbackPositions).insert(
+      PlaybackPositionsCompanion(
+        trackId: Value(trackId),
+        positionMs: Value(positionMs),
+        updatedAt: Value(DateTime.now()),
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
+  Future<PlaybackPosition?> getPlaybackPosition(int trackId) {
+    return (select(playbackPositions)..where((t) => t.trackId.equals(trackId)))
+        .getSingleOrNull();
+  }
+
+  Future<void> deletePlaybackPosition(int trackId) {
+    return (delete(playbackPositions)..where((t) => t.trackId.equals(trackId))).go();
+  }
 
   // Analytics Delegation
   Future<void> setTrackFavorite(int id, bool favorite) => analyticsDao.setTrackFavorite(id, favorite);

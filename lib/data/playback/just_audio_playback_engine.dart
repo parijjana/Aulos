@@ -136,6 +136,14 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
   Future<void> loadTrack(Track track) async {
     log('ENGINE: Loading track: "${track.title}"');
     _currentTrackController.add(track);
+    
+    // SYNC METADATA: Tell AudioService about the track so it can track duration
+    _handler.updateMetadata(MediaItem(
+      id: track.path,
+      title: track.title,
+      artist: 'Aulos Audio',
+    ));
+
     await setSource(track.path);
   }
 

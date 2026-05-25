@@ -8,6 +8,14 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
 
   AulosAudioHandler() {
     _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
+    
+    // AUTO-DURATION: Update mediaItem duration when it becomes available
+    _player.durationStream.listen((dur) {
+      final currentItem = mediaItem.value;
+      if (currentItem != null && dur != null) {
+        mediaItem.add(currentItem.copyWith(duration: dur));
+      }
+    });
   }
 
   Stream<String> get customEventStream => _customEventController.stream;
@@ -46,6 +54,22 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
 
   void updateMetadata(MediaItem item) {
     mediaItem.add(item);
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    switch (repeatMode) {
+      case AudioServiceRepeatMode.none:
+        await _player.setLoopMode(LoopMode.off);
+        break;
+      case AudioServiceRepeatMode.one:
+        await _player.setLoopMode(LoopMode.one);
+        break;
+      case AudioServiceRepeatMode.all:
+      case AudioServiceRepeatMode.group:
+        await _player.setLoopMode(LoopMode.all);
+        break;
+    }
   }
 
   AudioPlayer get player => _player;
