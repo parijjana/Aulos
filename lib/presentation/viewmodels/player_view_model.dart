@@ -5,6 +5,7 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/radio_database.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
 import 'package:aulos/domain/network/connection_manager.dart';
 import 'package:aulos/domain/network/socket_service.dart';
 import 'package:aulos/domain/network/log_service.dart';
@@ -14,7 +15,7 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:typed_data';
 
-enum MediaType { music, podcast, radio, audiobook }
+enum MediaType { music, podcast, radio, audiobook, noise }
 
 class PlayerViewModel extends ChangeNotifier with UniversalLog {
   final engine_domain.PlaybackEngine _engine;
@@ -24,6 +25,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   final RadioDatabase _radioDb;
   final SettingsViewModel _settingsVM;
   final http.Client _httpClient = http.Client();
+  NoiseViewModel? _noiseVM;
 
   Track? _currentTrack;
   Duration _position = Duration.zero;
@@ -89,6 +91,16 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
     });
   }
 
+  void setNoiseViewModel(NoiseViewModel vm) {
+    _noiseVM = vm;
+    _noiseVM?.addListener(notifyListeners);
+  }
+
+  void forceMediaType(MediaType type) {
+    _forcedMediaType = type;
+    notifyListeners();
+  }
+
   bool get isCurrentStationFavorite => _isCurrentStationFavorite;
   bool get isBookmarkMode => _isBookmarkMode;
   double get bookmarkStartMs => _bookmarkStartMs;
@@ -104,9 +116,9 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
         
         // ASYNC COLOR EXTRACTION: Don't block UI or playback
         if (track.coverArt != null && track.coverArt!.isNotEmpty) {
-           _extractColorFromMemory(track.coverArt!);
+           unawaited(_extractColorFromMemory(track.coverArt!));
         } else if (_currentImageUrl != null) {
-           _extractColorFromUrl(_currentImageUrl!);
+           unawaited(_extractColorFromUrl(_currentImageUrl!));
         }
       }
       notifyListeners();
@@ -125,9 +137,11 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
       if (state == engine_domain.PlaybackState.completed) {
         log('PLAYER: Track reached end. Type: $currentMediaType');
-        // LOCK: Only auto-skip for music and podcasts, NEVER for radio
+        // LOCK: Only auto-skip for music and podcasts, NEVER for radio/noise
         if (currentMediaType == MediaType.music || currentMediaType == MediaType.podcast) {
            _debouncedSkipNext();
+        } else if (currentMediaType == MediaType.noise) {
+           log('PLAYER: Noise loop completed.');
         } else {
            stop(); // Radio should just stop if it ends
         }
@@ -296,7 +310,12 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
     try {
       // 1. STOP PREVIOUS: Ensure no overlap and clear state
-      await _engine.stop();
+      if (intendedType != MediaType.noise) {
+        await _engine.stop();
+        if (_noiseVM?.isMixerActive ?? false) {
+           unawaited(_noiseVM?.clearMix());
+        }
+      }
 
       // 2. ASYNC COLOR EXTRACTION: Start immediately but don't await
       if (track.coverArt != null && track.coverArt!.isNotEmpty) {
@@ -361,12 +380,20 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
   void play() {
     log('PLAYER: User clicked play');
-    _engine.play();
+    if (currentMediaType == MediaType.noise && _noiseVM != null) {
+       unawaited(_noiseVM!.restoreActiveMix());
+    } else {
+       _engine.play();
+    }
   }
   
   void pause() {
     log('PLAYER: User clicked pause');
-    _engine.pause();
+    if (currentMediaType == MediaType.noise && _noiseVM != null) {
+       _noiseVM!.stopAll();
+    } else {
+       _engine.pause();
+    }
   }
 
   void _broadcastState() {
@@ -374,7 +401,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
       _connectionManager.broadcastState(
         title: _currentTrack?.title ?? 'Idle',
         artist: currentArtistName,
-        isPlaying: _isPlaying,
+        isPlaying: isPlaying,
         positionMs: _position.inMilliseconds,
         durationMs: _duration.inMilliseconds,
       );
@@ -383,10 +410,22 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
   MediaType get currentMediaType {
     if (_forcedMediaType != null) return _forcedMediaType!;
-    if (_currentTrack == null) return MediaType.music;
     
-    final type = _getMediaTypeForTrack(_currentTrack!);
-    return type;
+    // PRIORITY: If Noise is actively playing, it's Noise Mode.
+    if (_noiseVM?.isPlaying ?? false) return MediaType.noise;
+
+    // If Music/Podcast/Radio is actively playing, it's that mode.
+    if (_isPlaying) {
+      if (_currentTrack == null) return MediaType.music;
+      return _getMediaTypeForTrack(_currentTrack!);
+    }
+
+    // If nothing is playing, but Noise has a selection, claim the view 
+    // so the "Resume Mix" controls show up in Now Playing.
+    if (_noiseVM?.isMixerActive ?? false) return MediaType.noise;
+
+    if (_currentTrack == null) return MediaType.music;
+    return _getMediaTypeForTrack(_currentTrack!);
   }
 
   Track? get currentTrack {
@@ -399,7 +438,9 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   }
   Duration get position => _position;
   Duration get duration => _duration;
-  bool get isPlaying => _isPlaying;
+  bool get isPlaying => currentMediaType == MediaType.noise 
+      ? (_noiseVM?.isPlaying ?? false) 
+      : _isPlaying;
   double get volume => _volume;
   bool get isMuted => _volume == 0;
   bool get isShuffle => _isShuffle;
@@ -407,23 +448,42 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   engine_domain.PlaybackState get state => _playbackState;
   double get playbackSpeed => _playbackSpeed;
   Color? get extractedColor => _extractedColor;
-  String? get currentShowNotes => _currentShowNotes;
+  String? get currentShowNotes {
+    if (currentMediaType == MediaType.noise && _noiseVM != null) {
+      return _noiseVM!.activeAttributions;
+    }
+    return _currentShowNotes;
+  }
   String? get currentStreamMetadata => _currentStreamMetadata;
   String? get currentImageUrl => _currentImageUrl;
 
   bool get isHostMode => _connectionManager.isHost;
   bool get isRemoteMode => _connectionManager.isClient;
 
-  String get displayTitle => _currentTrack?.title ?? 'No Track Selected';
+  String get displayTitle {
+    if (currentMediaType == MediaType.noise && _noiseVM != null) {
+      return _noiseVM!.activeIngredientsLabel;
+    }
+    return _currentTrack?.title ?? 'No Track Selected';
+  }
+
   String _currentArtistName = 'Unknown Artist';
   String _currentAlbumName = 'Unknown Album';
   
-  String get currentArtistName => _currentArtistName;
+  String get currentArtistName {
+    if (currentMediaType == MediaType.noise && _noiseVM != null) {
+      return _noiseVM!.activeAttributions;
+    }
+    return _currentArtistName;
+  }
   String get currentAlbumName => _currentAlbumName;
   
   void stop() {
     log('PLAYER: User clicked stop');
     _engine.stop();
+    if (currentMediaType == MediaType.noise) {
+      _noiseVM?.stopAll();
+    }
   }
   
   void seek(Duration position) {
@@ -579,6 +639,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   }
 
   MediaType _getMediaTypeForTrack(Track track) {
+    if (track.id < -2000000) return MediaType.noise;
     if (track.id < -1000000) return MediaType.audiobook;
     if (track.id < 0) return MediaType.podcast;
     if (track.id == 0) return MediaType.radio;
@@ -588,6 +649,12 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
   void toggleShuffle() {
     _isShuffle = !_isShuffle;
     _queueVM.setShuffle(_isShuffle);
+    notifyListeners();
+  }
+
+  void setRepeatMode(engine_domain.RepeatMode mode) {
+    _repeatMode = mode;
+    _engine.setRepeatMode(mode);
     notifyListeners();
   }
 
@@ -726,6 +793,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog {
 
   @override
   void dispose() {
+    _noiseVM?.removeListener(notifyListeners);
     _posSub?.cancel();
     _durSub?.cancel();
     _stateSub?.cancel();

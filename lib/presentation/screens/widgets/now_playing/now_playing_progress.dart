@@ -37,6 +37,10 @@ class NowPlayingProgress extends StatelessWidget {
       );
     }
 
+    if (mediaType == MediaType.noise) {
+      return const SizedBox.shrink();
+    }
+
     // 2. Dual-Slider for Bookmark Mode
     if (vm.isBookmarkMode) {
       final total = vm.duration.inMilliseconds.toDouble();

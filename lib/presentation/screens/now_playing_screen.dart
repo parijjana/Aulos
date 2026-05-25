@@ -195,6 +195,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     String label = 'UP NEXT';
     if (type == MediaType.podcast) label = 'SHOW NOTES';
     if (type == MediaType.radio) label = 'STATION INFO';
+    if (type == MediaType.noise) label = 'LOOP ATTRIBUTION';
     if (type == MediaType.audiobook) label = 'CHAPTERS';
 
     return SliverToBoxAdapter(

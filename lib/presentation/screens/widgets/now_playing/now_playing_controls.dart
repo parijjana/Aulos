@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/presentation/viewmodels/display_view_model.dart';
+import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:provider/provider.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
@@ -22,6 +24,10 @@ class NowPlayingControls extends StatelessWidget {
     final double buttonSize = isOverlay ? 36 : 48;
     final double primaryButtonSize = isOverlay ? 72 : 96;
 
+    if (mediaType == MediaType.noise) {
+      return _buildNoiseControls(context, theme, vm, primaryButtonSize);
+    }
+
     if (mediaType == MediaType.radio) {
       return _buildRadioControls(theme, vm, primaryButtonSize);
     }
@@ -31,6 +37,36 @@ class NowPlayingControls extends StatelessWidget {
     }
 
     return _buildMusicControls(context, theme, vm, queueVM, buttonSize, primaryButtonSize);
+  }
+
+  Widget _buildNoiseControls(BuildContext context, ThemeData theme, PlayerViewModel vm, double size) {
+    final displayVM = context.read<DisplayViewModel>();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: () {
+            displayVM.setTabIndex(4); // NOISE tab
+            if (displayVM.mode != UIContextMode.highContext) {
+              displayVM.setMode(UIContextMode.highContext);
+            }
+          },
+          icon: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.tune_rounded, color: theme.colorScheme.primary, size: 20),
+          ),
+          tooltip: 'Modify Soundscape',
+        ),
+        const SizedBox(width: 32),
+        _buildAulosPlayButton(vm, theme, size),
+        const SizedBox(width: 32),
+        const SizedBox(width: 48), // Spacer for symmetry
+      ],
+    );
   }
 
   Widget _buildRadioControls(ThemeData theme, PlayerViewModel vm, double size) {
@@ -220,7 +256,7 @@ class NowPlayingControls extends StatelessWidget {
   Widget _buildAulosPlayButton(PlayerViewModel vm, ThemeData theme, double size) {
     final primary = theme.colorScheme.primary;
     return IconButton(
-      onPressed: vm.isPlaying ? vm.pause : vm.play,
+      onPressed: vm.isPlaying ? (vm.currentMediaType == MediaType.noise ? vm.stop : vm.pause) : vm.play,
       padding: EdgeInsets.zero,
       icon: Container(
         width: size,
@@ -241,7 +277,7 @@ class NowPlayingControls extends StatelessWidget {
           ],
         ),
         child: Icon(
-          vm.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          vm.isPlaying ? (vm.currentMediaType == MediaType.noise ? Icons.stop_rounded : Icons.pause_rounded) : Icons.play_arrow_rounded,
           color: Colors.white,
           size: size * 0.5,
         ),
@@ -290,12 +326,5 @@ class NowPlayingControls extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 }

@@ -30,6 +30,7 @@ part 'app_database.g.dart';
     Bookmarks,
     RadioListeningStats,
     PlaybackPositions,
+    SavedMixes,
   ],
   daos: [
     LibraryDao,
@@ -43,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +125,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 17) {
         await m.createTable(playbackPositions);
+      }
+      if (from < 18) {
+        await m.createTable(savedMixes);
       }
     },
   );
@@ -218,6 +222,11 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deletePlaybackPosition(int trackId) {
     return (delete(playbackPositions)..where((t) => t.trackId.equals(trackId))).go();
   }
+
+  // Saved Mixes (Ambient Mixer)
+  Future<int> saveMix(SavedMixesCompanion companion) => into(savedMixes).insert(companion, mode: InsertMode.insertOrReplace);
+  Future<List<SavedMix>> getAllMixes() => select(savedMixes).get();
+  Future<void> deleteMix(int id) => (delete(savedMixes)..where((t) => t.id.equals(id))).go();
 
   // Analytics Delegation
   Future<void> setTrackFavorite(int id, bool favorite) => analyticsDao.setTrackFavorite(id, favorite);

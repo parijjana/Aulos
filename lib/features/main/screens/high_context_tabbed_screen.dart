@@ -3,6 +3,7 @@ import 'package:aulos/features/library/widgets/music_library_view.dart';
 import 'package:aulos/presentation/screens/now_playing_screen.dart';
 import 'package:aulos/features/podcasts/screens/podcast_root_screen.dart';
 import 'package:aulos/features/radio/screens/radio_root_screen.dart';
+import 'package:aulos/features/noise/screens/noise_root_screen.dart';
 import 'package:aulos/features/settings/screens/settings_screen.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
@@ -32,9 +33,9 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     _lastKnownVmIndex = displayVM.selectedTabIndex;
     
     _tabController = TabController(
-      length: 5, 
+      length: 6, 
       vsync: this,
-      initialIndex: _lastKnownVmIndex.clamp(0, 4),
+      initialIndex: _lastKnownVmIndex.clamp(0, 5),
     );
 
     _tabController.addListener(_handleTabControllerChange);
@@ -61,7 +62,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     
     if (_lastKnownVmIndex != displayVM.selectedTabIndex) {
       _lastKnownVmIndex = displayVM.selectedTabIndex;
-      _tabController.animateTo(displayVM.selectedTabIndex.clamp(0, 4));
+      _tabController.animateTo(displayVM.selectedTabIndex.clamp(0, 5));
     }
   }
 
@@ -77,6 +78,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
     'MUSIC',
     'PODCASTS',
     'RADIO',
+    'NOISE',
     'SETTINGS'
   ];
 
@@ -118,6 +120,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
                         const MusicLibraryView(),
                         const PodcastRootScreen(),
                         const RadioRootScreen(),
+                        const NoiseRootScreen(),
                         const SettingsScreen(),
                       ],
                     ),

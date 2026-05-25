@@ -65,6 +65,9 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
       Uri uri;
       if (path.startsWith('http')) {
         uri = Uri.parse(path);
+      } else if (path.startsWith('asset:///')) {
+        // JustAudio supports asset:/// URIs directly in AudioSource.uri()
+        uri = Uri.parse(path);
       } else {
         final file = io.File(path);
         if (!file.existsSync()) {

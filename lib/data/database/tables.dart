@@ -147,3 +147,11 @@ class PlaybackPositions extends Table {
   @override
   Set<Column> get primaryKey => {trackId};
 }
+
+@DataClassName('SavedMix')
+class SavedMixes extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().unique()();
+  TextColumn get mixData => text()(); // JSON map of soundId -> volume
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}

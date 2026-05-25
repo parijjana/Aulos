@@ -11,6 +11,7 @@ import 'package:aulos/presentation/viewmodels/display_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
 import 'package:aulos/presentation/viewmodels/insights_view_model.dart';
+import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
 import 'package:aulos/data/library/playlist_service.dart';
 import 'package:aulos/data/library/library_indexer_service.dart';
 import 'package:aulos/data/library/artwork_service.dart';
@@ -22,6 +23,7 @@ import 'package:aulos/data/library/discovery_sync_manager.dart';
 import 'package:aulos/data/library/podcast_storage_manager.dart';
 import 'package:aulos/data/library/radio_browser_service.dart';
 import 'package:aulos/data/library/radio_sync_manager.dart';
+import 'package:aulos/data/playback/ambient_mixer_service.dart';
 import 'package:aulos/domain/library/podcast_service.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/features/main/screens/high_context_tabbed_screen.dart';
@@ -135,6 +137,8 @@ void main() async {
   final radioService = RadioBrowserService(rateLimiter: rateLimitDispatcher);
   final radioSyncManager = RadioSyncManager(api: radioService, db: radioDb);
 
+  final ambientMixerService = AmbientMixerService();
+
   final libraryIndexerService = LibraryIndexerService(
     db: database,
     prefs: prefs,
@@ -198,6 +202,11 @@ void main() async {
     db: radioDb,
     syncManager: radioSyncManager,
   );
+  final noiseViewModel = NoiseViewModel(
+    mixerService: ambientMixerService,
+    db: database,
+  );
+  playerViewModel.setNoiseViewModel(noiseViewModel);
   final insightsViewModel = InsightsViewModel(database);
 
   runApp(
@@ -213,6 +222,7 @@ void main() async {
         Provider<PersistentLibraryService>.value(value: persistentLibrary),
         Provider<EnsembleArtworkService>.value(value: ensembleService),
         Provider<PodcastService>.value(value: podcastService),
+        Provider<AmbientMixerService>.value(value: ambientMixerService),
         ChangeNotifierProvider.value(value: playerViewModel),
         ChangeNotifierProvider.value(value: libraryViewModel),
         ChangeNotifierProvider.value(value: queueViewModel),
@@ -223,6 +233,7 @@ void main() async {
         ChangeNotifierProvider.value(value: libraryIndexerService),
         ChangeNotifierProvider.value(value: podcastViewModel),
         ChangeNotifierProvider.value(value: radioViewModel),
+        ChangeNotifierProvider.value(value: noiseViewModel),
         ChangeNotifierProvider.value(value: insightsViewModel),
       ],
       child: const aulosApp(),
