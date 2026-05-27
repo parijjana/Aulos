@@ -14,25 +14,28 @@
 - **Presentation Layer:** Flutter widgets and ViewModels.
 - **Core Layer:** Utilities and shared components like `RateLimitDispatcher`.
 
-## Now Playing: Source of Truth (UX)
-The `NowPlayingScreen` must adapt dynamically based on the `MediaType` of the active stream:
+## Now Playing Architecture (Strategy Pattern)
+The `NowPlayingScreen` follows a **Strategy Pattern** to handle diverse media types within a unified visual frame.
+
+- **NowPlayingHost**: Manages the common frame (Glass card, Volume, Background gradient).
+- **NowPlayingStrategy**: Interface defining media-specific `buildContent()` and `buildControls()`.
+- **Implementations**: `MusicStrategy`, `PodcastStrategy`, `AudiobookStrategy`, `RadioStrategy`, `NoiseStrategy`.
 
 ### 1. Contextual Controls
 | Media Type | Primary Controls | Secondary Controls | Specialized |
 | :--- | :--- | :--- | :--- |
-| **Music** | Prev, Next, Play/Pause | Shuffle, Repeat | - |
+| **Music** | Prev, Next, Play/Pause | Shuffle, Repeat | Ratings |
 | **Podcast** | -10s, +15s, Play/Pause | Speed (0.5x-2.0x) | Bookmark |
-| **Audiobook** | Prev, Next, -10s, +15s, Play/Pause | Speed (0.5x-2.0x) | Bookmark |
-| **Radio** | Play/Stop | - | Station Meta |
-| **Noise** | Play/Pause | - | Infinite Loop |
+| **Audiobook** | Prev, Next, -10s, +15s, Play/Pause | Speed (0.5x-2.0x) | Bookmark/Chapters |
+| **Radio** | Play/Stop | - | Library Add |
+| **Noise** | Play/Pause | - | Tune/Mix |
 
 ### 2. Information Area (Bottom Section)
-- **Music & Audiobook:** Displays the **Queue** (Up Next). Tapping an item skips to it.
-- **Podcast:** Displays **Show Notes** (HTML supported). 
-    - **Timestamps:** Tapping `[00:12:34]` seeks the player to that position.
-    - **Web Links:** Opens in the system browser.
-- **Radio:** Displays live **Stream Metadata** (e.g., current song/show title from ICY headers).
-- **Noise:** Displays loop source and CC0 attribution.
+- **Music:** Displays the **Queue** (Up Next) with mini-art.
+- **Audiobook:** Dual-pane **Chapters & Clips** view. Prioritizes `.cue` markers.
+- **Podcast:** Displays **Show Notes** (HTML supported) with timestamp seeking.
+- **Radio:** Displays live **Stream Metadata** and station homepage link.
+- **Noise:** Displays loop source and CC0 attribution details.
 
 ### 3. State Management
 The `PlayerViewModel` is responsible for identifying the `MediaType` based on the launch source and providing the appropriate command set to the UI.
