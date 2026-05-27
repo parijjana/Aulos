@@ -12,10 +12,9 @@ class NowPlayingProgress extends StatelessWidget {
     final theme = Theme.of(context);
     final mediaType = vm.currentMediaType;
 
-    // 1. Hide for Radio (Live streams don't have progress)
     if (mediaType == MediaType.radio) {
       return const SizedBox(
-        height: 24, // Reduced height
+        height: 24, 
         child: Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -41,54 +40,116 @@ class NowPlayingProgress extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // 2. Dual-Slider for Bookmark Mode
+    final double total = vm.duration.inMilliseconds.toDouble();
+
+    // 2. Custom Arrow Sliders for Bookmark Mode
     if (vm.isBookmarkMode) {
-      final total = vm.duration.inMilliseconds.toDouble();
-      return Padding(
+      final effectiveMax = total > 0 ? total : 1000.0;
+      final double start = vm.bookmarkStartMs.toDouble().clamp(0.0, effectiveMax);
+      final double end = vm.bookmarkEndMsVal.toDouble().clamp(start + 1.0, effectiveMax);
+
+      return Container(
+        height: 120,
         padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(
           children: [
-            RangeSlider(
-              values: RangeValues(vm.bookmarkStartMs, vm.bookmarkEndMsVal),
-              min: 0,
-              max: total > 0 ? total : vm.bookmarkEndMsVal + 1000,
-              onChanged: (val) => vm.setBookmarkRange(val.start, val.end),
-              activeColor: theme.colorScheme.primary,
-              inactiveColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final startX = (start / effectiveMax) * width;
+                  final endX = (end / effectiveMax) * width;
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // The Timeline Base
+                      Center(
+                        child: Container(
+                          height: 4,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      // The Active Range
+                      Positioned(
+                        left: startX,
+                        right: width - endX,
+                        top: 58,
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      // Start Arrow (From Above) - WIDER HIT AREA
+                      Positioned(
+                        left: startX - 25,
+                        top: 10,
+                        child: GestureDetector(
+                          onHorizontalDragUpdate: (details) {
+                            final newStart = ((startX + details.delta.dx) / width) * effectiveMax;
+                            vm.setBookmarkRange(newStart.clamp(0.0, end - 100).toDouble(), end);
+                          },
+                          child: Container(
+                            width: 50, // Wider touch area
+                            color: Colors.transparent,
+                            child: Column(
+                              children: [
+                                Icon(Icons.arrow_downward_rounded, size: 28, color: theme.colorScheme.primary),
+                                Container(width: 4, height: 25, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // End Arrow (From Below) - WIDER HIT AREA
+                      Positioned(
+                        left: endX - 25,
+                        bottom: 10,
+                        child: GestureDetector(
+                          onHorizontalDragUpdate: (details) {
+                            final newEnd = ((endX + details.delta.dx) / width) * effectiveMax;
+                            vm.setBookmarkRange(start, newEnd.clamp(start + 100, effectiveMax).toDouble());
+                          },
+                          child: Container(
+                            width: 50, // Wider touch area
+                            color: Colors.transparent,
+                            child: Column(
+                              children: [
+                                Container(width: 4, height: 25, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+                                Icon(Icons.arrow_upward_rounded, size: 28, color: theme.colorScheme.primary),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-            const SizedBox(height: 4),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final startX = (vm.bookmarkStartMs / (total > 0 ? total : 1)) * width;
-                final endX = (vm.bookmarkEndMsVal / (total > 0 ? total : 1)) * width;
-                
-                return Stack(
-                  children: [
-                    const SizedBox(height: 20, width: double.infinity),
-                    Positioned(
-                      left: (startX - 20).clamp(0, width - 40),
-                      child: Text(
-                        _formatDuration(Duration(milliseconds: vm.bookmarkStartMs.toInt())),
-                        style: TextStyle(color: theme.colorScheme.primary, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      left: (endX - 20).clamp(0, width - 40),
-                      child: Text(
-                        _formatDuration(Duration(milliseconds: vm.bookmarkEndMsVal.toInt())),
-                        style: TextStyle(color: theme.colorScheme.primary, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const Center(
-                      child: Text(
-                        'ADJUST CLIP RANGE', 
-                        style: TextStyle(fontSize: 8, letterSpacing: 1.5, fontWeight: FontWeight.w900, color: Colors.white12),
-                      ),
-                    ),
-                  ],
-                );
-              },
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDuration(Duration(milliseconds: start.toInt())),
+                  style: TextStyle(color: theme.colorScheme.primary, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+                const Text(
+                  'DRAG ARROWS TO TRIM', 
+                  style: TextStyle(fontSize: 8, letterSpacing: 1.5, fontWeight: FontWeight.w900, color: Colors.white24),
+                ),
+                Text(
+                  _formatDuration(Duration(milliseconds: end.toInt())),
+                  style: TextStyle(color: theme.colorScheme.primary, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ],
         ),
@@ -100,7 +161,7 @@ class NowPlayingProgress extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: ProgressBar(
         progress: vm.position,
-        total: vm.duration,
+        total: total > 0 ? vm.duration : const Duration(milliseconds: 1),
         onSeek: vm.seek,
         baseBarColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
         progressBarColor: theme.colorScheme.primary,

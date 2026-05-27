@@ -17,6 +17,7 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
   final EnsembleArtworkService _ensembleService;
 
   IndexerState _state = IndexerState.idle;
+  int? _scanningFolderType; // 0 for Music, 1 for Audiobooks
   double _progress = 0.0;
   String _statusMessage = 'Idle';
   Uint8List? _lastFetchedArt;
@@ -42,6 +43,7 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
   }
 
   IndexerState get state => _state;
+  int? get scanningFolderType => _scanningFolderType;
   double get progress => _progress;
   String get statusMessage => _statusMessage;
   Uint8List? get lastFetchedArt => _lastFetchedArt;
@@ -232,14 +234,17 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
 
   Future<void> scanLibrary(
     List<String> folders,
-    PersistentLibraryService service,
-  ) async {
+    PersistentLibraryService service, {
+    int folderType = 0,
+  }) async {
     if (_state != IndexerState.idle) return;
 
-    log('INDEXER: Starting library scan on ${folders.length} folders.');
+    final typeLabel = folderType == 1 ? 'Audiobooks' : 'Music';
+    log('INDEXER: Starting library scan on ${folders.length} $typeLabel folders.');
     _state = IndexerState.scanning;
+    _scanningFolderType = folderType;
     _shouldPause = false;
-    _statusMessage = 'Initializing scan...';
+    _statusMessage = 'Initializing $typeLabel scan...';
     _foldersScanned = 0;
     _filesDiscovered = 0;
     notifyListeners();
@@ -253,6 +258,7 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
 
         await service.importFolder(
           path,
+          folderType: folderType,
           onFileFound: () {
             _filesDiscovered++;
             _totalFilesStored++;
@@ -273,11 +279,13 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
 
       _statusMessage = _shouldPause ? 'Scan Stopped' : 'Ready';
       _state = IndexerState.idle;
+      _scanningFolderType = null;
       notifyListeners();
     } catch (e) {
       log('INDEXER: Scan error: $e');
       _state = IndexerState.error;
       _statusMessage = 'Scan Error: $e';
+      _scanningFolderType = null;
       notifyListeners();
     }
   }

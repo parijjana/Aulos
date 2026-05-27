@@ -429,38 +429,65 @@ class _PodcastBrowserScreenState extends State<PodcastBrowserScreen> {
   Widget _buildSearchResults(PodcastViewModel vm, ThemeData theme) {
     if (vm.isLoading && vm.searchResults.isEmpty) return const Center(child: CircularProgressIndicator());
     
-    return ListView.builder(
-      controller: _detailScrollController,
-      itemCount: vm.searchResults.length + (vm.isLoading ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == vm.searchResults.length) {
-          return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
-        }
-        final result = vm.searchResults[index];
-        return ListTile(
-          leading: Hero(
-            tag: 'pod_${result.itunesId ?? result.feedUrl}',
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: result.imageUrl != null 
-                ? Image.network(result.imageUrl!, width: 50, height: 50, fit: BoxFit.cover)
-                : Container(width: 50, height: 50, color: Colors.white10),
+    if (!vm.isLoading && vm.searchResults.isEmpty) {
+      return _buildEmptyState(theme.colorScheme.onSurface);
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Row(
+            children: [
+              Text(
+                '${vm.searchResults.length} RESULTS FOUND',
+                style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 1.0),
+              ),
+              const Spacer(),
+              if (vm.isLoading) 
+                const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => vm.search(vm.lastSearchQuery),
+            child: ListView.builder(
+              controller: _detailScrollController,
+              itemCount: vm.searchResults.length + (vm.isLoading ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == vm.searchResults.length) {
+                  return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
+                }
+                final result = vm.searchResults[index];
+                return ListTile(
+                  leading: Hero(
+                    tag: 'pod_${result.itunesId ?? result.feedUrl}',
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: result.imageUrl != null 
+                        ? Image.network(result.imageUrl!, width: 50, height: 50, fit: BoxFit.cover)
+                        : Container(width: 50, height: 50, color: Colors.white10),
+                    ),
+                  ),
+                  title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  subtitle: Text(result.artist, style: const TextStyle(fontSize: 11)),
+                  trailing: const Icon(Icons.add_circle_outline, size: 20),
+                  onTap: () {
+                    vm.setActiveDiscoveryDetail({
+                      'iTunesId': result.itunesId ?? result.feedUrl,
+                      'title': result.title,
+                      'artist': result.artist,
+                      'imageUrl': result.imageUrl,
+                      'feedUrl': result.feedUrl,
+                    });
+                  },
+                );
+              },
             ),
           ),
-          title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          subtitle: Text(result.artist, style: const TextStyle(fontSize: 11)),
-          trailing: const Icon(Icons.add_circle_outline, size: 20),
-          onTap: () {
-            vm.setActiveDiscoveryDetail({
-              'iTunesId': result.itunesId ?? result.feedUrl,
-              'title': result.title,
-              'artist': result.artist,
-              'imageUrl': result.imageUrl,
-              'feedUrl': result.feedUrl,
-            });
-          },
-        );
-      },
+        ),
+      ],
     );
   }
 

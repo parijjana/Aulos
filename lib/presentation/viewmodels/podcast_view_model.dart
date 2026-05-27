@@ -7,11 +7,12 @@ import 'package:aulos/data/library/podcast_download_service.dart';
 import 'package:aulos/data/library/discovery_sync_manager.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/domain/network/log_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
-class PodcastViewModel extends ChangeNotifier {
+class PodcastViewModel extends ChangeNotifier with UniversalLog {
   final PodcastService _podcastService;
   final PodcastDiscoveryService _discoveryService;
   final PodcastDownloadService _downloadService;
@@ -36,6 +37,7 @@ class PodcastViewModel extends ChangeNotifier {
   Map<int, double> _downloadProgress = {};
   StreamSubscription? _downloadSub;
   StreamSubscription? _searchSub;
+  String _lastSearchQuery = '';
   
   // UI State Persistence
   Map<String, dynamic>? _selectedDiscoveryCategory;
@@ -56,6 +58,8 @@ class PodcastViewModel extends ChangeNotifier {
        _syncManager = syncManager,
        _discoveryDb = discoveryDb,
        _settingsVM = settingsVM {
+    log('PODCAST_VM: Initializing...');
+    _libraryFilter = 'ALL SHOWS'; // RESET FILTER ON BOOT
     unawaited(loadPodcasts());
     unawaited(_syncManager.triggerInitialSync());
     
@@ -76,6 +80,7 @@ class PodcastViewModel extends ChangeNotifier {
   bool get isSyncing => _syncManager.isSyncing;
   String? get error => _error;
   Map<int, double> get downloadProgress => _downloadProgress;
+  String get lastSearchQuery => _lastSearchQuery;
   
   Map<String, dynamic>? get selectedDiscoveryCategory => _selectedDiscoveryCategory;
   Map<String, dynamic>? get activeDiscoveryDetail => _activeDiscoveryDetail;
@@ -92,10 +97,10 @@ class PodcastViewModel extends ChangeNotifier {
         return dateB.compareTo(dateA);
       });
     } else if (_libraryFilter == 'DOWNLOADED') {
-      // Return shows with at least one play or download (placeholder for complex query)
-      return _podcasts.where((p) => p.playCount > 0).toList();
+      list = _podcasts.where((p) => p.playCount > 0).toList();
     }
     
+    log('PODCAST_VM: filteredPodcasts called. Filter: $_libraryFilter, Returning: ${list.length}/${_podcasts.length}');
     return list;
   }
 
@@ -120,12 +125,15 @@ class PodcastViewModel extends ChangeNotifier {
   }
 
   Future<void> loadPodcasts() async {
+    log('PODCAST_VM: loadPodcasts() started');
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
       _podcasts = await _podcastService.getSubscribedPodcasts();
+      log('PODCAST_VM: Fetched ${_podcasts.length} podcasts from service');
     } catch (e) {
+      log('PODCAST_VM: Error loading podcasts: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -187,12 +195,15 @@ class PodcastViewModel extends ChangeNotifier {
   }
 
   Future<void> search(String query, {int offset = 0}) async {
+    log('PODCAST_VM: search("$query") called');
+    _lastSearchQuery = query;
     _isLoading = true;
     _error = null;
     notifyListeners();
     
     _searchSub?.cancel();
     _searchSub = _discoveryDb.watchByCategory('search:$query', limit: 50).listen((raw) {
+      log('PODCAST_VM: Search watcher fired for "$query". Emitted ${raw.length} items.');
       _searchResults = _mapFromDb(raw);
       notifyListeners();
     });
@@ -201,6 +212,7 @@ class PodcastViewModel extends ChangeNotifier {
       // Trigger background search and persistence
       await _syncManager.performSearch(query);
     } catch (e) {
+      log('PODCAST_VM_ERROR: Search failed: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -253,13 +265,32 @@ class PodcastViewModel extends ChangeNotifier {
   }
 
   Future<void> loadEpisodes(int podcastId) async {
+    log('PODCAST_VM: loadEpisodes($podcastId) started');
     _isLoading = true;
+    _episodes = []; // CLEAR OLD EPISODES
+    _error = null;
     notifyListeners();
     try {
       _episodes = await _podcastService.getEpisodes(podcastId);
+      log('PODCAST_VM: Fetched ${_episodes.length} episodes for podcast $podcastId');
       _error = null;
     } catch (e) {
+      log('PODCAST_VM_ERROR: Error loading episodes: $e');
       _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshPodcast(int podcastId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _podcastService.refreshPodcast(podcastId);
+      await loadEpisodes(podcastId);
+    } catch (e) {
+      _error = 'Failed to refresh feed: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -287,7 +318,11 @@ class PodcastViewModel extends ChangeNotifier {
        unawaited(downloadEpisode(episode));
     }
 
-    final podcast = _podcasts.firstWhere((p) => p.id == episode.podcastId);
+    final podcast = _podcasts.where((p) => p.id == episode.podcastId).firstOrNull;
+    if (podcast == null) {
+      log('PODCAST_VM_ERROR: Cannot play episode, parent podcast not found in memory.');
+      return;
+    }
 
     final track = app_db.Track(
       id: -episode.id,
@@ -300,6 +335,8 @@ class PodcastViewModel extends ChangeNotifier {
       rating: 0,
       isFavorite: false,
       playCount: 0,
+      isAudiobook: false,
+      isPlayed: false,
     );
 
     await playerVM.loadTrack(
@@ -327,6 +364,8 @@ class PodcastViewModel extends ChangeNotifier {
       rating: 0,
       isFavorite: false,
       playCount: 0,
+      isAudiobook: false,
+      isPlayed: false,
     );
 
     // Fetch the full podcast metadata to get the image

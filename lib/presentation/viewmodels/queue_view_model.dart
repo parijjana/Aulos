@@ -91,6 +91,8 @@ class QueueViewModel extends ChangeNotifier {
               rating: 0,
               isFavorite: false,
               playCount: 0,
+              isAudiobook: false,
+              isPlayed: false,
             );
           }
         )

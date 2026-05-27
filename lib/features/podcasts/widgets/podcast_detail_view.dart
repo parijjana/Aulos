@@ -25,10 +25,20 @@ class _PodcastDetailViewState extends State<PodcastDetailView> {
   Episode? _selectedEpisode;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PodcastViewModel>().loadEpisodes(widget.podcast.id);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final podcastVM = context.watch<PodcastViewModel>();
     final playerVM = context.read<PlayerViewModel>();
     final theme = Theme.of(context);
+
+    debugPrint('PODCAST_DETAIL: Building for "${widget.podcast.title}". ViewModel has ${podcastVM.episodes.length} episodes.');
 
     return Column(
       children: [

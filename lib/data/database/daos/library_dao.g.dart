@@ -11,6 +11,7 @@ mixin _$LibraryDaoMixin on DatabaseAccessor<AppDatabase> {
   $TracksTable get tracks => attachedDatabase.tracks;
   $ArtistAlbumRelationsTable get artistAlbumRelations =>
       attachedDatabase.artistAlbumRelations;
+  $ChaptersTable get chapters => attachedDatabase.chapters;
   LibraryDaoManager get managers => LibraryDaoManager(this);
 }
 
@@ -32,4 +33,6 @@ class LibraryDaoManager {
         _db.attachedDatabase,
         _db.artistAlbumRelations,
       );
+  $$ChaptersTableTableManager get chapters =>
+      $$ChaptersTableTableManager(_db.attachedDatabase, _db.chapters);
 }

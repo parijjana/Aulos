@@ -329,6 +329,14 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
     )]);
   }
 
+  Future<void> removeStation(RadioStation station) async {
+    if (station.stationUuid.startsWith('manual_')) {
+      await _db.deleteStation(station.stationUuid);
+    } else {
+      await _db.setFavorite(station.stationUuid, false);
+    }
+  }
+
   Future<void> playStation(RadioStation station, PlayerViewModel playerVM, {bool isAvailable = true}) async {
     final track = app_db.Track(
       id: 0, 
@@ -339,6 +347,8 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
       rating: 0,
       isFavorite: false,
       playCount: 0,
+      isAudiobook: false,
+      isPlayed: false,
     );
     
     // ANALYTICS & HOMEPAGE: Pass UUID and Homepage in description

@@ -29,6 +29,7 @@ class SettingsViewModel extends ChangeNotifier {
   String _appName = 'Aulos';
   String _deviceId = const Uuid().v4();
   List<String> _monitoredFolders = [];
+  List<String> _audiobookFolders = [];
   ThemerModel _themeModel = AulosAudioTheme.model; 
   bool _isDynamicTheme = true;
   ArtworkShape _artworkShape = ArtworkShape.square;
@@ -54,6 +55,7 @@ class SettingsViewModel extends ChangeNotifier {
   String get appName => _appName;
   String get deviceId => _deviceId;
   List<String> get monitoredFolders => List.unmodifiable(_monitoredFolders);
+  List<String> get audiobookFolders => List.unmodifiable(_audiobookFolders);
   ThemerModel get themeModel => _themeModel;
   bool get isDynamicTheme => _isDynamicTheme;
   ArtworkShape get artworkShape => _artworkShape;
@@ -92,6 +94,7 @@ class SettingsViewModel extends ChangeNotifier {
     _appName = _prefs.getString('app_name') ?? 'Aulos';
     _deviceId = _prefs.getString('device_id') ?? const Uuid().v4();
     _monitoredFolders = _prefs.getStringList('monitored_folders') ?? [];
+    _audiobookFolders = _prefs.getStringList('audiobook_folders') ?? [];
     _isDynamicTheme = _prefs.getBool('is_dynamic_theme') ?? true;
     _artworkShape = ArtworkShape.values[_prefs.getInt('artwork_shape') ?? 0];
     _libraryViewType = LibraryViewType.values[_prefs.getInt('library_view_type') ?? 1];
@@ -165,6 +168,21 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> removeMonitoredFolder(String path) async {
     if (_monitoredFolders.remove(path)) {
       await _prefs.setStringList('monitored_folders', _monitoredFolders);
+      notifyListeners();
+    }
+  }
+
+  Future<void> addAudiobookFolder(String path) async {
+    if (!_audiobookFolders.contains(path)) {
+      _audiobookFolders.add(path);
+      await _prefs.setStringList('audiobook_folders', _audiobookFolders);
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeAudiobookFolder(String path) async {
+    if (_audiobookFolders.remove(path)) {
+      await _prefs.setStringList('audiobook_folders', _audiobookFolders);
       notifyListeners();
     }
   }

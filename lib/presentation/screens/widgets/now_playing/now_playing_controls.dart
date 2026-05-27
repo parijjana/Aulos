@@ -1,330 +1,180 @@
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
-import 'package:aulos/presentation/viewmodels/display_view_model.dart';
-import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
-import 'package:aulos/domain/playback/playback_engine.dart' as domain;
+import 'strategies/now_playing_strategy.dart';
+import 'strategies/music_strategy.dart';
+import 'strategies/audiobook_strategy.dart';
+import 'strategies/podcast_strategy.dart';
+import 'strategies/radio_strategy.dart';
+import 'strategies/noise_strategy.dart';
+import 'dart:typed_data';
 import 'package:provider/provider.dart';
-import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+
+// --- Shared Helpers for Strategies ---
+
+Widget buildAulosPlayButton(PlayerViewModel vm, ThemeData theme, double size) {
+  final primary = theme.colorScheme.primary;
+  final bool isPlaying = vm.isPlaying;
+  final bool isBuffering = vm.isBuffering;
+
+  return IconButton(
+    // UX FIX: Allow pausing even while buffering/loading to prevent feeling "stuck"
+    onPressed: isPlaying ? (vm.currentMediaType == MediaType.noise ? vm.stop : vm.pause) : vm.play,
+    padding: EdgeInsets.zero,
+    icon: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primary, primary.withValues(alpha: 0.7)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: isBuffering 
+        ? Center(child: SizedBox(width: size * 0.4, height: size * 0.4, child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)))
+        : Icon(
+            isPlaying ? (vm.currentMediaType == MediaType.noise ? Icons.stop_rounded : Icons.pause_rounded) : Icons.play_arrow_rounded,
+            color: Colors.white,
+            size: size * 0.5,
+          ),
+    ),
+  );
+}
+
+Widget buildCircularButton(IconData icon, VoidCallback onPressed, double size, ThemeData theme, {Color? color, bool isOverlay = false}) {
+  return IconButton(
+    onPressed: onPressed,
+    padding: EdgeInsets.zero,
+    icon: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isOverlay ? Colors.white10 : (color?.withValues(alpha: 0.1) ?? theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+        border: Border.all(color: color?.withValues(alpha: 0.3) ?? (isOverlay ? Colors.white24 : theme.colorScheme.onSurface.withValues(alpha: 0.1))),
+      ),
+      child: Icon(icon, color: color ?? (isOverlay ? Colors.white : theme.colorScheme.onSurface), size: size * 0.5),
+    ),
+  );
+}
+
+Widget buildSpeedSelector(PlayerViewModel vm, ThemeData theme, {bool isOverlay = false}) {
+  return PopupMenuButton<double>(
+    initialValue: vm.playbackSpeed,
+    onSelected: vm.setSpeed,
+    itemBuilder: (context) => [0.5, 0.8, 1.0, 1.2, 1.5, 2.0].map((s) => PopupMenuItem(
+      value: s,
+      child: Text('${s}x', style: TextStyle(fontWeight: vm.playbackSpeed == s ? FontWeight.bold : FontWeight.normal)),
+    )).toList(),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: isOverlay ? Colors.black45 : theme.colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: isOverlay ? Colors.white24 : theme.colorScheme.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('${vm.playbackSpeed}x', style: TextStyle(color: isOverlay ? Colors.white : theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 10)),
+          Icon(Icons.arrow_drop_down, color: isOverlay ? Colors.white : theme.colorScheme.primary, size: 14),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget buildMiniArt(BuildContext context, Uint8List? art, bool isPlaying, ThemeData theme) {
+  if (isPlaying) return Icon(Icons.play_circle_filled, color: theme.colorScheme.primary, size: 24);
+  final imageUrl = context.read<PlayerViewModel>().currentImageUrl;
+
+  return Container(
+    width: 24, height: 24,
+    decoration: BoxDecoration(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(4),
+      image: art != null && art.isNotEmpty 
+          ? DecorationImage(image: MemoryImage(art), fit: BoxFit.cover)
+          : imageUrl != null && imageUrl.isNotEmpty
+              ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+              : null,
+    ),
+    child: (art == null || art.isEmpty) && (imageUrl == null || imageUrl.isEmpty) 
+        ? const Icon(Icons.music_note, size: 12, color: Colors.white10) 
+        : null,
+  );
+}
+
+void showRichBookmarkDialog(BuildContext context, PlayerViewModel vm, ThemeData theme) {
+  final titleController = TextEditingController(text: 'Clip from ${vm.displayTitle}');
+  final tagsController = TextEditingController();
+  final notesController = TextEditingController();
+
+  showDialog(
+    context: context,
+    barrierDismissible: false, 
+    builder: (context) => AlertDialog(
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: const Text('SAVE AUDIO CLIP', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Name')),
+          const SizedBox(height: 16),
+          TextField(controller: tagsController, decoration: const InputDecoration(labelText: 'Tags')),
+          const SizedBox(height: 16),
+          TextField(controller: notesController, maxLines: 3, decoration: const InputDecoration(labelText: 'Notes')),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () { vm.resetBookmarkState(); Navigator.pop(context); }, child: const Text('CANCEL')),
+        ElevatedButton(
+          onPressed: () {
+            vm.saveBookmark(title: titleController.text, tags: tagsController.text, notes: notesController.text);
+            Navigator.pop(context);
+          },
+          child: const Text('SAVE CLIP'),
+        ),
+      ],
+    ),
+  );
+}
+
+// --- Main Controls Component ---
 
 class NowPlayingControls extends StatelessWidget {
   final bool isOverlay;
 
-  const NowPlayingControls({
-    super.key,
-    this.isOverlay = false,
-  });
+  const NowPlayingControls({super.key, this.isOverlay = false});
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<PlayerViewModel>();
-    final queueVM = context.watch<QueueViewModel>();
     final theme = Theme.of(context);
-    final mediaType = vm.currentMediaType;
+    final strategy = _getStrategy(vm.currentMediaType);
+    
     final double buttonSize = isOverlay ? 36 : 48;
     final double primaryButtonSize = isOverlay ? 72 : 96;
 
-    if (mediaType == MediaType.noise) {
-      return _buildNoiseControls(context, theme, vm, primaryButtonSize);
+    return strategy.buildControls(context, vm, theme, buttonSize, primaryButtonSize);
+  }
+
+  NowPlayingStrategy _getStrategy(MediaType type) {
+    switch (type) {
+      case MediaType.music: return MusicStrategy();
+      case MediaType.audiobook: return AudiobookStrategy();
+      case MediaType.podcast: return PodcastStrategy();
+      case MediaType.radio: return RadioStrategy();
+      case MediaType.noise: return NoiseStrategy();
     }
-
-    if (mediaType == MediaType.radio) {
-      return _buildRadioControls(theme, vm, primaryButtonSize);
-    }
-
-    if (mediaType == MediaType.podcast || mediaType == MediaType.audiobook) {
-      return _buildPodcastControls(context, theme, vm, buttonSize, primaryButtonSize, mediaType);
-    }
-
-    return _buildMusicControls(context, theme, vm, queueVM, buttonSize, primaryButtonSize);
-  }
-
-  Widget _buildNoiseControls(BuildContext context, ThemeData theme, PlayerViewModel vm, double size) {
-    final displayVM = context.read<DisplayViewModel>();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          onPressed: () {
-            displayVM.setTabIndex(4); // NOISE tab
-            if (displayVM.mode != UIContextMode.highContext) {
-              displayVM.setMode(UIContextMode.highContext);
-            }
-          },
-          icon: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.tune_rounded, color: theme.colorScheme.primary, size: 20),
-          ),
-          tooltip: 'Modify Soundscape',
-        ),
-        const SizedBox(width: 32),
-        _buildAulosPlayButton(vm, theme, size),
-        const SizedBox(width: 32),
-        const SizedBox(width: 48), // Spacer for symmetry
-      ],
-    );
-  }
-
-  Widget _buildRadioControls(ThemeData theme, PlayerViewModel vm, double size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          icon: Icon(
-            vm.isCurrentStationFavorite ? Icons.library_add_check : Icons.library_add,
-            color: vm.isCurrentStationFavorite ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-            size: 24,
-          ),
-          onPressed: vm.toggleCurrentStationFavorite,
-          tooltip: vm.isCurrentStationFavorite ? 'In Library' : 'Add to Library',
-        ),
-        const SizedBox(width: 24),
-        IconButton(
-          onPressed: vm.isPlaying ? vm.stop : vm.play,
-          padding: EdgeInsets.zero,
-          icon: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.7)],
-              ),
-            ),
-            child: Icon(
-              vm.isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-              color: Colors.white,
-              size: size * 0.5,
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        const SizedBox(width: 48), 
-      ],
-    );
-  }
-
-  Widget _buildPodcastControls(BuildContext context, ThemeData theme, PlayerViewModel vm, double buttonSize, double primarySize, MediaType type) {
-    final bool isAudiobook = type == MediaType.audiobook;
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildSpeedSelector(vm, theme),
-          const SizedBox(width: 16),
-          if (isAudiobook) ...[
-            _buildCircularButton(Icons.skip_previous_rounded, vm.skipPrevious, buttonSize * 0.9, theme),
-            const SizedBox(width: 12),
-          ],
-          _buildCircularButton(Icons.replay_10_rounded, vm.skipBackward, buttonSize, theme),
-          const SizedBox(width: 16),
-          _buildAulosPlayButton(vm, theme, primarySize),
-          const SizedBox(width: 16),
-          _buildCircularButton(Icons.forward_10_rounded, vm.skipForward, buttonSize, theme),
-          if (isAudiobook) ...[
-            const SizedBox(width: 12),
-            _buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize * 0.9, theme),
-          ],
-          const SizedBox(width: 16),
-          _buildCircularButton(
-            vm.isBookmarkMode ? Icons.check_circle : Icons.bookmark_add_outlined, 
-            () {
-              if (vm.isBookmarkMode) {
-                _showRichBookmarkDialog(context, vm, theme);
-              } else {
-                vm.toggleBookmarkMode();
-              }
-            }, 
-            buttonSize, 
-            theme,
-            color: vm.isBookmarkMode ? theme.colorScheme.primary : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMusicControls(BuildContext context, ThemeData theme, PlayerViewModel vm, QueueViewModel queueVM, double buttonSize, double primarySize) {
-    final currentTrack = vm.currentTrack;
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (currentTrack != null) ...[
-            IconButton(
-              icon: Icon(
-                currentTrack.rating == -1 ? Icons.thumb_down_alt : Icons.thumb_down_alt_outlined,
-                color: currentTrack.rating == -1 ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-              onPressed: () => queueVM.updateRating(currentTrack.id, -1),
-            ),
-            const SizedBox(width: 8),
-          ],
-          IconButton(
-            icon: Icon(
-              vm.isShuffle ? Icons.shuffle : Icons.shuffle_rounded,
-              color: vm.isShuffle ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-            onPressed: vm.toggleShuffle,
-          ),
-          const SizedBox(width: 8),
-          _buildCircularButton(Icons.skip_previous_rounded, vm.skipPrevious, buttonSize, theme),
-          const SizedBox(width: 16),
-          _buildAulosPlayButton(vm, theme, primarySize),
-          const SizedBox(width: 16),
-          _buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize, theme),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: Icon(
-              vm.repeatMode == domain.RepeatMode.one ? Icons.repeat_one : Icons.repeat,
-              color: vm.repeatMode != domain.RepeatMode.off ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-            onPressed: vm.toggleRepeat,
-          ),
-          if (currentTrack != null) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              icon: Icon(
-                currentTrack.rating == 1 ? Icons.favorite : Icons.favorite_border,
-                color: currentTrack.rating == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-              onPressed: () => queueVM.updateRating(currentTrack.id, 1),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _showRichBookmarkDialog(BuildContext context, PlayerViewModel vm, ThemeData theme) {
-    final titleController = TextEditingController(text: 'Clip from ${vm.displayTitle}');
-    final tagsController = TextEditingController();
-    final notesController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('SAVE AUDIO CLIP', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Name', hintText: 'Interesting insight...'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: tagsController,
-              decoration: const InputDecoration(labelText: 'Tags', hintText: 'funny, informative, research'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Thoughts / Notes', hintText: 'Key takeaway from this section...'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
-          ElevatedButton(
-            onPressed: () {
-              vm.saveBookmark(
-                title: titleController.text,
-                tags: tagsController.text,
-                notes: notesController.text,
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('SAVE CLIP'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAulosPlayButton(PlayerViewModel vm, ThemeData theme, double size) {
-    final primary = theme.colorScheme.primary;
-    return IconButton(
-      onPressed: vm.isPlaying ? (vm.currentMediaType == MediaType.noise ? vm.stop : vm.pause) : vm.play,
-      padding: EdgeInsets.zero,
-      icon: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [primary, primary.withValues(alpha: 0.7)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: primary.withValues(alpha: 0.3),
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Icon(
-          vm.isPlaying ? (vm.currentMediaType == MediaType.noise ? Icons.stop_rounded : Icons.pause_rounded) : Icons.play_arrow_rounded,
-          color: Colors.white,
-          size: size * 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCircularButton(IconData icon, VoidCallback onPressed, double size, ThemeData theme, {Color? color}) {
-    return IconButton(
-      onPressed: onPressed,
-      padding: EdgeInsets.zero,
-      icon: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isOverlay ? Colors.white10 : (color?.withValues(alpha: 0.1) ?? theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-          border: Border.all(color: color?.withValues(alpha: 0.3) ?? (isOverlay ? Colors.white24 : theme.colorScheme.onSurface.withValues(alpha: 0.1))),
-        ),
-        child: Icon(icon, color: color ?? (isOverlay ? Colors.white : theme.colorScheme.onSurface), size: size * 0.5),
-      ),
-    );
-  }
-
-  Widget _buildSpeedSelector(PlayerViewModel vm, ThemeData theme) {
-    return PopupMenuButton<double>(
-      initialValue: vm.playbackSpeed,
-      onSelected: vm.setSpeed,
-      itemBuilder: (context) => [0.5, 0.8, 1.0, 1.2, 1.5, 2.0].map((s) => PopupMenuItem(
-        value: s,
-        child: Text('${s}x', style: TextStyle(fontWeight: vm.playbackSpeed == s ? FontWeight.bold : FontWeight.normal)),
-      )).toList(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: isOverlay ? Colors.black45 : theme.colorScheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isOverlay ? Colors.white24 : theme.colorScheme.primary.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('${vm.playbackSpeed}x', style: TextStyle(color: isOverlay ? Colors.white : theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 10)),
-            Icon(Icons.arrow_drop_down, color: isOverlay ? Colors.white : theme.colorScheme.primary, size: 14),
-          ],
-        ),
-      ),
-    );
   }
 }

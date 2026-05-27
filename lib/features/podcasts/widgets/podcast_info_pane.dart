@@ -44,11 +44,26 @@ class PodcastInfoPane extends StatelessWidget {
               style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.7), height: 1.5),
             ),
             const SizedBox(height: 32),
-            OutlinedButton.icon(
-              onPressed: onUnsubscribe,
-              icon: const Icon(Icons.delete_outline, size: 16),
-              label: const Text('UNSUBSCRIBE', style: TextStyle(fontSize: 10)),
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => context.read<PodcastViewModel>().refreshPodcast(podcast.id),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('REFRESH FEED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    foregroundColor: theme.colorScheme.primary,
+                    elevation: 0,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onUnsubscribe,
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('UNSUBSCRIBE', style: TextStyle(fontSize: 10)),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
+                ),
+              ],
             ),
           ],
         ),

@@ -59,7 +59,7 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
             final results = data['results'] as List? ?? [];
             log('API: Search successful. Found ${results.length} results.');
             return results
@@ -91,7 +91,7 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
             final results = data['results'] as List? ?? [];
             log('API: Category fetch successful. Found ${results.length} items.');
             return results
@@ -118,7 +118,7 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
             final results = data['feed']['results'] as List? ?? [];
             log('API: Trending fetch successful. Found ${results.length} items.');
             return results.map<PodcastSearchResult>((j) {
@@ -168,7 +168,7 @@ class PodcastDiscoveryService with UniversalLog {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = json.decode(response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
             final results = data['results'] as List;
             if (results.isNotEmpty) {
               final item = results.first as Map<String, dynamic>;

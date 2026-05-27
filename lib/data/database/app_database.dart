@@ -31,6 +31,7 @@ part 'app_database.g.dart';
     RadioListeningStats,
     PlaybackPositions,
     SavedMixes,
+    Chapters,
   ],
   daos: [
     LibraryDao,
@@ -44,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -129,6 +130,22 @@ class AppDatabase extends _$AppDatabase {
       if (from < 18) {
         await m.createTable(savedMixes);
       }
+      if (from < 19) {
+        await m.addColumn(folders, folders.folderType);
+        await m.addColumn(albums, albums.isAudiobook);
+        await m.addColumn(tracks, tracks.isAudiobook);
+      }
+      if (from < 20) {
+        await m.addColumn(albums, albums.seriesName);
+        await m.addColumn(albums, albums.narrator);
+        await m.addColumn(albums, albums.description);
+        await m.addColumn(albums, albums.isPlayed);
+        await m.addColumn(tracks, tracks.isPlayed);
+        await m.addColumn(bookmarks, bookmarks.contextType);
+      }
+      if (from < 21) {
+        await m.createTable(chapters);
+      }
     },
   );
 
@@ -137,9 +154,9 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Folder>> getAllFolders() => libraryDao.getAllFolders();
   Future<List<Folder>> getRootFolders() => libraryDao.getRootFolders();
   Future<List<Folder>> getSubFolders(int parentId) => libraryDao.getSubFolders(parentId);
-  Future<int> ensureFolder(String path, {int? parentId}) => libraryDao.ensureFolder(path, parentId: parentId);
+  Future<int> ensureFolder(String path, {int? parentId, int folderType = 0}) => libraryDao.ensureFolder(path, parentId: parentId, folderType: folderType);
   Future<int> ensureArtist(String name) => libraryDao.ensureArtist(name);
-  Future<int> ensureAlbum(String name, int? artistId, {Uint8List? coverArt}) => libraryDao.ensureAlbum(name, artistId, coverArt: coverArt);
+  Future<int> ensureAlbum(String name, int? artistId, {Uint8List? coverArt, bool isAudiobook = false}) => libraryDao.ensureAlbum(name, artistId, coverArt: coverArt, isAudiobook: isAudiobook);
   Future<int> ensureGenre(String name) => libraryDao.ensureGenre(name);
   Future<List<Artist>> getAllArtists() => libraryDao.getAllArtists();
   Future<List<Album>> getAllAlbums() => libraryDao.getAllAlbums();
@@ -160,6 +177,13 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateTrackRating(int trackId, int rating) => libraryDao.updateTrackRating(trackId, rating);
   Future<List<Track>> getLikedTracks() => libraryDao.getLikedTracks();
   Future<List<Track>> getDislikedTracks() => libraryDao.getDislikedTracks();
+
+  // Audiobook Specific
+  Future<List<Album>> getAudiobooks() => (select(albums)..where((a) => a.isAudiobook.equals(true))).get();
+  Future<List<Track>> getChaptersForBook(int bookId) => (select(tracks)..where((t) => t.albumId.equals(bookId))).get();
+
+  Future<void> addChapters(List<ChaptersCompanion> companions) => libraryDao.addChapters(companions);
+  Future<List<Chapter>> getChaptersForTrack(int trackId) => libraryDao.getChaptersForTrack(trackId);
 
   Future<List<Playlist>> getAllPlaylists() => playlistDao.getAllPlaylists();
   Future<void> deletePlaylist(int id) => playlistDao.deletePlaylist(id);
@@ -195,6 +219,13 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> saveBookmark(BookmarksCompanion companion) => into(bookmarks).insert(companion);
   Future<List<Bookmark>> getBookmarksForTrack(String path) => (select(bookmarks)..where((t) => t.trackPath.equals(path))).get();
+  
+  // Segregated Bookmarks
+  Future<List<Bookmark>> getPodcastBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(1))).get();
+  Future<List<Bookmark>> getAudiobookBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(2))).get();
+  Stream<List<Bookmark>> watchAudiobookBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(2))).watch();
+  Stream<List<Bookmark>> watchPodcastBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(1))).watch();
+
   Future<void> deleteBookmark(int id) => (delete(bookmarks)..where((t) => t.id.equals(id))).go();
   Future<void> deleteBookmarksForTrack(String path) => (delete(bookmarks)..where((t) => t.trackPath.equals(path))).go();
   Future<void> updateBookmarkPaths(String oldPath, String newPath) {

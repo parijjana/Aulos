@@ -61,23 +61,8 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
   Future<void> setSource(String path) async {
     await _ensureSession();
     try {
-      log('ENGINE: Preparing source: $path');
-      Uri uri;
-      if (path.startsWith('http')) {
-        uri = Uri.parse(path);
-      } else if (path.startsWith('asset:///')) {
-        // JustAudio supports asset:/// URIs directly in AudioSource.uri()
-        uri = Uri.parse(path);
-      } else {
-        final file = io.File(path);
-        if (!file.existsSync()) {
-          final err = 'File does not exist at path: $path';
-          log('ENGINE_FAILURE: $err');
-          return;
-        }
-        uri = Uri.file(file.absolute.path);
-      }
-      await _handler.setSource(uri);
+      log('ENGINE: Streaming source (Buffered Playback): $path');
+      await _handler.setSource(Uri.file(io.File(path).absolute.path));
     } catch (e) {
       log('ENGINE_ERROR: Failed to set source: $e');
     }
@@ -151,10 +136,10 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
   }
 
   @override
-  Stream<Duration> get positionStream => AudioService.position;
+  Stream<Duration> get positionStream => _handler.player.positionStream;
 
   @override
-  Stream<Duration?> get durationStream => _handler.mediaItem.map((i) => i?.duration);
+  Stream<Duration?> get durationStream => _handler.player.durationStream;
 
   @override
   Stream<domain.PlaybackState> get stateStream => _stateController.stream;
@@ -170,4 +155,4 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
 
   @override
   Stream<String?> get icyMetadataStream => _handler.icyMetadataStream;
-  }
+}

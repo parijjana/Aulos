@@ -4,6 +4,12 @@ import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/features/library/screens/insights_screen.dart';
 import 'package:aulos/presentation/screens/widgets/glass_card.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/strategies/now_playing_strategy.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/strategies/music_strategy.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/strategies/audiobook_strategy.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/strategies/podcast_strategy.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/strategies/radio_strategy.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/strategies/noise_strategy.dart';
 import 'package:provider/provider.dart';
 
 import 'widgets/now_playing/now_playing_controls.dart';
@@ -34,6 +40,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     super.dispose();
   }
 
+  NowPlayingStrategy _getStrategy(MediaType type) {
+    switch (type) {
+      case MediaType.music: return MusicStrategy();
+      case MediaType.audiobook: return AudiobookStrategy();
+      case MediaType.podcast: return PodcastStrategy();
+      case MediaType.radio: return RadioStrategy();
+      case MediaType.noise: return NoiseStrategy();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -45,6 +61,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     if (isDynamic && playerVM.extractedColor != null) {
       primaryColor = playerVM.extractedColor!;
     }
+
+    final strategy = _getStrategy(playerVM.currentMediaType);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -71,10 +89,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
                       hasScrollBody: false,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: _buildMainPlayer(playerVM, theme, constraints, isCompact),
+                        child: _buildMainPlayer(playerVM, theme, constraints, isCompact, strategy),
                       ),
                     ),
-                    _buildSectionHeader(theme, playerVM),
+                    _buildSectionHeader(theme, strategy),
                     const SliverPadding(
                       padding: EdgeInsets.fromLTRB(40, 24, 40, 120),
                       sliver: NowPlayingContent(),
@@ -90,7 +108,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     );
   }
 
-  Widget _buildMainPlayer(PlayerViewModel vm, ThemeData theme, BoxConstraints constraints, bool isCompact) {
+  Widget _buildMainPlayer(PlayerViewModel vm, ThemeData theme, BoxConstraints constraints, bool isCompact, NowPlayingStrategy strategy) {
     final double artSize = (constraints.maxHeight * 0.45).clamp(180.0, isCompact ? 400.0 : 500.0);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -101,7 +119,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
         _buildTrackInfo(theme, vm, isCompact),
         if (!isCompact) ...[
           const SizedBox(height: 24),
-          const NowPlayingProgress(),
+          if (strategy.showProgress) const NowPlayingProgress(),
           const SizedBox(height: 16),
           const NowPlayingControls(),
           const SizedBox(height: 24),
@@ -190,19 +208,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     );
   }
 
-  Widget _buildSectionHeader(ThemeData theme, PlayerViewModel vm) {
-    final type = vm.currentMediaType;
-    String label = 'UP NEXT';
-    if (type == MediaType.podcast) label = 'SHOW NOTES';
-    if (type == MediaType.radio) label = 'STATION INFO';
-    if (type == MediaType.noise) label = 'LOOP ATTRIBUTION';
-    if (type == MediaType.audiobook) label = 'CHAPTERS';
-
+  Widget _buildSectionHeader(ThemeData theme, NowPlayingStrategy strategy) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 10)),
+          Text(strategy.sectionLabel, style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 10)),
           const SizedBox(height: 8),
           const Divider(height: 1, color: Colors.white10),
         ]),

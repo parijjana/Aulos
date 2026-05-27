@@ -43,7 +43,7 @@ class ServicesStorageSection extends StatelessWidget {
             // --- Music Storage Area ---
             const SettingsLabel('LOCAL MUSIC LIBRARIES'),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
+              constraints: const BoxConstraints(maxHeight: 140),
               child: Scrollbar(
                 child: ListView(
                   shrinkWrap: true,
@@ -70,8 +70,43 @@ class ServicesStorageSection extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            _buildScannerControls(context, theme, onSurface),
+            const SizedBox(height: 8),
+            _buildScannerControls(context, theme, onSurface, 0),
+
+            const Divider(height: 32, color: Colors.white10),
+
+            // --- Audiobook Storage Area ---
+            const SettingsLabel('LOCAL AUDIOBOOK LIBRARIES'),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 140),
+              child: Scrollbar(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ...vm.audiobookFolders.map((path) => PathSelectorTile(
+                      label: 'Book Path',
+                      path: path,
+                      onTap: () async {
+                        final String? newPath = await FilePicker.getDirectoryPath();
+                        if (newPath != null) vm.addAudiobookFolder(newPath);
+                      },
+                      onClear: () => vm.removeAudiobookFolder(path),
+                    )),
+                    if (vm.audiobookFolders.isEmpty)
+                      PathSelectorTile(
+                        label: 'Add Audiobook Folder',
+                        path: null,
+                        onTap: () async {
+                          final String? path = await FilePicker.getDirectoryPath();
+                          if (path != null) vm.addAudiobookFolder(path);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildScannerControls(context, theme, onSurface, 1),
 
             const Divider(height: 32, color: Colors.white10),
 
@@ -197,23 +232,29 @@ class ServicesStorageSection extends StatelessWidget {
     );
   }
 
-  Widget _buildScannerControls(BuildContext context, ThemeData theme, Color onSurface) {
+  Widget _buildScannerControls(BuildContext context, ThemeData theme, Color onSurface, int folderType) {
+    // Only show progress if THIS SPECIFIC folder type is being scanned
+    final bool isThisTypeScanning = indexerService.state == IndexerState.scanning && indexerService.scanningFolderType == folderType;
+    final bool isAnyScanning = indexerService.state == IndexerState.scanning;
+    
+    final folders = folderType == 1 ? vm.audiobookFolders : vm.monitoredFolders;
+    
     return Row(
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () {
+            onPressed: isAnyScanning && !isThisTypeScanning ? null : () {
               final lib = context.read<PersistentLibraryService>();
-              indexerService.state == IndexerState.scanning
+              isThisTypeScanning
                   ? indexerService.stopIndexer()
-                  : indexerService.scanLibrary(vm.monitoredFolders, lib);
+                  : indexerService.scanLibrary(folders, lib, folderType: folderType);
             },
-            icon: Icon(indexerService.state == IndexerState.scanning ? Icons.stop : Icons.sync, size: 14),
-            label: Text(indexerService.state == IndexerState.scanning ? 'STOP SCAN' : 'START SCAN', style: const TextStyle(fontSize: 9)),
+            icon: Icon(isThisTypeScanning ? Icons.stop : Icons.sync, size: 14),
+            label: Text(isThisTypeScanning ? 'STOP SCAN' : 'START SCAN', style: const TextStyle(fontSize: 9)),
           ),
         ),
         const SizedBox(width: 8),
-        if (indexerService.state != IndexerState.idle)
+        if (isThisTypeScanning || (indexerService.state == IndexerState.optimizing && indexerService.scanningFolderType == folderType))
           Expanded(
             child: Column(
               children: [

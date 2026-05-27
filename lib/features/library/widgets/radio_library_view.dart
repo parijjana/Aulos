@@ -236,7 +236,7 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
               icon: Icon(Icons.more_vert, color: onSurface.withValues(alpha: 0.24), size: 20),
               onSelected: (val) {
                 if (val == 'hide') vm.toggleHidden(station);
-                if (val == 'remove') vm.toggleFavorite(station);
+                if (val == 'remove') vm.removeStation(station);
               },
               itemBuilder: (context) => [
                 PopupMenuItem(
@@ -273,6 +273,17 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
 
     return GestureDetector(
       onTap: () => vm.playStation(station, playerVM, isAvailable: isAvailable),
+      onSecondaryTapDown: (details) {
+        _showGridMenu(details.globalPosition, station, vm);
+      },
+      onLongPress: () {
+        // Find position of tile for long press menu
+        final RenderBox? box = context.findRenderObject() as RenderBox?;
+        if (box != null) {
+          final offset = box.localToGlobal(Offset.zero);
+          _showGridMenu(offset, station, vm);
+        }
+      },
       child: Opacity(
         opacity: isAvailable ? 1.0 : 0.4,
         child: Column(
@@ -286,13 +297,16 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
                   Positioned(
                     bottom: 8,
                     right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                      child: Icon(
-                        station.isFavorite ? Icons.library_add_check : Icons.library_add, 
-                        color: Colors.white, 
-                        size: 16,
+                    child: GestureDetector(
+                      onTap: () => _showGridMenu(null, station, vm),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                        child: const Icon(
+                          Icons.more_horiz, 
+                          color: Colors.white, 
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -330,6 +344,53 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
         ),
       ),
     );
+  }
+
+  void _showGridMenu(Offset? position, RadioStation station, RadioViewModel vm) async {
+    final RelativeRect? rect = position != null 
+        ? RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy)
+        : null;
+
+    final result = await showMenu<String>(
+      context: context,
+      position: rect ?? const RelativeRect.fromLTRB(100, 100, 100, 100),
+      items: [
+        PopupMenuItem(
+          value: 'pin',
+          child: Row(
+            children: [
+              Icon(station.isPinned ? Icons.push_pin : Icons.push_pin_outlined, size: 18),
+              const SizedBox(width: 12),
+              Text(station.isPinned ? 'Unpin' : 'Pin to Top'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'hide',
+          child: Row(
+            children: [
+              Icon(station.isHidden ? Icons.visibility : Icons.visibility_off, size: 18),
+              const SizedBox(width: 12),
+              Text(station.isHidden ? 'Show Station' : 'Hide Station'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'remove',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+              const SizedBox(width: 12),
+              Text('Remove from Library', style: TextStyle(color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (result == 'pin') vm.togglePin(station);
+    if (result == 'hide') vm.toggleHidden(station);
+    if (result == 'remove') vm.removeStation(station);
   }
 
   Widget _buildEmptyState(BuildContext context, Color onSurface, RadioViewModel vm) {

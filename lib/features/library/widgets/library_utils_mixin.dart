@@ -21,7 +21,7 @@ mixin LibraryUtilsMixin {
   String getCategoryGridSubtitle(dynamic item) {
     if (item is Folder) return item.path;
     if (item is Artist) return 'Artist';
-    if (item is Album) return 'Album';
+    if (item is Album) return item.isAudiobook ? 'Audiobook' : 'Album';
     if (item is Track) return 'Track';
     return '';
   }
@@ -60,6 +60,8 @@ mixin LibraryUtilsMixin {
         return vm.years;
       case LibraryMode.playlists:
         return vm.playlists;
+      case LibraryMode.books:
+        return vm.books;
     }
   }
 

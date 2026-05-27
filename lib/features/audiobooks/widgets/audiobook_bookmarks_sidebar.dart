@@ -3,32 +3,33 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 
-class PodcastBookmarksSidebar extends StatelessWidget {
-  const PodcastBookmarksSidebar({super.key});
+class AudiobookBookmarksSidebar extends StatelessWidget {
+  const AudiobookBookmarksSidebar({super.key});
 
   @override
   Widget build(BuildContext context) {
     final db = context.read<AppDatabase>();
     final playerVM = context.read<PlayerViewModel>();
     final theme = Theme.of(context);
+    final currentTrack = playerVM.currentTrack;
 
     return Container(
       width: 350,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.95),
+        color: theme.colorScheme.surface.withValues(alpha: 0.98),
         border: Border(left: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.05))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 64, 24, 16), // Extra top padding for title bar
+            padding: const EdgeInsets.fromLTRB(24, 64, 24, 16),
             child: Row(
               children: [
-                Icon(Icons.bookmarks_outlined, size: 18, color: theme.colorScheme.primary),
+                Icon(Icons.book_rounded, size: 18, color: theme.colorScheme.primary),
                 const SizedBox(width: 12),
                 Text(
-                  'ALL SAVED CLIPS',
+                  'BOOK CLIPS',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2,
@@ -39,7 +40,9 @@ class PodcastBookmarksSidebar extends StatelessWidget {
           ),
           Expanded(
             child: StreamBuilder<List<Bookmark>>(
-              stream: (db.select(db.bookmarks)..where((t) => t.contextType.equals(1))).watch(),
+              stream: currentTrack != null 
+                  ? (db.select(db.bookmarks)..where((t) => t.trackPath.equals(currentTrack.path))).watch()
+                  : Stream.value([]),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 final bookmarks = snapshot.data!;
@@ -49,9 +52,9 @@ class PodcastBookmarksSidebar extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.bookmark_border, size: 48, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+                        Icon(Icons.bookmark_border_rounded, size: 48, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
                         const SizedBox(height: 16),
-                        Text('No clips saved yet.', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.38))),
+                        Text('No clips for this book.', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.24), fontSize: 12)),
                       ],
                     ),
                   );
@@ -91,9 +94,9 @@ class _BookmarkCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.03),
+          color: theme.colorScheme.primary.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.05)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +112,7 @@ class _BookmarkCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 16),
+                  icon: const Icon(Icons.delete_outline, size: 14),
                   onPressed: () => db.deleteBookmark(bookmark.id),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -130,26 +133,20 @@ class _BookmarkCard extends StatelessWidget {
                 )).toList(),
               ),
             ],
-            if (bookmark.notes != null && bookmark.notes!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                bookmark.notes!,
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.access_time, size: 12, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-                const SizedBox(width: 6),
+                Icon(Icons.play_circle_outline, size: 16, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
                 Text(
-                  '${_formatMs(bookmark.startTimeMs)} - ${_formatMs(bookmark.endTimeMs ?? 0)}',
-                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.38), fontWeight: FontWeight.bold),
+                  '${_formatMs(bookmark.startTimeMs)}',
+                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                Icon(Icons.play_circle_fill, size: 24, color: theme.colorScheme.primary),
+                Text(
+                  '${_formatMs((bookmark.endTimeMs ?? 0) - bookmark.startTimeMs)} CLIP',
+                  style: TextStyle(fontSize: 8, color: theme.colorScheme.primary.withValues(alpha: 0.5), fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                ),
               ],
             ),
           ],

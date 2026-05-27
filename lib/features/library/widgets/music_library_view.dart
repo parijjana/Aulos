@@ -44,6 +44,7 @@ class _MusicLibraryViewState extends State<MusicLibraryView>
       case LibraryMode.genres: return 3;
       case LibraryMode.years: return 4;
       case LibraryMode.playlists: return 5;
+      case LibraryMode.books: return 2; // Fallback for Music view
     }
   }
 
@@ -89,8 +90,14 @@ class _MusicLibraryViewState extends State<MusicLibraryView>
     final viewModel = context.watch<LibraryViewModel>();
     final theme = Theme.of(context);
 
-    if (_currentKey != viewModel.currentScrollKey) {
-      _currentKey = viewModel.currentScrollKey;
+    // Sync internal tab controller if mode changed externally
+    final int targetIndex = _getInitialTabIndex(viewModel.mode);
+    if (!_subTabController.indexIsChanging && _subTabController.index != targetIndex) {
+      _subTabController.index = targetIndex;
+    }
+
+    if (_currentKey != viewModel.mode.name) {
+      _currentKey = viewModel.mode.name;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           final offset = viewModel.getScrollOffset();
@@ -100,8 +107,10 @@ class _MusicLibraryViewState extends State<MusicLibraryView>
       });
     }
 
+    final bool isAtRoot = viewModel.isAtRootFor(viewModel.lastMusicMode);
+
     return PopScope(
-      canPop: viewModel.isAtRoot,
+      canPop: isAtRoot,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (_scrollController.hasClients) {
@@ -123,17 +132,17 @@ class _MusicLibraryViewState extends State<MusicLibraryView>
                       color: theme.colorScheme.primary,
                     ),
                   )
-                : _buildContent(viewModel),
+                : _buildContent(viewModel, isAtRoot),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContent(LibraryViewModel viewModel) {
+  Widget _buildContent(LibraryViewModel viewModel, bool isAtRoot) {
     switch (viewModel.viewType) {
       case settings.LibraryViewType.list:
-        return viewModel.isAtRoot
+        return isAtRoot
             ? LibraryCategoryList(viewModel: viewModel, scrollController: _scrollController)
             : LibrarySubList(viewModel: viewModel, scrollController: _scrollController);
       case settings.LibraryViewType.grid:

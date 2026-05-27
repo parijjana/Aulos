@@ -67,14 +67,20 @@ class DiscoveryDatabase extends _$DiscoveryDatabase {
 
   // Persistence Operations
   Future<void> upsertPodcasts(List<DiscoveredPodcastsCompanion> podcasts, String categoryId) async {
-    await transaction(() async {
+    // 0. Clear old relations for this category
+    await (delete(discoveryCategoryRelations)..where((t) => t.categoryId.equals(categoryId))).go();
+
+    await batch((b) {
+      // 1. Insert/Update Podcasts
+      b.insertAll(discoveredPodcasts, podcasts, mode: InsertMode.insertOrReplace);
+    });
+
+    await batch((b) {
+      // 2. Link to Category
       for (var p in podcasts) {
-        // 1. Insert/Update Podcast
-        await into(discoveredPodcasts).insert(p, mode: InsertMode.insertOrReplace);
-        
-        // 2. Link to Category
         final id = p.iTunesId.value;
-        await into(discoveryCategoryRelations).insert(
+        b.insert(
+          discoveryCategoryRelations,
           DiscoveryCategoryRelationsCompanion.insert(
             iTunesId: id,
             categoryId: categoryId,

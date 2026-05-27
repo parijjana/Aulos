@@ -5,6 +5,9 @@ import 'package:aulos/domain/library/podcast_service.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+// Top-level function for compute()
+RssFeed _parseRss(String body) => RssFeed.parse(body);
+
 class RssPodcastService implements PodcastService {
   final AppDatabase _db;
   final http.Client _client;
@@ -27,7 +30,7 @@ class RssPodcastService implements PodcastService {
       throw Exception('Failed to fetch RSS feed: ${response.statusCode}');
     }
 
-    final rss = RssFeed.parse(response.body);
+    final rss = await compute(_parseRss, response.body);
     
     final imageUrl = rss.itunes?.image?.href ?? rss.image?.url;
     Uint8List? imageBytes;
@@ -70,7 +73,7 @@ class RssPodcastService implements PodcastService {
       throw Exception('Failed to refresh RSS feed: ${response.statusCode}');
     }
 
-    final rss = RssFeed.parse(response.body);
+    final rss = await compute(_parseRss, response.body);
     final List<EpisodesCompanion> companions = [];
 
     for (final item in rss.items) {

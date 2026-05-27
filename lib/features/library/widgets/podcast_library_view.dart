@@ -29,6 +29,8 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
 
+    debugPrint('PODCAST_LIBRARY: Building. Filter: ${podcastVM.libraryFilter}, Count: ${podcastVM.filteredPodcasts.length}');
+
     final activePod = podcastVM.activePodcast;
     if (activePod != null) {
       return PodcastDetailView(
@@ -77,9 +79,12 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
         const SizedBox(height: 8),
 
         Expanded(
-          child: podcastVM.filteredPodcasts.isEmpty 
-            ? _buildEmptyState(onSurface)
-            : _buildMainContent(podcastVM, settingsVM, theme, onSurface),
+          child: RefreshIndicator(
+            onRefresh: podcastVM.loadPodcasts,
+            child: podcastVM.filteredPodcasts.isEmpty 
+              ? _buildEmptyState(onSurface, podcastVM.isLoading)
+              : _buildMainContent(podcastVM, settingsVM, theme, onSurface),
+          ),
         ),
       ],
     );
@@ -90,6 +95,7 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
     if (settingsVM.libraryViewType == settings.LibraryViewType.list) {
       return ListView.builder(
         key: const PageStorageKey('podcast_library_list'),
+        physics: const AlwaysScrollableScrollPhysics(),
         itemCount: list.length,
         itemBuilder: (context, index) {
           final pod = list[index];
@@ -106,6 +112,7 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
 
     return GridView.builder(
       key: const PageStorageKey('podcast_library_grid'),
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(24),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
@@ -191,16 +198,29 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
     );
   }
 
-  Widget _buildEmptyState(Color onSurface) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.podcasts_outlined, size: 64, color: onSurface.withValues(alpha: 0.1)),
-          const SizedBox(height: 16),
-          Text('No podcasts found.', style: TextStyle(color: onSurface.withValues(alpha: 0.38))),
-        ],
-      ),
+  Widget _buildEmptyState(Color onSurface, bool isLoading) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 150),
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isLoading ? Icons.sync : Icons.podcasts_outlined, 
+                size: 64, 
+                color: onSurface.withValues(alpha: 0.1),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isLoading ? 'FETCHING SHOWS...' : 'NO PODCASTS FOUND', 
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: Colors.white24),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

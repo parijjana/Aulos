@@ -91,6 +91,9 @@ class LibraryArtWidget extends StatelessWidget {
       case LibraryMode.playlists:
         icon = Icons.playlist_play;
         break;
+      case LibraryMode.books:
+        icon = Icons.library_books;
+        break;
     }
     return Icon(
       icon,

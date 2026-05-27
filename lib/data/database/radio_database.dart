@@ -188,6 +188,10 @@ class RadioDatabase extends _$RadioDatabase {
         ));
   }
 
+  Future<void> deleteStation(String uuid) {
+    return (delete(radioStations)..where((t) => t.stationUuid.equals(uuid))).go();
+  }
+
   Future<void> clearCache() async {
     // Delete all categories
     await delete(radioCategories).go();

@@ -7,6 +7,7 @@ class Folders extends Table {
   TextColumn get name => text()();
   IntColumn get parentId =>
       integer().nullable().references(Folders, #id)(); // Hierarchical Folders
+  IntColumn get folderType => integer().withDefault(const Constant(0))(); // 0: Music, 1: Audiobooks
 }
 
 class Artists extends Table {
@@ -26,6 +27,13 @@ class Albums extends Table {
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();
+  BoolColumn get isAudiobook => boolean().withDefault(const Constant(false))();
+  
+  // Audiobook/Series Metadata
+  TextColumn get seriesName => text().nullable()();
+  TextColumn get narrator => text().nullable()();
+  TextColumn get description => text().nullable()();
+  BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
 
   @override
   List<Set<Column>> get uniqueKeys => [
@@ -53,6 +61,8 @@ class Tracks extends Table {
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();
+  BoolColumn get isAudiobook => boolean().withDefault(const Constant(false))();
+  BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
 }
 
 class ArtistAlbumRelations extends Table {
@@ -136,7 +146,16 @@ class Bookmarks extends Table {
   IntColumn get endTimeMs => integer().nullable()();
   TextColumn get tags => text().nullable()();
   TextColumn get notes => text().nullable()();
+  IntColumn get contextType => integer().withDefault(const Constant(0))(); // 0: Music, 1: Podcast, 2: Audiobook
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class Chapters extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get trackId => integer().references(Tracks, #id)();
+  TextColumn get title => text()();
+  IntColumn get startTimeMs => integer()();
+  IntColumn get durationMs => integer().nullable()();
 }
 
 class PlaybackPositions extends Table {

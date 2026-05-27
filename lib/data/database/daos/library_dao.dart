@@ -6,9 +6,19 @@ import 'package:path/path.dart' as p;
 
 part 'library_dao.g.dart';
 
-@DriftAccessor(tables: [Folders, Artists, Albums, Genres, Tracks, ArtistAlbumRelations])
+@DriftAccessor(tables: [Folders, Artists, Albums, Genres, Tracks, ArtistAlbumRelations, Chapters])
 class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   LibraryDao(AppDatabase db) : super(db);
+
+  // Chapter Operations
+  Future<void> addChapters(List<ChaptersCompanion> companions) async {
+    await batch((b) {
+      b.insertAll(chapters, companions, mode: InsertMode.insertOrReplace);
+    });
+  }
+
+  Future<List<Chapter>> getChaptersForTrack(int trackId) =>
+      (select(chapters)..where((c) => c.trackId.equals(trackId))).get();
 
   // Folder Operations
   Future<int> addFolder(FoldersCompanion folder) =>
@@ -19,7 +29,7 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   Future<List<Folder>> getSubFolders(int parentId) =>
       (select(folders)..where((f) => f.parentId.equals(parentId))).get();
 
-  Future<int> ensureFolder(String path, {int? parentId}) async {
+  Future<int> ensureFolder(String path, {int? parentId, int folderType = 0}) async {
     final existing = await (select(folders)..where((f) => f.path.equals(path))).getSingleOrNull();
     if (existing != null) return existing.id;
     final name = p.basename(path);
@@ -28,6 +38,7 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
         path: path,
         name: name,
         parentId: Value(parentId),
+        folderType: Value(folderType),
       ),
     );
   }
@@ -39,7 +50,7 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
     return into(artists).insert(ArtistsCompanion.insert(name: name));
   }
 
-  Future<int> ensureAlbum(String name, int? artistId, {Uint8List? coverArt}) async {
+  Future<int> ensureAlbum(String name, int? artistId, {Uint8List? coverArt, bool isAudiobook = false}) async {
     final existing = await (select(albums)..where(
               (a) => a.name.equals(name) &
                   (artistId == null ? a.artistId.isNull() : a.artistId.equals(artistId)),
@@ -59,6 +70,7 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
         name: name,
         artistId: Value(artistId),
         coverArt: Value(coverArt),
+        isAudiobook: Value(isAudiobook),
       ),
     );
   }

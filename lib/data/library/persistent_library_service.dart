@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/domain/library/library_service.dart';
 import 'package:path/path.dart' as p;
+import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
 abstract class PersistentLibraryService {
@@ -21,8 +22,9 @@ abstract class PersistentLibraryService {
   Future<List<Track>> getTracksForYear(int year);
 
   Future<List<Track>> getAllTracks();
-  Future<void> importFolder(String path, {VoidCallback? onFileFound});
+  Future<void> importFolder(String path, {VoidCallback? onFileFound, int folderType = 0});
   Future<void> autoDiscoverTracks();
+  Future<void> pickAndAddFolder({int folderType = 0});
   Future<void> updateRating(int trackId, int rating);
   Future<void> updateAlbumArt(int albumId, Uint8List art);
   Future<void> updateArtistPhoto(int artistId, Uint8List photo);
@@ -32,6 +34,10 @@ abstract class PersistentLibraryService {
   Future<void> savePlaylist(String name, List<int> trackIds);
   Future<List<Track>> getTracksForPlaylist(int playlistId);
   Future<void> deletePlaylist(int playlistId);
+
+  // Audiobook Specific
+  Future<List<Album>> getAudiobooks();
+  Future<List<Track>> getChapters(int bookId);
 }
 
 class PersistentLibraryServiceImpl implements PersistentLibraryService {
@@ -89,51 +95,107 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   Future<List<Track>> getAllTracks() => _db.getAllTracks();
 
   @override
-  Future<void> importFolder(String path, {VoidCallback? onFileFound}) async {
-    // 1. Ensure the root folder exists
-    final rootId = await _db.ensureFolder(path);
+  Future<List<Album>> getAudiobooks() => _db.getAudiobooks();
 
-    // 2. Scan all files recursively
+  @override
+  Future<List<Track>> getChapters(int bookId) => _db.getChaptersForBook(bookId);
+
+  @override
+  Future<void> pickAndAddFolder({int folderType = 0}) async {
+    final String? path = await FilePicker.getDirectoryPath();
+    if (path != null) {
+      await importFolder(path, folderType: folderType);
+    }
+  }
+
+  @override
+  Future<void> importFolder(String path, {VoidCallback? onFileFound, int folderType = 0}) async {
+    final bool isAudiobook = folderType == 1;
+
+    final rootId = await _db.ensureFolder(path, folderType: folderType);
     final files = await _scanner.scanDirectory(path);
 
-    // Cache for folder paths to IDs to minimize DB hits
     final Map<String, int> folderCache = {path: rootId};
 
     for (final f in files) {
       onFileFound?.call();
 
-      // 3. Resolve the folder hierarchy for this file
       final fileDir = p.dirname(f.path);
       final trackFolderId = await _ensureFolderHierarchy(
         fileDir,
         rootId,
         path,
         folderCache,
+        folderType: folderType,
       );
 
-      // 4. Extract metadata and add track
       final artistId = await _db.ensureArtist(f.artist);
       final albumArtistId = f.albumArtist != null
           ? await _db.ensureArtist(f.albumArtist!)
           : artistId;
-      final albumId = f.album != null
-          ? await _db.ensureAlbum(f.album!, albumArtistId, coverArt: f.coverArt)
-          : null;
+      
+      String bookName = f.album ?? p.basename(fileDir);
+      
+      final albumId = await _db.ensureAlbum(
+        bookName, 
+        albumArtistId, 
+        coverArt: f.coverArt,
+        isAudiobook: isAudiobook,
+      );
+      
       final genreId = f.genre != null ? await _db.ensureGenre(f.genre!) : null;
 
-      await _db.addTracks([
-        TracksCompanion(
-          path: Value(f.path),
-          title: Value(f.title),
-          folderId: Value(trackFolderId),
-          artistId: Value(artistId),
-          albumId: Value(albumId),
-          genreId: Value(genreId),
-          year: Value(f.year),
-          durationSeconds: Value(f.duration?.inSeconds),
-          coverArt: Value(f.coverArt),
-        ),
-      ]);
+      // 4a. Add track or get existing ID
+      int effectiveTrackId;
+      final existing = await (_db.select(_db.tracks)..where((t) => t.path.equals(f.path))).getSingleOrNull();
+      
+      if (existing == null) {
+        effectiveTrackId = await _db.into(_db.tracks).insert(
+          TracksCompanion.insert(
+            path: f.path,
+            title: f.title,
+            folderId: trackFolderId,
+            artistId: Value(artistId),
+            albumId: Value(albumId),
+            genreId: Value(genreId),
+            year: Value(f.year),
+            durationSeconds: Value(f.duration?.inSeconds),
+            coverArt: Value(f.coverArt),
+            isAudiobook: Value(isAudiobook),
+          ),
+        );
+      } else {
+        effectiveTrackId = existing.id;
+        // Optional: Update metadata if it was missing before
+        if (existing.albumId == null) {
+           await (_db.update(_db.tracks)..where((t) => t.id.equals(effectiveTrackId))).write(TracksCompanion(albumId: Value(albumId)));
+        }
+      }
+
+      // 4b. ADD CHAPTERS IF PRESENT
+      if (f.chapters.isNotEmpty && effectiveTrackId > 0) {
+        // Clear existing chapters for this track first to prevent duplicates
+        await (_db.delete(_db.chapters)..where((c) => c.trackId.equals(effectiveTrackId))).go();
+
+        final List<ChaptersCompanion> companions = [];
+        for (int i = 0; i < f.chapters.length; i++) {
+          final chapter = f.chapters[i];
+          int? durationMs;
+          if (i < f.chapters.length - 1) {
+            durationMs = f.chapters[i + 1].startTime.inMilliseconds - chapter.startTime.inMilliseconds;
+          } else if (f.duration != null) {
+            durationMs = f.duration!.inMilliseconds - chapter.startTime.inMilliseconds;
+          }
+
+          companions.add(ChaptersCompanion.insert(
+            trackId: effectiveTrackId,
+            title: chapter.title,
+            startTimeMs: chapter.startTime.inMilliseconds,
+            durationMs: Value(durationMs),
+          ));
+        }
+        await _db.addChapters(companions);
+      }
     }
   }
 
@@ -141,8 +203,9 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
     String currentPath,
     int rootId,
     String rootPath,
-    Map<String, int> cache,
-  ) async {
+    Map<String, int> cache, {
+    int folderType = 0,
+  }) async {
     final normalizedCurrent = p.normalize(p.absolute(currentPath));
     final normalizedRoot = p.normalize(p.absolute(rootPath));
 
@@ -161,10 +224,11 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
       rootId,
       normalizedRoot,
       cache,
+      folderType: folderType,
     );
 
     final folderId =
-        await _db.ensureFolder(normalizedCurrent, parentId: parentId);
+        await _db.ensureFolder(normalizedCurrent, parentId: parentId, folderType: folderType);
     cache[normalizedCurrent] = folderId;
     return folderId;
   }

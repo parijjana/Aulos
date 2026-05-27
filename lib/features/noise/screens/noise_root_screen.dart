@@ -318,14 +318,20 @@ class _SavedMixesTab extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (noiseVM.isMixerActive)
+              if (noiseVM.isMixerActive) ...[
+                IconButton(
+                  onPressed: noiseVM.isPlaying ? noiseVM.stopAll : noiseVM.restoreActiveMix,
+                  icon: Icon(noiseVM.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, size: 28),
+                  tooltip: noiseVM.isPlaying ? 'Pause All' : 'Resume Mix',
+                  color: theme.colorScheme.primary,
+                ),
                 IconButton(
                   onPressed: () => _showSaveDialog(context, noiseVM),
-                  icon: const Icon(Icons.save_alt_rounded, size: 16),
+                  icon: const Icon(Icons.save_alt_rounded, size: 20),
                   tooltip: 'Save Current Mix',
-                  visualDensity: VisualDensity.compact,
                   color: theme.colorScheme.primary.withValues(alpha: 0.6),
                 ),
+              ],
             ],
           ),
         ),

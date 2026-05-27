@@ -15,7 +15,7 @@ class AudioFile {
   final int? year;
   final Duration? duration;
   final Uint8List? coverArt;
-  final String? coverPath;
+  final List<AudioChapter> chapters;
 
   AudioFile({
     required this.path,
@@ -27,7 +27,7 @@ class AudioFile {
     this.year,
     this.duration,
     this.coverArt,
-    this.coverPath,
+    this.chapters = const [],
   });
 
   @override
@@ -41,4 +41,16 @@ class AudioFile {
 
   @override
   int get hashCode => path.hashCode ^ title.hashCode ^ artist.hashCode;
+}
+
+class AudioChapter {
+  final String title;
+  final Duration startTime;
+  final Duration? duration;
+
+  AudioChapter({
+    required this.title,
+    required this.startTime,
+    this.duration,
+  });
 }

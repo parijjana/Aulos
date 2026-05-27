@@ -6,6 +6,9 @@ import 'package:aulos/domain/network/log_service.dart';
 import 'package:drift/drift.dart';
 import 'package:dart_rss/dart_rss.dart';
 
+// Top-level function for compute()
+RssFeed _parseRss(String body) => RssFeed.parse(body);
+
 class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
   final PodcastDiscoveryService _api;
   final DiscoveryDatabase _db;
@@ -159,7 +162,7 @@ class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
       final xml = await _api.fetchRawRss(resolvedUrl);
       if (xml == null) return;
 
-      final rss = RssFeed.parse(xml);
+      final rss = await compute(_parseRss, xml);
       
       // 2. Update Podcast with description and resolved feedUrl
       final podcast = await _db.getByITunesId(iTunesId);
