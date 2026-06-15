@@ -4,6 +4,7 @@ import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/data/database/radio_database.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:aulos/core/config/api_config.dart';
 
 class RadioStationResult {
   final String stationuuid;
@@ -62,20 +63,25 @@ class RadioStationResult {
   }
 }
 
-class RadioBrowserService with UniversalLog {
+class RadioBrowserService {
   final http.Client _client;
   final RateLimitDispatcher _rateLimiter;
+  final LogService _logService;
   
   // Use a reliable default mirror (German mirror is usually very stable)
-  String _baseUrl = 'https://de1.api.radio-browser.info/json';
+  String _baseUrl = ApiConfig.radioBrowserDefaultBaseUrl;
 
   RadioBrowserService({
+    LogService? logService,
     http.Client? client,
     RateLimitDispatcher? rateLimiter,
   }) : _client = client ?? http.Client(),
-       _rateLimiter = rateLimiter ?? RateLimitDispatcher() {
+       _rateLimiter = rateLimiter ?? RateLimitDispatcher(),
+       _logService = logService ?? NoOpLogService() {
     _resolveHost();
   }
+
+  void log(String message) => _logService.log(message);
 
   @visibleForTesting
   Future<void> resolveHost() => _resolveHost();
@@ -83,7 +89,7 @@ class RadioBrowserService with UniversalLog {
   Future<void> _resolveHost() async {
     try {
       // Use DNS lookup or a known reliable mirror
-      final response = await http.get(Uri.parse('https://all.api.radio-browser.info/json/servers'));
+      final response = await http.get(Uri.parse(ApiConfig.radioBrowserServersUrl));
       if (response.statusCode == 200) {
         final servers = json.decode(response.body) as List;
         if (servers.isNotEmpty) {
@@ -130,7 +136,7 @@ class RadioBrowserService with UniversalLog {
     final url = '$_baseUrl/countries?order=stationcount&reverse=true';
     final response = await _client.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
+      final List<dynamic> data = json.decode(response.body) as List<dynamic>;
       return data.map((e) => e as Map<String, dynamic>).toList();
     }
     return [];
@@ -140,7 +146,7 @@ class RadioBrowserService with UniversalLog {
     final url = '$_baseUrl/languages?order=stationcount&reverse=true';
     final response = await _client.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
+      final List<dynamic> data = json.decode(response.body) as List<dynamic>;
       return data.map((e) => e as Map<String, dynamic>).toList();
     }
     return [];
@@ -156,11 +162,13 @@ class RadioBrowserService with UniversalLog {
           if (response.statusCode == 200) {
             final data = json.decode(response.body) as List;
             return data.map((e) => e as Map<String, dynamic>).toList();
+          } else {
+            throw Exception('Tag fetch failed with status ${response.statusCode}');
           }
         } catch (e) {
           debugPrint('RadioBrowserService: Tag fetch failed: $e');
+          rethrow;
         }
-        return [];
       },
     );
   }
@@ -174,11 +182,13 @@ class RadioBrowserService with UniversalLog {
           if (response.statusCode == 200) {
             final data = json.decode(response.body) as List;
             return data.map((j) => RadioStationResult.fromJson(j as Map<String, dynamic>)).toList();
+          } else {
+            throw Exception('Request failed with status ${response.statusCode}');
           }
         } catch (e) {
           debugPrint('RadioBrowserService: Request failed ($url): $e');
+          rethrow;
         }
-        return <RadioStationResult>[];
       },
     );
   }

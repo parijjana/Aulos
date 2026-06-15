@@ -33,15 +33,20 @@ class PodcastSearchResult {
   }
 }
 
-class PodcastDiscoveryService with UniversalLog {
+class PodcastDiscoveryService {
   final http.Client _client;
   final RateLimitDispatcher _rateLimiter;
+  final LogService _logService;
 
   PodcastDiscoveryService({
+    LogService? logService,
     http.Client? client,
     RateLimitDispatcher? rateLimiter,
   }) : _client = client ?? http.Client(),
-       _rateLimiter = rateLimiter ?? RateLimitDispatcher();
+       _rateLimiter = rateLimiter ?? RateLimitDispatcher(),
+       _logService = logService ?? NoOpLogService();
+
+  void log(String message) => _logService.log(message);
 
   Future<List<PodcastSearchResult>> searchPodcasts(
     String query, {
@@ -68,11 +73,12 @@ class PodcastDiscoveryService with UniversalLog {
                 .toList();
           } else {
             log('API: Search failed with status ${response.statusCode}');
+            throw Exception('Search failed with status ${response.statusCode}');
           }
         } catch (e) {
           log('API: Search error: $e');
+          rethrow;
         }
-        return <PodcastSearchResult>[];
       },
     );
   }
@@ -100,11 +106,12 @@ class PodcastDiscoveryService with UniversalLog {
                 .toList();
           } else {
             log('API: Category fetch failed with status ${response.statusCode}');
+            throw Exception('Category fetch failed with status ${response.statusCode}');
           }
         } catch (e) {
           log('API: Category fetch error: $e');
+          rethrow;
         }
-        return <PodcastSearchResult>[];
       },
     );
   }
@@ -133,11 +140,12 @@ class PodcastDiscoveryService with UniversalLog {
             }).toList();
           } else {
             log('API: Trending fetch failed with status ${response.statusCode}');
+            throw Exception('Trending fetch failed with status ${response.statusCode}');
           }
         } catch (e) {
           log('API: Trending fetch error: $e');
+          rethrow;
         }
-        return <PodcastSearchResult>[];
       },
     );
   }
@@ -150,11 +158,13 @@ class PodcastDiscoveryService with UniversalLog {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
             return response.body;
+          } else {
+            throw Exception('RSS fetch failed with status ${response.statusCode}');
           }
         } catch (e) {
           log('API: RSS fetch error ($url): $e');
+          rethrow;
         }
-        return null;
       },
     );
   }
@@ -180,11 +190,12 @@ class PodcastDiscoveryService with UniversalLog {
             }
           } else {
             log('API: Lookup failed with status ${response.statusCode}');
+            throw Exception('Lookup failed with status ${response.statusCode}');
           }
         } catch (e) {
           log('API: Lookup error: $e');
+          rethrow;
         }
-        return null;
       },
     );
   }

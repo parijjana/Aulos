@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:provider/provider.dart';
 
@@ -44,7 +45,9 @@ class PodcastInfoPane extends StatelessWidget {
               style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.7), height: 1.5),
             ),
             const SizedBox(height: 32),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 ElevatedButton.icon(
                   onPressed: () => context.read<PodcastViewModel>().refreshPodcast(podcast.id),
@@ -56,7 +59,6 @@ class PodcastInfoPane extends StatelessWidget {
                     elevation: 0,
                   ),
                 ),
-                const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: onUnsubscribe,
                   icon: const Icon(Icons.delete_outline, size: 16),

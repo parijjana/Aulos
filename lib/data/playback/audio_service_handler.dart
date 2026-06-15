@@ -6,18 +6,19 @@ import 'package:aulos/domain/network/log_service.dart';
 import 'file_stream_source.dart';
 import 'package:path/path.dart' as p;
 
-class AulosAudioHandler extends BaseAudioHandler with SeekHandler, UniversalLog {
+class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final _customEventController = StreamController<String>.broadcast();
+  final LogService _logService;
 
-  AulosAudioHandler() {
+  AulosAudioHandler({LogService? logService}) : _logService = logService ?? NoOpLogService() {
     _player.playerStateStream.listen((state) {
       log('HANDLER: Player State -> Playing: ${state.playing}, Processing: ${state.processingState}');
+      _broadcastState();
     });
     
-    _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
-    
     _player.playbackEventStream.listen((event) {
+      _broadcastState(event);
       if (event.icyMetadata != null) {
         log('HANDLER: ICY Metadata -> ${event.icyMetadata}');
       }
@@ -33,6 +34,8 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler, UniversalLog 
       }
     });
   }
+
+  void log(String message) => _logService.log(message);
 
   Stream<String> get customEventStream => _customEventController.stream;
 
@@ -69,17 +72,18 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler, UniversalLog 
 
   Future<void> setSource(Uri uri, {bool isRetry = false}) async {
     try {
-      final String rawPath = uri.toFilePath();
-      log('HANDLER: Setting source -> $rawPath (Retry: $isRetry)');
-      
-      final String ext = p.extension(rawPath).toLowerCase();
-      final String mimeType = (ext == '.m4b' || ext == '.m4a') ? 'audio/mp4' : 'audio/mpeg';
-
       final AudioSource source;
       if (uri.isScheme('file')) {
+        final String rawPath = uri.toFilePath();
+        log('HANDLER: Setting source -> $rawPath (Retry: $isRetry)');
+        
+        final String ext = p.extension(rawPath).toLowerCase();
+        final String mimeType = (ext == '.m4b' || ext == '.m4a') ? 'audio/mp4' : 'audio/mpeg';
+
         log('HANDLER: Using FileStreamSource ($mimeType) for local path.');
         source = FileStreamSource(File(rawPath), contentType: mimeType);
       } else {
+        log('HANDLER: Setting network source -> $uri');
         source = AudioSource.uri(uri);
       }
 
@@ -95,7 +99,7 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler, UniversalLog 
       final errStr = e.toString();
       if (!isRetry && (errStr.contains('Loading interrupted') || errStr.contains('busy'))) {
         log('HANDLER_RECOVERY: Transient error ($errStr). Retrying in 2s...');
-        await Future.delayed(const Duration(seconds: 2000));
+        await Future.delayed(const Duration(seconds: 2));
         return setSource(uri, isRetry: true);
       }
       log('HANDLER_ERROR: Critical failure: $e');
@@ -132,8 +136,8 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler, UniversalLog 
     return '${info.title}${info.url != null ? " (${info.url})" : ""}';
   });
 
-  PlaybackState _transformEvent(PlaybackEvent event) {
-    return PlaybackState(
+  void _broadcastState([PlaybackEvent? event]) {
+    playbackState.add(PlaybackState(
       controls: [
         MediaControl.skipToPrevious,
         if (_player.playing) MediaControl.pause else MediaControl.play,
@@ -157,7 +161,7 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler, UniversalLog 
       updatePosition: _player.position,
       bufferedPosition: _player.bufferedPosition,
       speed: _player.speed,
-      queueIndex: event.currentIndex,
-    );
+      queueIndex: event?.currentIndex ?? _player.currentIndex,
+    ));
   }
 }

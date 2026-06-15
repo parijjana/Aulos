@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart' as app_db;
-import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/data/database/podcast_database.dart' as podcast_db;
 import 'package:aulos/domain/library/podcast_service.dart';
+import 'package:aulos/domain/library/podcast.dart' as dom_podcast;
+import 'package:aulos/domain/library/episode.dart' as dom_episode;
 import 'package:aulos/data/library/podcast_discovery_service.dart';
 import 'package:aulos/data/library/podcast_download_service.dart';
 import 'package:aulos/data/library/discovery_sync_manager.dart';
@@ -12,16 +14,17 @@ import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
-class PodcastViewModel extends ChangeNotifier with UniversalLog {
+class PodcastViewModel extends ChangeNotifier {
   final PodcastService _podcastService;
   final PodcastDiscoveryService _discoveryService;
   final PodcastDownloadService _downloadService;
   final DiscoverySyncManager _syncManager;
-  final DiscoveryDatabase _discoveryDb;
+  final podcast_db.PodcastDatabase _discoveryDb;
   final SettingsViewModel _settingsVM;
+  final LogService _logService;
 
-  List<app_db.Podcast> _podcasts = [];
-  List<app_db.Episode> _episodes = [];
+  List<podcast_db.Podcast> _podcasts = [];
+  List<podcast_db.Episode> _episodes = [];
   
   // Discovery State
   List<PodcastSearchResult> _searchResults = [];
@@ -34,15 +37,27 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
   bool _isLoading = false;
   String? _error;
 
-  Map<int, double> _downloadProgress = {};
+  Map<String, double> _downloadProgress = {};
+  final Map<String, int> _episodePositions = {};
+  Map<String, int> get episodePositions => _episodePositions;
+
+  Future<void> _loadEpisodePositions() async {
+    _episodePositions.clear();
+    for (final ep in _episodes) {
+      final pos = await _podcastService.getPlaybackPosition(ep.id);
+      _episodePositions[ep.id] = pos;
+    }
+  }
+
   StreamSubscription? _downloadSub;
   StreamSubscription? _searchSub;
   String _lastSearchQuery = '';
+  bool _disposed = false;
   
   // UI State Persistence
   Map<String, dynamic>? _selectedDiscoveryCategory;
   Map<String, dynamic>? _activeDiscoveryDetail;
-  app_db.Podcast? _activePodcast;
+  podcast_db.Podcast? _activePodcast;
   String _libraryFilter = 'ALL SHOWS';
 
   PodcastViewModel({
@@ -50,14 +65,16 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     required PodcastDiscoveryService discoveryService,
     required PodcastDownloadService downloadService,
     required DiscoverySyncManager syncManager,
-    required DiscoveryDatabase discoveryDb,
+    required podcast_db.PodcastDatabase discoveryDb,
     required SettingsViewModel settingsVM,
+    LogService? logService,
   }) : _podcastService = podcastService,
        _discoveryService = discoveryService,
        _downloadService = downloadService,
        _syncManager = syncManager,
        _discoveryDb = discoveryDb,
-       _settingsVM = settingsVM {
+       _settingsVM = settingsVM,
+       _logService = logService ?? NoOpLogService() {
     log('PODCAST_VM: Initializing...');
     _libraryFilter = 'ALL SHOWS'; // RESET FILTER ON BOOT
     unawaited(loadPodcasts());
@@ -71,24 +88,26 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     _syncManager.addListener(notifyListeners);
   }
 
-  List<app_db.Podcast> get podcasts => _podcasts;
-  List<app_db.Episode> get episodes => _episodes;
+  void log(String message) => _logService.log(message);
+
+  List<podcast_db.Podcast> get podcasts => _podcasts;
+  List<podcast_db.Episode> get episodes => _episodes;
   List<PodcastSearchResult> get searchResults => _searchResults;
   List<PodcastSearchResult> get trendingResults => _trendingResults;
   Map<String, List<PodcastSearchResult>> get categoryResults => _categoryResults;
   bool get isLoading => _isLoading || _syncManager.isSyncing;
   bool get isSyncing => _syncManager.isSyncing;
   String? get error => _error;
-  Map<int, double> get downloadProgress => _downloadProgress;
+  Map<String, double> get downloadProgress => _downloadProgress;
   String get lastSearchQuery => _lastSearchQuery;
   
   Map<String, dynamic>? get selectedDiscoveryCategory => _selectedDiscoveryCategory;
   Map<String, dynamic>? get activeDiscoveryDetail => _activeDiscoveryDetail;
-  app_db.Podcast? get activePodcast => _activePodcast;
+  podcast_db.Podcast? get activePodcast => _activePodcast;
   String get libraryFilter => _libraryFilter;
 
-  List<app_db.Podcast> get filteredPodcasts {
-    var list = List<app_db.Podcast>.from(_podcasts);
+  List<podcast_db.Podcast> get filteredPodcasts {
+    var list = List<podcast_db.Podcast>.from(_podcasts);
     
     if (_libraryFilter == 'RECENT') {
       list.sort((a, b) {
@@ -119,7 +138,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     notifyListeners();
   }
 
-  void setActivePodcast(app_db.Podcast? podcast) {
+  void setActivePodcast(podcast_db.Podcast? podcast) {
     _activePodcast = podcast;
     notifyListeners();
   }
@@ -130,7 +149,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     _error = null;
     notifyListeners();
     try {
-      _podcasts = await _podcastService.getSubscribedPodcasts();
+      _podcasts = (await _podcastService.getSubscribedPodcasts()).map((p) => p.toDrift()).toList();
       log('PODCAST_VM: Fetched ${_podcasts.length} podcasts from service');
     } catch (e) {
       log('PODCAST_VM: Error loading podcasts: $e');
@@ -159,7 +178,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     });
   }
 
-  List<PodcastSearchResult> _mapFromDb(List<DiscoveredPodcast> raw) {
+  List<PodcastSearchResult> _mapFromDb(List<podcast_db.DiscoveredPodcast> raw) {
     return raw.map((p) => PodcastSearchResult(
       title: p.title,
       artist: p.artist,
@@ -224,12 +243,12 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     _isLoading = true;
     notifyListeners();
     try {
-      final podcast = await _podcastService.subscribeToFeed(url);
+      final podcast = (await _podcastService.subscribeToFeed(url)).toDrift();
       await loadPodcasts();
       
       final episodes = await _podcastService.getEpisodes(podcast.id);
       if (episodes.isNotEmpty) {
-        unawaited(downloadEpisode(episodes.first));
+        unawaited(downloadEpisode(episodes.first.toDrift()));
       }
       _error = null;
     } catch (e) {
@@ -247,8 +266,9 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
       String? feedUrl = result.feedUrl;
       // Note: In decoupled mode, we still might need a one-off lookup if feedUrl is empty
       // but ideally this is handled in sync layer.
-      if (feedUrl.isEmpty && result.itunesId != null) {
-        feedUrl = await _discoveryService.lookupFeedUrl(result.itunesId!);
+      final itunesId = result.itunesId;
+      if (feedUrl.isEmpty && itunesId != null) {
+        feedUrl = await _discoveryService.lookupFeedUrl(itunesId);
       }
 
       if (feedUrl != null && feedUrl.isNotEmpty) {
@@ -264,14 +284,15 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     }
   }
 
-  Future<void> loadEpisodes(int podcastId) async {
+  Future<void> loadEpisodes(String podcastId) async {
     log('PODCAST_VM: loadEpisodes($podcastId) started');
     _isLoading = true;
     _episodes = []; // CLEAR OLD EPISODES
     _error = null;
     notifyListeners();
     try {
-      _episodes = await _podcastService.getEpisodes(podcastId);
+      _episodes = (await _podcastService.getEpisodes(podcastId)).map((e) => e.toDrift()).toList();
+      await _loadEpisodePositions();
       log('PODCAST_VM: Fetched ${_episodes.length} episodes for podcast $podcastId');
       _error = null;
     } catch (e) {
@@ -283,7 +304,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     }
   }
 
-  Future<void> refreshPodcast(int podcastId) async {
+  Future<void> refreshPodcast(String podcastId) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -297,14 +318,52 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     }
   }
 
-  Future<void> downloadEpisode(app_db.Episode episode) async {
+  Future<void> refreshAllSubscribedPodcasts() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final subscribed = await _podcastService.getSubscribedPodcasts();
+      if (subscribed.isNotEmpty) {
+        log('PODCAST_VM: Refreshing ${subscribed.length} subscribed podcasts...');
+        await Future.wait(subscribed.map((pod) async {
+          try {
+            await _podcastService.refreshPodcast(pod.id);
+          } catch (e) {
+            log('PODCAST_VM: Failed to refresh podcast ${pod.id}: $e');
+          }
+        }));
+      }
+      await loadPodcasts();
+    } catch (e) {
+      log('PODCAST_VM: Error refreshing subscribed podcasts: $e');
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> checkAndRefreshLibraryDaily() async {
+    final lastRefresh = _settingsVM.lastPodcastRefreshTime;
+    final now = DateTime.now();
+    if (lastRefresh == null || now.difference(lastRefresh).inHours >= 24) {
+      log('PODCAST_VM: Automatically refreshing subscribed podcasts (daily sync)...');
+      await refreshAllSubscribedPodcasts();
+      await _settingsVM.setLastPodcastRefreshTime(now);
+    } else {
+      log('PODCAST_VM: Daily refresh not needed. Last refresh was at $lastRefresh');
+    }
+  }
+
+  Future<void> downloadEpisode(podcast_db.Episode episode) async {
     final storage = _settingsVM.podcastStorageLocation;
     if (storage == null) return;
 
     try {
       await _downloadService.downloadEpisode(episode, storage);
       if (_episodes.any((e) => e.id == episode.id)) {
-        _episodes = await _podcastService.getEpisodes(episode.podcastId);
+        _episodes = (await _podcastService.getEpisodes(episode.podcastId)).map((e) => e.toDrift()).toList();
       }
       notifyListeners();
     } catch (e) {
@@ -312,7 +371,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     }
   }
 
-  Future<void> playEpisode(app_db.Episode episode, PlayerViewModel playerVM, {bool isAvailable = true}) async {
+  Future<void> playEpisode(podcast_db.Episode episode, PlayerViewModel playerVM, {bool isAvailable = true}) async {
     final storage = _settingsVM.podcastStorageLocation;
     if (episode.downloadState != 2 && storage != null) {
        unawaited(downloadEpisode(episode));
@@ -324,14 +383,15 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
       return;
     }
 
+    final localFilePath = episode.localFilePath;
     final track = app_db.Track(
-      id: -episode.id,
-      path: (episode.downloadState == 2 && episode.localFilePath != null)
-          ? episode.localFilePath!
+      id: 'podcast_${episode.id}',
+      path: (episode.downloadState == 2 && localFilePath != null)
+          ? localFilePath
           : episode.audioUrl,
       title: episode.title,
-      artistId: 0,
-      folderId: 0,
+      artistId: 'podcast_artist',
+      folderId: 'podcast_folder',
       rating: 0,
       isFavorite: false,
       playCount: 0,
@@ -350,17 +410,17 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
   }
 
   Future<void> playDiscoveredEpisode(
-    DiscoveredEpisode ep, 
+    podcast_db.DiscoveredEpisode ep, 
     String podcastTitle,
     PlayerViewModel playerVM, {
     bool isAvailable = true,
   }) async {
     final track = app_db.Track(
-      id: -ep.id, // Negative ID to indicate virtual/remote track
+      id: 'podcast_${ep.id}', // Prefix with podcast_
       path: ep.audioUrl,
       title: ep.title,
-      artistId: 0,
-      folderId: 0,
+      artistId: 'podcast_artist',
+      folderId: 'podcast_folder',
       rating: 0,
       isFavorite: false,
       playCount: 0,
@@ -392,9 +452,9 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     }
   }
 
-  Future<void> deleteEpisode(app_db.Episode episode, BuildContext context) async {
+  Future<void> deleteEpisode(podcast_db.Episode episode, BuildContext context) async {
     final path = episode.localFilePath ?? '';
-    final bookmarks = await _podcastService.db.getBookmarksForTrack(path);
+    final bookmarks = await _podcastService.getBookmarksForTrack(path);
     
     if (bookmarks.isNotEmpty) {
       if (!context.mounted) return;
@@ -414,19 +474,20 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
       if (result == 0 || result == null) return;
       if (result == 1) {
         // Option 2: Delete episode + bookmarks
-        await _podcastService.db.deleteBookmarksForTrack(path);
+        await _podcastService.deleteBookmarksForTrack(path);
       } else if (result == 2) {
         // Option 3: Preserve bookmarks (Move to Remote URL)
-        await _podcastService.db.updateBookmarkPaths(path, episode.audioUrl);
+        await _podcastService.updateBookmarkPaths(path, episode.audioUrl);
       }
     }
 
     try {
       // CLEANUP RESUME DATA
-      await _podcastService.db.deletePlaybackPosition(episode.id);
+      await _podcastService.deletePlaybackPosition(episode.id);
 
-      if (episode.localFilePath != null) {
-        final file = File(episode.localFilePath!);
+      final localFilePath = episode.localFilePath;
+      if (localFilePath != null) {
+        final file = File(localFilePath);
         if (await file.exists()) {
           await file.delete();
         }
@@ -436,7 +497,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
         downloadState: 0,
         localFilePath: null,
       );
-      _episodes = await _podcastService.getEpisodes(episode.podcastId);
+      _episodes = (await _podcastService.getEpisodes(episode.podcastId)).map((e) => e.toDrift()).toList();
       notifyListeners();
     } catch (e) {
       _error = 'Failed to delete episode: $e';
@@ -444,17 +505,18 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     }
   }
 
-  Future<void> togglePin(app_db.Episode episode) async {
+  Future<void> togglePin(podcast_db.Episode episode) async {
     try {
       String? newPath = episode.localFilePath;
       
       // Physically move the file if it exists
-      if (episode.downloadState == 2 && episode.localFilePath != null) {
+      final localFilePath = episode.localFilePath;
+      if (episode.downloadState == 2 && localFilePath != null) {
         final storage = _settingsVM.podcastStorageLocation;
         if (storage != null) {
-          final file = File(episode.localFilePath!);
+          final file = File(localFilePath);
           if (await file.exists()) {
-            final fileName = p.basename(episode.localFilePath!);
+            final fileName = p.basename(localFilePath);
             final favoritesDir = Directory(p.join(storage, 'favorites'));
             if (!favoritesDir.existsSync()) await favoritesDir.create(recursive: true);
 
@@ -486,7 +548,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
         isPinned: !episode.isPinned,
         localFilePath: newPath,
       );
-      _episodes = await _podcastService.getEpisodes(episode.podcastId);
+      _episodes = (await _podcastService.getEpisodes(episode.podcastId)).map((e) => e.toDrift()).toList();
       notifyListeners();
     } catch (e) {
       _error = 'Failed to update pin status: $e';
@@ -498,7 +560,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     return name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
   }
 
-  Future<void> unsubscribe(int podcastId) async {
+  Future<void> unsubscribe(String podcastId) async {
     try {
       await _podcastService.unsubscribe(podcastId);
       await loadPodcasts();
@@ -511,11 +573,11 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
 
   void exitDiscoveryView() => _syncManager.disableActiveSync();
 
-  Stream<DiscoveredPodcast?> watchPodcast(String iTunesId) {
+  Stream<podcast_db.DiscoveredPodcast?> watchPodcast(String iTunesId) {
     return _discoveryDb.watchByITunesId(iTunesId);
   }
 
-  Stream<List<DiscoveredEpisode>> watchEpisodes(String iTunesId) {
+  Stream<List<podcast_db.DiscoveredEpisode>> watchEpisodes(String iTunesId) {
     return _discoveryDb.watchEpisodes(iTunesId);
   }
 
@@ -527,6 +589,7 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
 
   @override
   void dispose() {
+    _disposed = true;
     _syncManager.removeListener(notifyListeners);
     for (var sub in _categorySubs.values) {
       sub.cancel();
@@ -534,5 +597,52 @@ class PodcastViewModel extends ChangeNotifier with UniversalLog {
     _downloadSub?.cancel();
     _searchSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+}
+
+extension DomainPodcastToDrift on dom_podcast.Podcast {
+  podcast_db.Podcast toDrift() {
+    return podcast_db.Podcast(
+      id: id,
+      feedUrl: feedUrl,
+      title: title,
+      description: description,
+      author: author,
+      imageUrl: imageUrl,
+      image: image,
+      subscribedAt: subscribedAt,
+      isFavorite: isFavorite,
+      playCount: playCount,
+      lastPlayed: lastPlayed,
+    );
+  }
+}
+
+extension DomainEpisodeToDrift on dom_episode.Episode {
+  podcast_db.Episode toDrift() {
+    return podcast_db.Episode(
+      id: id,
+      podcastId: podcastId,
+      guid: guid,
+      title: title,
+      description: description,
+      audioUrl: audioUrl,
+      localFilePath: localFilePath,
+      downloadState: downloadState,
+      pubDate: pubDate,
+      durationSeconds: durationSeconds,
+      isPlayed: isPlayed,
+      isPinned: isPinned,
+      playbackPositionSeconds: playbackPositionSeconds,
+      playCount: playCount,
+      lastPlayed: lastPlayed,
+    );
   }
 }

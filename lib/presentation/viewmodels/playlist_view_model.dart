@@ -34,7 +34,7 @@ class PlaylistViewModel extends ChangeNotifier {
     await _loadPlaylists();
   }
 
-  Future<void> deletePlaylist(int id) async {
+  Future<void> deletePlaylist(String id) async {
     final playlist = _playlists.firstWhere((p) => p.id == id);
     if (playlist.isSmart) {
       debugPrint('PlaylistVM: Cannot delete smart playlist.');
@@ -56,7 +56,7 @@ class PlaylistViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateRating(int trackId, int rating) async {
+  Future<void> updateRating(String trackId, int rating) async {
     await _libraryService.updateRating(trackId, rating);
     notifyListeners();
   }
@@ -71,6 +71,6 @@ class PlaylistViewModel extends ChangeNotifier {
     return all.where((t) => t.rating < 0).toList();
   }
 
-  Future<List<Track>> getTracksForPlaylist(int playlistId) =>
+  Future<List<Track>> getTracksForPlaylist(String playlistId) =>
       _libraryService.getTracksForPlaylist(playlistId);
 }

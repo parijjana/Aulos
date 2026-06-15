@@ -54,7 +54,6 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
       ),
     );
   }
-
   Widget _buildTopBar(settings.SettingsViewModel settingsVM) {
     final theme = Theme.of(context);
     int currentPage = 0;
@@ -62,12 +61,16 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
       currentPage = _pageController.page?.round() ?? 0;
     }
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizontalPadding = screenWidth <= 380 ? 12 : 24;
+    final double buttonSpacing = screenWidth <= 380 ? 4 : 8;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
           _buildNavButton('YOUR LIBRARY', 0, currentPage == 0, theme),
-          const SizedBox(width: 8),
+          SizedBox(width: buttonSpacing),
           _buildNavButton('FIND MORE', 1, currentPage == 1, theme),
           
           const Spacer(),
@@ -80,11 +83,16 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
   }
 
   Widget _buildNavButton(String label, int index, bool isActive, ThemeData theme) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizPadding = screenWidth <= 380 ? 8 : 12;
+    final double vertPadding = screenWidth <= 380 ? 4 : 6;
+    final double fontSize = screenWidth <= 380 ? 8 : 9;
+
     return InkWell(
       onTap: () => _navigateToPage(index),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: horizPadding, vertical: vertPadding),
         decoration: BoxDecoration(
           color: isActive ? theme.colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
@@ -93,7 +101,7 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 9,
+            fontSize: fontSize,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.0,
             color: isActive ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withValues(alpha: 0.6),

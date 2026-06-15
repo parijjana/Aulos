@@ -12,7 +12,7 @@ class ConnectivityViewModel extends ChangeNotifier {
   final ConnectionManager _connectionManager;
   final DiscoveryService _discoveryService;
   final HandshakeService _handshakeService;
-  final MediaLogService _logService;
+  final LogService _logService;
   final _appLinks = AppLinks();
 
   // FIXED: Removed network_info_plus as it triggers Location permissions on Windows.
@@ -30,11 +30,11 @@ class ConnectivityViewModel extends ChangeNotifier {
     required ConnectionManager connectionManager,
     required DiscoveryService discoveryService,
     required HandshakeService handshakeService,
-    required MediaLogService logService,
+    LogService? logService,
   }) : _connectionManager = connectionManager,
        _discoveryService = discoveryService,
        _handshakeService = handshakeService,
-       _logService = logService {
+       _logService = logService ?? NoOpLogService() {
     _initDeepLinks();
     _updateLocalIp();
     _listenToConnectionManager();

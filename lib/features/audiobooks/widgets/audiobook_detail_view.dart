@@ -138,6 +138,8 @@ class _AudiobookInfoPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final libraryVM = context.watch<LibraryViewModel>();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -145,19 +147,30 @@ class _AudiobookInfoPane extends StatelessWidget {
         children: [
           // Cover Art
           Center(
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                image: book.coverArt != null 
-                    ? DecorationImage(image: MemoryImage(book.coverArt!), fit: BoxFit.cover)
-                    : null,
-              ),
-              child: book.coverArt == null 
-                  ? Icon(Icons.library_books, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.1))
-                  : null,
+            child: Stack(
+              children: [
+                Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                    image: book.coverArt != null 
+                        ? DecorationImage(image: MemoryImage(book.coverArt!), fit: BoxFit.cover)
+                        : (book.coverArtUrl != null ? DecorationImage(image: NetworkImage(book.coverArtUrl!), fit: BoxFit.cover) : null),
+                  ),
+                  child: (book.coverArt == null && book.coverArtUrl == null)
+                      ? Icon(Icons.library_books, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.1))
+                      : null,
+                ),
+                if (libraryVM.isLoading)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -166,7 +179,15 @@ class _AudiobookInfoPane extends StatelessWidget {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5),
           ),
           const SizedBox(height: 8),
-          // AUTHOR / SERIES (Placeholders)
+          // AUTHOR / SERIES
+          if (book.subtitle != null && book.subtitle!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                book.subtitle!,
+                style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
+            ),
           Text(
             'BY ${book.narrator ?? "UNKNOWN NARRATOR"}',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
@@ -175,20 +196,45 @@ class _AudiobookInfoPane extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'SERIES: ${book.seriesName}',
+                'SERIES: ${book.seriesName}${book.seriesPosition != null ? " #${book.seriesPosition}" : ""}',
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               ),
             ),
           const SizedBox(height: 24),
+          
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: libraryVM.isLoading ? null : () => libraryVM.enrichAudiobook(book),
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('ENRICH METADATA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  foregroundColor: theme.colorScheme.primary,
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
           const Text(
             'DESCRIPTION',
             style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white24),
           ),
           const SizedBox(height: 8),
           Text(
-            book.description ?? 'No description available for this book yet. Detailed metadata will be fetched in Milestone 2.',
+            book.description ?? 'No description available for this book yet. Click "Enrich Metadata" to fetch details from Audnexus.',
             style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.5),
           ),
+          if (book.publisher != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Text(
+                'PUBLISHED BY ${book.publisher!.toUpperCase()}',
+                style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white10, letterSpacing: 1.0),
+              ),
+            ),
         ],
       ),
     );
@@ -202,12 +248,18 @@ class _AudiobookChaptersPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playerVM = context.read<PlayerViewModel>();
+    final libraryVM = context.watch<LibraryViewModel>();
+    final playbackPositions = libraryVM.trackPlaybackPositions;
+    final theme = Theme.of(context);
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 16),
       itemCount: tracks.length,
       itemBuilder: (context, index) {
         final track = tracks[index];
         final isPlaying = playerVM.currentTrack?.id == track.id;
+        final positionMs = playbackPositions[track.id] ?? 0;
+        final durationSec = track.durationSeconds ?? 0;
         
         return ListTile(
           leading: Container(
@@ -215,7 +267,7 @@ class _AudiobookChaptersPane extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isPlaying ? Theme.of(context).colorScheme.primary : Colors.white10,
+              color: isPlaying ? theme.colorScheme.primary : Colors.white10,
             ),
             child: Center(
               child: isPlaying 
@@ -228,12 +280,31 @@ class _AudiobookChaptersPane extends StatelessWidget {
             style: TextStyle(
               fontSize: 13, 
               fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
-              color: isPlaying ? Theme.of(context).colorScheme.primary : null,
+              color: isPlaying ? theme.colorScheme.primary : null,
             ),
           ),
-          subtitle: track.durationSeconds != null 
-            ? Text(_formatDuration(Duration(seconds: track.durationSeconds!)), style: const TextStyle(fontSize: 10))
-            : null,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (track.durationSeconds != null)
+                Text(_formatDuration(Duration(seconds: track.durationSeconds!)), style: const TextStyle(fontSize: 10)),
+              if (positionMs > 0 && durationSec > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: (positionMs / 1000) / durationSec,
+                      minHeight: 3,
+                      backgroundColor: Colors.white10,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isPlaying ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           onTap: () => playerVM.setQueueAndPlay(tracks, index),
         );
       },

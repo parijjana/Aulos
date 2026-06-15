@@ -3,6 +3,7 @@ import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:aulos/data/database/app_database.dart';
 import 'library_art_widget.dart';
 import 'library_utils_mixin.dart';
 
@@ -61,6 +62,57 @@ class LibraryGridView extends StatelessWidget with LibraryUtilsMixin {
                           tag: 'cat_${getCategoryId(item)}',
                           child: LibraryArtWidget(item: item, viewModel: viewModel),
                         ),
+                        if (item is Album && item.isAudiobook)
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(12),
+                                bottomRight: Radius.circular(12),
+                              ),
+                              child: LinearProgressIndicator(
+                                value: viewModel.getBookProgress(item.id),
+                                minHeight: 4,
+                                backgroundColor: Colors.black38,
+                                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                              ),
+                            ),
+                          ),
+                        if (item is Album && item.librivoxId != null)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: (item.isDownloadedViaAulos)
+                                    ? Colors.teal.withValues(alpha: 0.9)
+                                    : Colors.orange.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    item.isDownloadedViaAulos ? Icons.download_done_rounded : Icons.sensors_rounded,
+                                    size: 10,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    item.isDownloadedViaAulos ? 'OFFLINE' : 'STREAM',
+                                    style: const TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         Positioned(
                           bottom: 8,
                           right: 8,

@@ -167,7 +167,7 @@ class _LibraryHeaderState extends State<LibraryHeader> {
     if (item is String) return item;
     if (item is LibraryMode) return item.name;
     try {
-      return (item as dynamic).name ?? (item as dynamic).title ?? 'Detail';
+      return ((item as dynamic).name?.toString() ?? (item as dynamic).title?.toString() ?? 'Detail');
     } catch (_) {
       return 'Detail';
     }
@@ -197,9 +197,14 @@ class _ExpandableSearchState extends State<_ExpandableSearch> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double targetWidth = _expanded
+        ? (screenWidth < 380 ? 120 : 200)
+        : 40;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: _expanded ? 200 : 40,
+      width: targetWidth,
       height: 36,
       decoration: BoxDecoration(
         color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
@@ -207,9 +212,9 @@ class _ExpandableSearchState extends State<_ExpandableSearch> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.search, size: 18, color: _expanded ? theme.colorScheme.primary : null),
-            onPressed: () {
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
               setState(() => _expanded = !_expanded);
               if (!_expanded) {
                 _controller.clear();
@@ -218,6 +223,15 @@ class _ExpandableSearchState extends State<_ExpandableSearch> {
                 _focusNode.requestFocus();
               }
             },
+            child: SizedBox(
+              width: 40,
+              height: 36,
+              child: Icon(
+                Icons.search,
+                size: 18,
+                color: _expanded ? theme.colorScheme.primary : null,
+              ),
+            ),
           ),
           if (_expanded)
             Expanded(

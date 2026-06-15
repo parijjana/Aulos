@@ -76,7 +76,6 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
       ),
     );
   }
-
   Widget _buildTopBar(bool isDesktop, settings.SettingsViewModel settingsVM) {
     final theme = Theme.of(context);
     final podcastVM = context.read<PodcastViewModel>();
@@ -85,23 +84,31 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
       currentPage = _pageController.page?.round() ?? 0;
     }
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizontalPadding = screenWidth <= 380 ? 12 : 24;
+    final double buttonSpacing = screenWidth <= 380 ? 4 : 8;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
-          _buildNavButton('YOUR LIBRARY', 0, currentPage == 0, theme),
-          const SizedBox(width: 8),
-          _buildNavButton('FIND MORE', 1, currentPage == 1, theme),
+          _buildNavButton(screenWidth <= 380 ? 'LIBRARY' : 'YOUR LIBRARY', 0, currentPage == 0, theme),
+          SizedBox(width: buttonSpacing),
+          _buildNavButton(screenWidth <= 380 ? 'DISCOVER' : 'FIND MORE', 1, currentPage == 1, theme),
           
           const Spacer(),
           
-          if (currentPage == 0)
+          if (currentPage == 0) ...[
             IconButton(
               onPressed: () => podcastVM.loadPodcasts(),
               icon: const Icon(Icons.refresh, size: 18),
               tooltip: 'Refresh Library',
               visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
+            if (screenWidth <= 380) const SizedBox(width: 8) else const SizedBox(width: 12),
+          ],
           
           _ViewModeSelector(settingsVM: settingsVM),
         ],
@@ -110,6 +117,11 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
   }
 
   Widget _buildNavButton(String label, int index, bool isActive, ThemeData theme) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizPadding = screenWidth <= 380 ? 8 : 16;
+    final double vertPadding = screenWidth <= 380 ? 4 : 10;
+    final double fontSize = screenWidth <= 380 ? 8 : 10;
+
     return InkWell(
       onTap: () {
         _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
@@ -117,7 +129,7 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
       },
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: horizPadding, vertical: vertPadding),
         decoration: BoxDecoration(
           color: isActive ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -125,7 +137,7 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: fontSize,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.2,
             color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.38),
@@ -163,20 +175,33 @@ class _ViewModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
-    final onSurface = theme.colorScheme.onSurface.withValues(alpha: 0.38);
+    final onSurface = theme.colorScheme.onSurface;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: Icon(Icons.view_module, size: 20, color: settingsVM.libraryViewType == settings.LibraryViewType.grid ? primary : onSurface),
-          onPressed: () => settingsVM.setLibraryViewType(settings.LibraryViewType.grid),
-          tooltip: 'Grid View',
+    return PopupMenuButton<settings.LibraryViewType>(
+      initialValue: settingsVM.libraryViewType,
+      onSelected: settingsVM.setLibraryViewType,
+      icon: Icon(Icons.grid_view_rounded, color: primary.withValues(alpha: 0.7), size: 20),
+      tooltip: 'View Mode',
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: settings.LibraryViewType.list,
+          child: Row(
+            children: [
+              Icon(Icons.list, size: 18, color: settingsVM.libraryViewType == settings.LibraryViewType.list ? primary : onSurface),
+              const SizedBox(width: 12),
+              const Text('List View', style: TextStyle(fontSize: 12)),
+            ],
+          ),
         ),
-        IconButton(
-          icon: Icon(Icons.view_list, size: 20, color: settingsVM.libraryViewType == settings.LibraryViewType.list ? primary : onSurface),
-          onPressed: () => settingsVM.setLibraryViewType(settings.LibraryViewType.list),
-          tooltip: 'List View',
+        PopupMenuItem(
+          value: settings.LibraryViewType.grid,
+          child: Row(
+            children: [
+              Icon(Icons.grid_view, size: 18, color: settingsVM.libraryViewType == settings.LibraryViewType.grid ? primary : onSurface),
+              const SizedBox(width: 12),
+              const Text('Grid View', style: TextStyle(fontSize: 12)),
+            ],
+          ),
         ),
       ],
     );

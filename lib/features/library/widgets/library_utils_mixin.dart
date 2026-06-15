@@ -3,19 +3,19 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 
 mixin LibraryUtilsMixin {
-  int getCategoryId(dynamic item) {
-    if (item is int) return item;
+  String getCategoryId(dynamic item) {
+    if (item is String) return item;
     if (item is Track) return item.id;
     if (item is Folder) return item.id;
     if (item is Album) return item.id;
     if (item is Artist) return item.id;
-    return (item as dynamic).id as int;
+    return (item as dynamic).id as String;
   }
 
   String getCategoryName(dynamic item) {
     if (item is int) return item.toString();
     if (item is Track) return item.title;
-    return (item as dynamic).name as String;
+    return (item as dynamic).name?.toString() ?? 'Unknown';
   }
 
   String getCategoryGridSubtitle(dynamic item) {

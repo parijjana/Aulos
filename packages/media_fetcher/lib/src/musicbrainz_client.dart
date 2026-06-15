@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'rate_limiter.dart';
 
 class MusicBrainzClient {
-  static const _baseUrl = 'https://musicbrainz.org/ws/2';
-  static const _caaUrl = 'https://coverartarchive.org';
+  final String baseUrl;
+  final String caaUrl;
   
   final String userAgent;
   final RateLimiter? _legacyLimiter;
@@ -14,11 +14,15 @@ class MusicBrainzClient {
 
   MusicBrainzClient({
     required this.userAgent,
+    String? baseUrl,
+    String? caaUrl,
     RateLimiter? limiter,
     Future<T> Function<T>(Future<T> Function() call)? universalDispatcher,
     http.Client? client,
     void Function(String message)? onLog,
-  }) : _legacyLimiter = limiter ?? (universalDispatcher == null ? RateLimiter(cooldown: const Duration(seconds: 1)) : null),
+  }) : baseUrl = baseUrl ?? 'https://musicbrainz.org/ws/2',
+       caaUrl = caaUrl ?? 'https://coverartarchive.org',
+       _legacyLimiter = limiter ?? (universalDispatcher == null ? RateLimiter(cooldown: const Duration(seconds: 1)) : null),
        _universalDispatcher = universalDispatcher,
        _client = client ?? http.Client(),
        _onLog = onLog;
@@ -34,10 +38,21 @@ class MusicBrainzClient {
     return _legacyLimiter!.run(task);
   }
 
+  String _escapePhrase(String value) {
+    return value.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+  }
+
   /// Searches for an artist and returns their MusicBrainz ID (MBID).
   Future<String?> findArtistMbid(String name) async {
     _log('API: Searching MusicBrainz for artist: $name');
-    final uri = Uri.parse('$_baseUrl/artist?query=artist:${Uri.encodeComponent(name)}&fmt=json');
+    final escapedName = _escapePhrase(name);
+    final query = 'artist:"$escapedName"';
+    final uri = Uri.parse('$baseUrl/artist').replace(
+      queryParameters: {
+        'query': query,
+        'fmt': 'json',
+      },
+    );
     
     final response = await _run(() => _client.get(
       uri,
@@ -48,9 +63,11 @@ class MusicBrainzClient {
       final data = jsonDecode(response.body);
       final artists = data['artists'] as List<dynamic>;
       if (artists.isNotEmpty) {
-        final id = artists.first['id'] as String;
-        _log('API: Found artist MBID: $id');
-        return id;
+        final id = artists.first['id']?.toString();
+        if (id != null) {
+          _log('API: Found artist MBID: $id');
+          return id;
+        }
       }
     }
     _log('API: No MusicBrainz ID found for artist: $name');
@@ -60,8 +77,15 @@ class MusicBrainzClient {
   /// Searches for a release (album) and returns its MBID.
   Future<String?> findReleaseMbid(String artistName, String albumName) async {
     _log('API: Searching MusicBrainz for album: "$albumName" by "$artistName"');
-    final query = 'release:${Uri.encodeComponent(albumName)} AND artist:${Uri.encodeComponent(artistName)}';
-    final uri = Uri.parse('$_baseUrl/release?query=$query&fmt=json');
+    final escapedArtist = _escapePhrase(artistName);
+    final escapedAlbum = _escapePhrase(albumName);
+    final query = 'release:"$escapedAlbum" AND artist:"$escapedArtist"';
+    final uri = Uri.parse('$baseUrl/release').replace(
+      queryParameters: {
+        'query': query,
+        'fmt': 'json',
+      },
+    );
 
     final response = await _run(() => _client.get(
       uri,
@@ -72,9 +96,11 @@ class MusicBrainzClient {
       final data = jsonDecode(response.body);
       final releases = data['releases'] as List<dynamic>;
       if (releases.isNotEmpty) {
-        final id = releases.first['id'] as String;
-        _log('API: Found release MBID: $id');
-        return id;
+        final id = releases.first['id']?.toString();
+        if (id != null) {
+          _log('API: Found release MBID: $id');
+          return id;
+        }
       }
     }
     _log('API: No release MBID found for: $albumName');
@@ -84,7 +110,7 @@ class MusicBrainzClient {
   /// Returns the URL for the front cover of a release MBID.
   Future<String?> getCoverArtUrl(String mbid) async {
     _log('API: Checking CoverArtArchive for MBID: $mbid');
-    final uri = Uri.parse('$_caaUrl/release/$mbid');
+    final uri = Uri.parse('$caaUrl/release/$mbid');
 
     final response = await _run(() => _client.get(
       uri,
@@ -96,9 +122,11 @@ class MusicBrainzClient {
       final images = data['images'] as List<dynamic>;
       for (var img in images) {
         if (img['front'] == true) {
-          final url = img['image'] as String;
-          _log('API: Found cover art URL: $url');
-          return url;
+          final url = img['image']?.toString();
+          if (url != null) {
+            _log('API: Found cover art URL: $url');
+            return url;
+          }
         }
       }
     }
@@ -109,7 +137,7 @@ class MusicBrainzClient {
   /// Attempts to find an artist photo URL.
   Future<String?> getArtistPhotoUrl(String mbid) async {
     _log('API: Checking artist photo for MBID: $mbid');
-    final uri = Uri.parse('$_baseUrl/artist/$mbid?inc=url-rels&fmt=json');
+    final uri = Uri.parse('$baseUrl/artist/$mbid?inc=url-rels&fmt=json');
     
     final response = await _run(() => _client.get(
       uri,
@@ -119,15 +147,111 @@ class MusicBrainzClient {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final relations = data['relations'] as List<dynamic>? ?? [];
+      
+      // First pass: try to find a direct image relation
       for (var rel in relations) {
         if (rel['type'] == 'image') {
-          final url = rel['url']?['resource'] as String?;
+          String? url = rel['url']?['resource'] as String?;
           if (url != null) {
-            _log('API: Found artist photo URL: $url');
+            final fileUri = Uri.tryParse(url);
+            if (fileUri != null && fileUri.path.contains('/wiki/File:')) {
+              final index = fileUri.path.indexOf('/wiki/File:');
+              final filename = fileUri.path.substring(index + 11);
+              final prefix = fileUri.path.substring(0, index);
+              final newPath = '$prefix/wiki/Special:FilePath/$filename';
+              url = fileUri.replace(path: newPath).toString();
+            }
+            _log('API: Found direct artist photo URL: $url');
             return url;
           }
         }
       }
+
+      // Second pass: fallback to wikidata relation
+      for (var rel in relations) {
+        if (rel['type'] == 'wikidata') {
+          final wikidataUrl = rel['url']?['resource'] as String?;
+          if (wikidataUrl != null) {
+            _log('API: Found Wikidata URL: $wikidataUrl');
+            final wikidataId = _extractWikidataId(wikidataUrl);
+            if (wikidataId != null) {
+              final imageUrl = await _fetchImageFromWikidata(wikidataId);
+              if (imageUrl != null) {
+                _log('API: Found artist photo via Wikidata: $imageUrl');
+                return imageUrl;
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  String? _extractWikidataId(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    if (segments.length >= 2 && segments[segments.length - 2] == 'wiki') {
+      return segments.last;
+    }
+    final match = RegExp(r'(Q\d+)$').firstMatch(url);
+    return match?.group(1);
+  }
+
+  Future<String?> _fetchImageFromWikidata(String wikidataId) async {
+    try {
+      _log('API: Querying Wikidata entity $wikidataId for P18 (image)');
+      final uri = Uri.parse('https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=$wikidataId&property=P18&format=json');
+      final response = await _run(() => _client.get(
+        uri,
+        headers: {'User-Agent': userAgent},
+      ));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final claims = data['claims'] as Map<String, dynamic>?;
+        final p18 = claims?['P18'] as List<dynamic>?;
+        if (p18 != null && p18.isNotEmpty) {
+          final filename = p18.first['mainsnak']?['datavalue']?['value'] as String?;
+          if (filename != null && filename.isNotEmpty) {
+            _log('API: Found image filename from Wikidata: $filename');
+            return await _fetchUrlFromCommons(filename);
+          }
+        }
+      }
+    } catch (e) {
+      _log('API_ERROR: Failed to fetch from Wikidata: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _fetchUrlFromCommons(String filename) async {
+    try {
+      _log('API: Querying Wikimedia Commons for file URL of $filename');
+      final uri = Uri.parse('https://commons.wikimedia.org/w/api.php?action=query&titles=File:${Uri.encodeComponent(filename)}&prop=imageinfo&iiprop=url&format=json');
+      final response = await _run(() => _client.get(
+        uri,
+        headers: {'User-Agent': userAgent},
+      ));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final pages = data['query']?['pages'] as Map<String, dynamic>?;
+        if (pages != null && pages.isNotEmpty) {
+          final firstPage = pages.values.first;
+          final imageinfo = firstPage['imageinfo'] as List<dynamic>?;
+          if (imageinfo != null && imageinfo.isNotEmpty) {
+            final url = imageinfo.first['url'] as String?;
+            if (url != null) {
+              _log('API: Found Commons file URL: $url');
+              return url;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      _log('API_ERROR: Failed to fetch from Commons: $e');
     }
     return null;
   }

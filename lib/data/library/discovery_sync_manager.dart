@@ -1,27 +1,33 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/data/library/podcast_discovery_service.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:drift/drift.dart';
 import 'package:dart_rss/dart_rss.dart';
+import 'package:aulos/core/utils/date_parser.dart';
 
 // Top-level function for compute()
 RssFeed _parseRss(String body) => RssFeed.parse(body);
 
-class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
+class DiscoverySyncManager extends ChangeNotifier {
   final PodcastDiscoveryService _api;
-  final DiscoveryDatabase _db;
+  final PodcastDatabase _db;
+  final LogService _logService;
   
   bool _isSyncing = false;
   bool _isActiveSyncEnabled = false;
+  final Set<String> _syncedPodcasts = {};
   
-  final _syncCooldown = const Duration(hours: 6);
+  final _syncCooldown = const Duration(days: 30);
 
   DiscoverySyncManager({
     required PodcastDiscoveryService api,
-    required DiscoveryDatabase db,
-  }) : _api = api, _db = db;
+    required PodcastDatabase db,
+    LogService? logService,
+  }) : _api = api, _db = db, _logService = logService ?? NoOpLogService();
+
+  void log(String message) => _logService.log(message);
 
   bool get isSyncing => _isSyncing;
 
@@ -61,11 +67,10 @@ class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
       log('DISCOVERY: Fetching trending podcasts...');
       var trending = await _api.getTrendingPodcasts();
       
-      // Optimization: If trending items lack feedUrl, try to fetch them for the top 10
-      // so the trending shelf isn't completely empty when first viewed
       for (int i = 0; i < trending.length && i < 10; i++) {
-        if (trending[i].feedUrl.isEmpty && trending[i].itunesId != null) {
-          final url = await _api.lookupFeedUrl(trending[i].itunesId!);
+        final itunesId = trending[i].itunesId;
+        if (trending[i].feedUrl.isEmpty && itunesId != null) {
+          final url = await _api.lookupFeedUrl(itunesId);
           if (url != null) {
             trending[i] = PodcastSearchResult(
               title: trending[i].title,
@@ -138,17 +143,23 @@ class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
       notifyListeners();
     }
   }
-
   Future<void> syncPodcastDetails(String iTunesId, String? feedUrl) async {
-    if (_isSyncing) return;
+    if (_syncedPodcasts.contains(iTunesId)) {
+      log('DISCOVERY: Podcast $iTunesId details already synced. Skipping.');
+      return;
+    }
+    if (_isSyncing) {
+      log('DISCOVERY: Sync already in progress. Deferring sync for $iTunesId.');
+      return;
+    }
     
     log('DISCOVERY: Syncing details for podcast $iTunesId...');
     _isSyncing = true;
+    _syncedPodcasts.add(iTunesId);
     notifyListeners();
     try {
       String? resolvedUrl = feedUrl;
       
-      // 1. Proactive Lookup if feedUrl is missing (common for Trending items)
       if (resolvedUrl == null || resolvedUrl.isEmpty) {
         log('DISCOVERY: Feed URL missing for $iTunesId, performing lookup...');
         resolvedUrl = await _api.lookupFeedUrl(iTunesId);
@@ -164,7 +175,6 @@ class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
 
       final rss = await compute(_parseRss, xml);
       
-      // 2. Update Podcast with description and resolved feedUrl
       final podcast = await _db.getByITunesId(iTunesId);
       if (podcast != null) {
         await _db.update(_db.discoveredPodcasts).replace(
@@ -180,13 +190,15 @@ class DiscoverySyncManager extends ChangeNotifier with UniversalLog {
         );
       }
 
-      // 3. Sync Top 5 Episodes
-      final episodes = rss.items.take(5).map((item) => DiscoveredEpisodesCompanion.insert(
-        iTunesId: iTunesId,
-        title: item.title ?? 'Untitled Episode',
-        audioUrl: item.enclosure?.url ?? '',
-        pubDate: Value(item.pubDate != null ? DateTime.tryParse(item.pubDate!) : null),
-      )).toList();
+      final episodes = rss.items.take(5).map((item) {
+        final pubDateStr = item.pubDate;
+        return DiscoveredEpisodesCompanion.insert(
+          iTunesId: iTunesId,
+          title: item.title ?? 'Untitled Episode',
+          audioUrl: item.enclosure?.url ?? '',
+          pubDate: Value(parseRfc822(pubDateStr)),
+        );
+      }).toList();
 
       await _db.upsertEpisodes(episodes);
       log('DISCOVERY: Persisted details and ${episodes.length} episodes for $iTunesId.');

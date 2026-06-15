@@ -13,7 +13,7 @@ class MockDiscoveryService extends Mock implements DiscoveryService {}
 
 class MockHandshakeService extends Mock implements HandshakeService {}
 
-class MockMediaLogService extends Mock implements MediaLogService {}
+class MockLogService extends Mock implements LogService {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +21,7 @@ void main() {
   late MockConnectionManager mockManager;
   late MockDiscoveryService mockDiscovery;
   late MockHandshakeService mockHandshake;
-  late MockMediaLogService mockLog;
+  late MockLogService mockLog;
 
   setUpAll(() {
     registerFallbackValue(DiscoveredDevice(name: 'f', ip: 'i', port: 0));
@@ -31,7 +31,7 @@ void main() {
     mockManager = MockConnectionManager();
     mockDiscovery = MockDiscoveryService();
     mockHandshake = MockHandshakeService();
-    mockLog = MockMediaLogService();
+    mockLog = MockLogService();
 
     viewModel = ConnectivityViewModel(
       connectionManager: mockManager,

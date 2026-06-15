@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:async';
 
 class CollapsedPlayerScreen extends StatelessWidget {
   const CollapsedPlayerScreen({super.key});
@@ -17,11 +18,14 @@ class CollapsedPlayerScreen extends StatelessWidget {
     final playerVM = context.watch<PlayerViewModel>();
     final displayVM = context.watch<DisplayViewModel>();
     final track = playerVM.currentTrack;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    final bool isDesktop = !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        onPanStart: (details) => windowManager.startDragging(),
+        onPanStart: isDesktop ? (details) => windowManager.startDragging() : null,
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(
@@ -49,30 +53,34 @@ class CollapsedPlayerScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               // Replicated FAB Controls
-              IconButton(
-                icon: Icon(
-                  Icons.shuffle,
-                  color: playerVM.isShuffle
-                      ? Colors.cyanAccent
-                      : Colors.white24,
-                  size: 16,
+              if (screenWidth >= 400) ...[
+                IconButton(
+                  icon: Icon(
+                    Icons.shuffle,
+                    color: playerVM.isShuffle
+                        ? Colors.cyanAccent
+                        : Colors.white24,
+                    size: 16,
+                  ),
+                  onPressed: playerVM.toggleShuffle,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                onPressed: playerVM.toggleShuffle,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                icon: const Icon(
-                  Icons.skip_previous_rounded,
-                  color: Colors.white70,
-                  size: 20,
+                const SizedBox(width: 12),
+              ],
+              if (screenWidth >= 360) ...[
+                IconButton(
+                  icon: const Icon(
+                    Icons.skip_previous_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                  onPressed: playerVM.skipPrevious,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                onPressed: playerVM.skipPrevious,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
+              ],
               IconButton(
                 icon: Icon(
                   playerVM.isPlaying
@@ -81,68 +89,74 @@ class CollapsedPlayerScreen extends StatelessWidget {
                   color: Colors.white,
                   size: 24,
                 ),
-                onPressed: playerVM.isPlaying ? playerVM.pause : playerVM.play,
+                onPressed: playerVM.togglePlay,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 12),
-              IconButton(
-                icon: const Icon(
-                  Icons.skip_next_rounded,
-                  color: Colors.white70,
-                  size: 20,
+              if (screenWidth >= 360) ...[
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: const Icon(
+                    Icons.skip_next_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                  onPressed: playerVM.skipNext,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                onPressed: playerVM.skipNext,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                icon: Icon(
-                  playerVM.repeatMode == domain.RepeatMode.one
-                      ? Icons.repeat_one_rounded
-                      : Icons.repeat_rounded,
-                  color: playerVM.repeatMode != domain.RepeatMode.off
-                      ? Colors.cyanAccent
-                      : Colors.white24,
-                  size: 16,
+              ],
+              if (screenWidth >= 400) ...[
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: Icon(
+                    playerVM.repeatMode == domain.RepeatMode.one
+                        ? Icons.repeat_one_rounded
+                        : Icons.repeat_rounded,
+                    color: playerVM.repeatMode != domain.RepeatMode.off
+                        ? Colors.cyanAccent
+                        : Colors.white24,
+                    size: 16,
+                  ),
+                  onPressed: playerVM.toggleRepeat,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                onPressed: playerVM.toggleRepeat,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 16),
-              // Window Controls
-              IconButton(
-                icon: const Icon(
-                  Icons.unfold_more_rounded,
-                  color: Colors.cyanAccent,
-                  size: 18,
+              ],
+              if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) ...[
+                const SizedBox(width: 16),
+                // Window Controls
+                IconButton(
+                  icon: const Icon(
+                    Icons.unfold_more_rounded,
+                    color: Colors.cyanAccent,
+                    size: 18,
+                  ),
+                  onPressed: () async {
+                    displayVM.toggleCollapsed();
+                    if (!kIsWeb && Platform.isWindows) {
+                      await windowManager.setAlwaysOnTop(false);
+                      await windowManager.setSize(const Size(1280, 720));
+                      await windowManager.center();
+                    }
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Restore',
                 ),
-                onPressed: () async {
-                  displayVM.toggleCollapsed();
-                  if (!kIsWeb && Platform.isWindows) {
-                    await windowManager.setAlwaysOnTop(false);
-                    await windowManager.setSize(const Size(1280, 720));
-                    await windowManager.center();
-                  }
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'Restore',
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: Colors.redAccent.withValues(alpha: 0.7),
-                  size: 18,
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: Colors.redAccent.withValues(alpha: 0.7),
+                    size: 18,
+                  ),
+                  onPressed: () => windowManager.close(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Close',
                 ),
-                onPressed: () => windowManager.close(),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'Close',
-              ),
+              ],
             ],
           ),
         ),
@@ -178,47 +192,62 @@ class _ScrollingText extends StatefulWidget {
   State<_ScrollingText> createState() => _ScrollingTextState();
 }
 
-class _ScrollingTextState extends State<_ScrollingText>
-    with SingleTickerProviderStateMixin {
+class _ScrollingTextState extends State<_ScrollingText> {
   late ScrollController _scrollController;
+  Timer? _timer;
+  bool _animating = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startScrolling());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleNextScroll(const Duration(seconds: 2)));
   }
 
-  void _startScrolling() async {
-    if (!_scrollController.hasClients) return;
+  void _scheduleNextScroll(Duration delay) {
+    _timer?.cancel();
+    if (!mounted) return;
+    _timer = Timer(delay, () => _scroll());
+  }
 
-    while (mounted) {
-      await Future<void>.delayed(const Duration(seconds: 2));
-      if (!mounted || !_scrollController.hasClients) break;
+  void _scroll() async {
+    if (!mounted || !_scrollController.hasClients || _animating) return;
 
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      if (maxScroll <= 0) continue;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) {
+      _scheduleNextScroll(const Duration(seconds: 2));
+      return;
+    }
 
-      final scrollDuration = Duration(milliseconds: (maxScroll * 30).toInt());
-      await _scrollController.animateTo(
-        maxScroll,
-        duration: scrollDuration,
-        curve: Curves.linear,
-      );
+    _animating = true;
+    final scrollDuration = Duration(milliseconds: (maxScroll * 30).toInt());
+    await _scrollController.animateTo(
+      maxScroll,
+      duration: scrollDuration,
+      curve: Curves.linear,
+    );
 
-      await Future<void>.delayed(const Duration(seconds: 2));
-      if (!mounted || !_scrollController.hasClients) break;
+    if (!mounted) return;
+    _animating = false;
 
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 2), () async {
+      if (!mounted || !_scrollController.hasClients) return;
+      _animating = true;
       await _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 1000),
         curve: Curves.easeOut,
       );
-    }
+      if (!mounted) return;
+      _animating = false;
+      _scheduleNextScroll(const Duration(seconds: 2));
+    });
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }

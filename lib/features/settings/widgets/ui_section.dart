@@ -63,6 +63,37 @@ class UiSection extends StatelessWidget {
               onChanged: vm.setShowRemoteAnimation,
               theme: theme,
             ),
+            _buildSwitchTile(
+              label: 'Music Visualizer (Winamp Style)',
+              value: vm.isVisualizerEnabled,
+              onChanged: vm.setIsVisualizerEnabled,
+              theme: theme,
+            ),
+            if (vm.isVisualizerEnabled) ...[
+              const SizedBox(height: 8),
+              const SettingsLabel('VISUALIZER TYPE'),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildChoiceChip(
+                      label: 'BAR SPECTRUM',
+                      isSelected: vm.visualizerPluginId == 'bar_spectrum',
+                      onTap: () => vm.setVisualizerPluginId('bar_spectrum'),
+                      theme: theme,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildChoiceChip(
+                      label: 'OSCILLOSCOPE',
+                      isSelected: vm.visualizerPluginId == 'oscilloscope',
+                      onTap: () => vm.setVisualizerPluginId('oscilloscope'),
+                      theme: theme,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

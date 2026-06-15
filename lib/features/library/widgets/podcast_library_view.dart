@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/features/podcasts/widgets/podcast_detail_view.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
-import 'package:aulos/data/database/app_database.dart' as app_db;
+import 'package:aulos/data/database/podcast_database.dart' as podcast_db;
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +15,16 @@ class PodcastLibraryView extends StatefulWidget {
 
 class _PodcastLibraryViewState extends State<PodcastLibraryView> {
   final ScrollController _tabScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<PodcastViewModel>().checkAndRefreshLibraryDaily();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -151,7 +161,7 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
     );
   }
 
-  Widget _buildPodcastGridTile(app_db.Podcast pod, ThemeData theme, PodcastViewModel vm) {
+  Widget _buildPodcastGridTile(podcast_db.Podcast pod, ThemeData theme, PodcastViewModel vm) {
     return GestureDetector(
       onTap: () => vm.setActivePodcast(pod),
       child: Column(
@@ -248,9 +258,14 @@ class _ExpandableSearchState extends State<_ExpandableSearch> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double targetWidth = _expanded
+        ? (screenWidth < 380 ? 120 : 200)
+        : 40;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: _expanded ? 200 : 40,
+      width: targetWidth,
       height: 36,
       decoration: BoxDecoration(
         color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
@@ -258,9 +273,8 @@ class _ExpandableSearchState extends State<_ExpandableSearch> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.search, size: 18, color: _expanded ? theme.colorScheme.primary : null),
-            onPressed: () {
+          InkWell(
+            onTap: () {
               setState(() => _expanded = !_expanded);
               if (!_expanded) {
                 _controller.clear();
@@ -268,6 +282,18 @@ class _ExpandableSearchState extends State<_ExpandableSearch> {
                 _focusNode.requestFocus();
               }
             },
+            borderRadius: BorderRadius.circular(18),
+            child: SizedBox(
+              width: 40,
+              height: 36,
+              child: Center(
+                child: Icon(
+                  Icons.search,
+                  size: 18,
+                  color: _expanded ? theme.colorScheme.primary : null,
+                ),
+              ),
+            ),
           ),
           if (_expanded)
             Expanded(

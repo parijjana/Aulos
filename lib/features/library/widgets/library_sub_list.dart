@@ -87,6 +87,7 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
+        final theme = Theme.of(context);
         if (item is Track) {
           return ListTile(
             leading: LibraryArtWidget(item: item, viewModel: viewModel, size: 40),
@@ -99,6 +100,13 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
               ),
               maxLines: 1,
             ),
+            trailing: item.isStream == true
+                ? Icon(
+                    Icons.sensors_rounded,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                    size: 16,
+                  )
+                : null,
             onTap: () async {
               // Ensure we are playing from the correct list
               final tracks = items.whereType<Track>().toList();

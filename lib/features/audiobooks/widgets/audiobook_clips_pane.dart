@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:drift/drift.dart' hide Column;
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/playback_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 
@@ -10,16 +10,11 @@ class AudiobookClipsPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final db = context.read<AppDatabase>();
     final playerVM = context.read<PlayerViewModel>();
     final theme = Theme.of(context);
 
     return StreamBuilder<List<Bookmark>>(
-      stream: (db.select(db.bookmarks).join([
-        innerJoin(db.tracks, db.tracks.path.equalsExp(db.bookmarks.trackPath)),
-      ])..where(db.tracks.albumId.equals(book.id) & db.bookmarks.contextType.equals(2)))
-      .watch()
-      .map((rows) => rows.map((r) => r.readTable(db.bookmarks)).toList()),
+      stream: playerVM.watchAudiobookClips(book.id),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         

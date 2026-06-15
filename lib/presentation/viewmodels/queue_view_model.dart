@@ -83,11 +83,11 @@ class QueueViewModel extends ChangeNotifier {
           (e) {
             final map = e as Map<String, dynamic>;
             return Track(
-              id: map['id'] as int,
+              id: map['id']?.toString() ?? '',
               title: map['title'] as String,
               path: map['path'] as String,
-              folderId: 0,
-              artistId: map['artistId'] as int? ?? 0,
+              folderId: '',
+              artistId: map['artistId']?.toString(),
               rating: 0,
               isFavorite: false,
               playCount: 0,
@@ -283,17 +283,33 @@ class QueueViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateRating(int trackId, int rating) async {
+  Future<void> updateRating(String trackId, int rating) async {
     if (_connectionManager?.isClient ?? false) return;
-    await _libraryService.updateRating(trackId, rating);
-    _updateTrackRatingInList(_queue, trackId, rating);
-    _updateTrackRatingInList(_shuffledQueue, trackId, rating);
-    _updateTrackRatingInList(_history, trackId, rating);
+
+    int targetRating = rating;
+    final index = _queue.indexWhere((t) => t.id == trackId);
+    if (index != -1) {
+      if (_queue[index].rating == rating) {
+        targetRating = 0;
+      }
+    } else {
+      final shuffleIndex = _shuffledQueue.indexWhere((t) => t.id == trackId);
+      if (shuffleIndex != -1) {
+        if (_shuffledQueue[shuffleIndex].rating == rating) {
+          targetRating = 0;
+        }
+      }
+    }
+
+    await _libraryService.updateRating(trackId, targetRating);
+    _updateTrackRatingInList(_queue, trackId, targetRating);
+    _updateTrackRatingInList(_shuffledQueue, trackId, targetRating);
+    _updateTrackRatingInList(_history, trackId, targetRating);
     _sendQueueData();
     notifyListeners();
   }
 
-  void _updateTrackRatingInList(List<Track> list, int id, int rating) {
+  void _updateTrackRatingInList(List<Track> list, String id, int rating) {
     for (int i = 0; i < list.length; i++) {
       if (list[i].id == id) {
         list[i] = list[i].copyWith(rating: rating);
@@ -301,7 +317,7 @@ class QueueViewModel extends ChangeNotifier {
     }
   }
 
-  Future<String> getArtistName(int? artistId) async {
+  Future<String> getArtistName(String? artistId) async {
     if (artistId == null) return 'Unknown Artist';
     final artists = await _libraryService.getArtists();
     for (final a in artists) {
@@ -310,7 +326,7 @@ class QueueViewModel extends ChangeNotifier {
     return 'Unknown Artist';
   }
 
-  Future<String> getAlbumName(int? albumId) async {
+  Future<String> getAlbumName(String? albumId) async {
     if (albumId == null) return 'Unknown Album';
     final albums = await _libraryService.getAlbums();
     for (final a in albums) {

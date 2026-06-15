@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/playback_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 
@@ -8,7 +8,6 @@ class AudiobookBookmarksSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final db = context.read<AppDatabase>();
     final playerVM = context.read<PlayerViewModel>();
     final theme = Theme.of(context);
     final currentTrack = playerVM.currentTrack;
@@ -41,7 +40,7 @@ class AudiobookBookmarksSidebar extends StatelessWidget {
           Expanded(
             child: StreamBuilder<List<Bookmark>>(
               stream: currentTrack != null 
-                  ? (db.select(db.bookmarks)..where((t) => t.trackPath.equals(currentTrack.path))).watch()
+                  ? playerVM.watchBookmarksForTrack(currentTrack.path)
                   : Stream.value([]),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
@@ -66,7 +65,7 @@ class AudiobookBookmarksSidebar extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final b = bookmarks[index];
-                    return _BookmarkCard(bookmark: b, playerVM: playerVM, theme: theme, db: db);
+                    return _BookmarkCard(bookmark: b, playerVM: playerVM, theme: theme);
                   },
                 );
               },
@@ -82,9 +81,8 @@ class _BookmarkCard extends StatelessWidget {
   final Bookmark bookmark;
   final PlayerViewModel playerVM;
   final ThemeData theme;
-  final AppDatabase db;
 
-  const _BookmarkCard({required this.bookmark, required this.playerVM, required this.theme, required this.db});
+  const _BookmarkCard({required this.bookmark, required this.playerVM, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +111,7 @@ class _BookmarkCard extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 14),
-                  onPressed: () => db.deleteBookmark(bookmark.id),
+                  onPressed: () => playerVM.deleteBookmark(bookmark.id),
                   visualDensity: VisualDensity.compact,
                 ),
               ],

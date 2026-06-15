@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/presentation/screens/widgets/html_text.dart';
 import 'package:aulos/presentation/screens/widgets/bookmarks_view.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class PodcastNotesPane extends StatelessWidget {
   final Episode? selectedEpisode;
@@ -66,7 +68,7 @@ class PodcastNotesPane extends StatelessWidget {
                       Text(ep.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.2)),
                       const SizedBox(height: 8),
                       Text(
-                        ep.pubDate?.toString().split(' ')[0] ?? 'Unknown Date',
+                        ep.pubDate != null ? DateFormat.yMMMd().format(ep.pubDate!) : 'Unknown Date',
                         style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                       const SizedBox(height: 32),

@@ -17,14 +17,14 @@ class MockSocketService extends Mock implements SocketService {}
 
 class MockSharedPreferences extends Mock implements SharedPreferences {}
 
-class MockMediaLogService extends Mock implements MediaLogService {}
+class MockLogService extends Mock implements LogService {}
 
 void main() {
   late MockDiscoveryService mockDiscovery;
   late MockHandshakeService mockHandshake;
   late MockSocketService mockSocket;
   late MockSharedPreferences mockPrefs;
-  late MockMediaLogService mockLog;
+  late MockLogService mockLog;
 
   setUpAll(() {
     registerFallbackValue(MediaCommand(type: CommandType.play));
@@ -35,7 +35,7 @@ void main() {
     mockHandshake = MockHandshakeService();
     mockSocket = MockSocketService();
     mockPrefs = MockSharedPreferences();
-    mockLog = MockMediaLogService();
+    mockLog = MockLogService();
 
     when(() => mockSocket.commandStream).thenAnswer((_) => const Stream.empty());
     when(() => mockSocket.sendCommand(any())).thenAnswer((_) async => {});

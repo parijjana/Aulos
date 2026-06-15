@@ -72,6 +72,41 @@ class ServicesStorageSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _buildScannerControls(context, theme, onSurface, 0),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUTO-SYNC FOLDERS',
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: onSurface.withValues(alpha: 0.5),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Automatically sync library when files change in background',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: onSurface.withValues(alpha: 0.35),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: vm.isFolderWatcherEnabled,
+                  onChanged: (val) => vm.setIsFolderWatcherEnabled(val),
+                  activeColor: theme.colorScheme.primary,
+                ),
+              ],
+            ),
 
             const Divider(height: 32, color: Colors.white10),
 

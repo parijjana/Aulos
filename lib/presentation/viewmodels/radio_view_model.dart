@@ -8,11 +8,14 @@ import 'package:aulos/domain/network/log_service.dart';
 import 'package:drift/drift.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class RadioViewModel extends ChangeNotifier with UniversalLog {
+class RadioViewModel extends ChangeNotifier {
   final RadioBrowserService _api;
   final RadioDatabase _db;
   final RadioSyncManager _syncManager;
+  final LogService _logService;
   final http.Client _httpClient = http.Client();
 
   List<RadioStation> _favorites = [];
@@ -32,23 +35,35 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
   bool _isShowingHidden = false;
   int _nextUnavailableCheckIndex = 0;
   String _libraryFilter = 'ALL STATIONS';
+  bool _disposed = false;
 
   RadioViewModel({
     required RadioBrowserService api,
     required RadioDatabase db,
     required RadioSyncManager syncManager,
-  }) : _api = api, _db = db, _syncManager = syncManager {
+    LogService? logService,
+  }) : _api = api, _db = db, _syncManager = syncManager, _logService = logService ?? NoOpLogService() {
     _init();
   }
 
+  void log(String message) => _logService.log(message);
+
   @override
   void dispose() {
+    _disposed = true;
     _browseSub?.cancel();
     _searchSub?.cancel();
     _favSub?.cancel();
     _catSub?.cancel();
     _httpClient.close();
     super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
   }
 
   List<RadioStation> get favorites => _favorites;
@@ -83,7 +98,7 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
     notifyListeners();
   }
 
-  Future<void> _init() async {
+  Future<void> _init({bool force = false}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -91,15 +106,52 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
     _setupSubscriptions();
 
     try {
-      unawaited(_syncManager.runInitialSync());
-      _allCountries = await _api.getAllCountries();
-      _allLanguages = await _api.getAllLanguages();
+      unawaited(_syncManager.runInitialSync(force: force));
+      
+      final prefs = await SharedPreferences.getInstance();
+      final cachedCountries = prefs.getString('cached_radio_countries');
+      final cachedLanguages = prefs.getString('cached_radio_languages');
+      final lastMetaSyncStr = prefs.getString('last_radio_metadata_sync_time');
+      
+      bool needsMetaSync = force || cachedCountries == null || cachedLanguages == null || lastMetaSyncStr == null;
+      if (!needsMetaSync) {
+        final lastMetaSync = DateTime.tryParse(lastMetaSyncStr!);
+        if (lastMetaSync == null || DateTime.now().difference(lastMetaSync).inDays >= 30) {
+          needsMetaSync = true;
+        }
+      }
+      
+      if (needsMetaSync) {
+        log('RADIO: Fetching countries and languages from remote API...');
+        _allCountries = await _api.getAllCountries();
+        _allLanguages = await _api.getAllLanguages();
+        
+        await prefs.setString('cached_radio_countries', jsonEncode(_allCountries));
+        await prefs.setString('cached_radio_languages', jsonEncode(_allLanguages));
+        await prefs.setString('last_radio_metadata_sync_time', DateTime.now().toIso8601String());
+      } else {
+        log('RADIO: Loading countries and languages from local cache...');
+        _allCountries = List<Map<String, dynamic>>.from(jsonDecode(cachedCountries!) as List);
+        _allLanguages = List<Map<String, dynamic>>.from(jsonDecode(cachedLanguages!) as List);
+      }
       
       // Load initial discovery view
-      await loadDiscoveryHome();
+      await loadDiscoveryHome(runHealthCheck: force);
       
-      // HEALTH CHECK: Run health checks for library stations at startup
-      unawaited(_performHealthChecks());
+      // HEALTH CHECK: Run health checks for library stations (cached monthly or forced)
+      final lastHealthCheckStr = prefs.getString('last_radio_health_check_time');
+      bool needsHealthCheck = force || lastHealthCheckStr == null;
+      if (!needsHealthCheck && lastHealthCheckStr != null) {
+        final lastHealthCheck = DateTime.tryParse(lastHealthCheckStr);
+        if (lastHealthCheck == null || DateTime.now().difference(lastHealthCheck).inDays >= 30) {
+          needsHealthCheck = true;
+        }
+      }
+      if (needsHealthCheck) {
+        unawaited(_performHealthChecks().then((_) async {
+          await prefs.setString('last_radio_health_check_time', DateTime.now().toIso8601String());
+        }));
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -122,10 +174,12 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
     });
   }
 
-  Future<void> loadDiscoveryHome() async {
+  Future<void> loadDiscoveryHome({bool runHealthCheck = false}) async {
     _browseResults = await _db.getTopStations(limit: 30);
     notifyListeners();
-    unawaited(checkHealthForBrowseResults());
+    if (runHealthCheck) {
+      unawaited(checkHealthForBrowseResults());
+    }
   }
 
   void toggleShowingHidden() {
@@ -217,7 +271,14 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
   }
 
   Future<void> toggleHidden(RadioStation station) async {
-    await _db.setHidden(station.stationUuid, !station.isHidden);
+    final targetHidden = !station.isHidden;
+    _updateStationHiddenState(station.stationUuid, targetHidden);
+    try {
+      await _db.setHidden(station.stationUuid, targetHidden);
+    } catch (e) {
+      log('Failed to toggle hidden in DB: $e');
+      _updateStationHiddenState(station.stationUuid, !targetHidden);
+    }
   }
 
   Future<void> browseCategory(String tag) async {
@@ -309,15 +370,35 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
   }
 
   Future<void> toggleFavorite(RadioStation station) async {
-    await _db.setFavorite(station.stationUuid, !station.isFavorite);
+    final targetFav = !station.isFavorite;
+    _updateStationFavoriteState(station.stationUuid, targetFav);
+    try {
+      await _db.setFavorite(station.stationUuid, targetFav);
+    } catch (e) {
+      log('Failed to update favorite in DB: $e');
+      _updateStationFavoriteState(station.stationUuid, !targetFav);
+    }
   }
 
   Future<void> togglePin(RadioStation station) async {
-    await _db.setPinned(station.stationUuid, !station.isPinned);
+    final targetPinned = !station.isPinned;
+    _updateStationPinState(station.stationUuid, targetPinned);
+    try {
+      await _db.setPinned(station.stationUuid, targetPinned);
+    } catch (e) {
+      log('Failed to update pin in DB: $e');
+      _updateStationPinState(station.stationUuid, !targetPinned);
+    }
   }
 
   Future<void> addFavoriteFromResult(RadioStation result) async {
-     await _db.setFavorite(result.stationUuid, true);
+    _updateStationFavoriteState(result.stationUuid, true);
+    try {
+      await _db.setFavorite(result.stationUuid, true);
+    } catch (e) {
+      log('Failed to add favorite in DB: $e');
+      _updateStationFavoriteState(result.stationUuid, false);
+    }
   }
 
   Future<void> addManualStation(String name, String url) async {
@@ -331,19 +412,89 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
 
   Future<void> removeStation(RadioStation station) async {
     if (station.stationUuid.startsWith('manual_')) {
-      await _db.deleteStation(station.stationUuid);
+      _browseResults.removeWhere((s) => s.stationUuid == station.stationUuid);
+      _searchResults.removeWhere((s) => s.stationUuid == station.stationUuid);
+      notifyListeners();
+      try {
+        await _db.deleteStation(station.stationUuid);
+      } catch (e) {
+        log('Failed to delete manual station in DB: $e');
+      }
     } else {
-      await _db.setFavorite(station.stationUuid, false);
+      _updateStationFavoriteState(station.stationUuid, false);
+      try {
+        await _db.setFavorite(station.stationUuid, false);
+      } catch (e) {
+        log('Failed to remove favorite in DB: $e');
+        _updateStationFavoriteState(station.stationUuid, true);
+      }
+    }
+  }
+
+  void _updateStationFavoriteState(String uuid, bool isFavorite) {
+    bool changed = false;
+    for (int i = 0; i < _browseResults.length; i++) {
+      if (_browseResults[i].stationUuid == uuid) {
+        _browseResults[i] = _browseResults[i].copyWith(isFavorite: isFavorite);
+        changed = true;
+      }
+    }
+    for (int i = 0; i < _searchResults.length; i++) {
+      if (_searchResults[i].stationUuid == uuid) {
+        _searchResults[i] = _searchResults[i].copyWith(isFavorite: isFavorite);
+        changed = true;
+      }
+    }
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  void _updateStationPinState(String uuid, bool isPinned) {
+    bool changed = false;
+    for (int i = 0; i < _browseResults.length; i++) {
+      if (_browseResults[i].stationUuid == uuid) {
+        _browseResults[i] = _browseResults[i].copyWith(isPinned: isPinned);
+        changed = true;
+      }
+    }
+    for (int i = 0; i < _searchResults.length; i++) {
+      if (_searchResults[i].stationUuid == uuid) {
+        _searchResults[i] = _searchResults[i].copyWith(isPinned: isPinned);
+        changed = true;
+      }
+    }
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  void _updateStationHiddenState(String uuid, bool isHidden) {
+    bool changed = false;
+    for (int i = 0; i < _browseResults.length; i++) {
+      if (_browseResults[i].stationUuid == uuid) {
+        _browseResults[i] = _browseResults[i].copyWith(isHidden: isHidden);
+        changed = true;
+      }
+    }
+    for (int i = 0; i < _searchResults.length; i++) {
+      if (_searchResults[i].stationUuid == uuid) {
+        _searchResults[i] = _searchResults[i].copyWith(isHidden: isHidden);
+        changed = true;
+      }
+    }
+    if (changed) {
+      notifyListeners();
     }
   }
 
   Future<void> playStation(RadioStation station, PlayerViewModel playerVM, {bool isAvailable = true}) async {
     final track = app_db.Track(
-      id: 0, 
+      id: 'radio_${station.stationUuid}', 
       path: station.url,
       title: station.name,
-      artistId: 0,
-      folderId: 0,
+      artistId: 'radio_artist',
+      folderId: 'radio_folder',
       rating: 0,
       isFavorite: false,
       playCount: 0,
@@ -364,7 +515,7 @@ class RadioViewModel extends ChangeNotifier with UniversalLog {
 
   Future<void> refresh() async {
     _error = null;
-    await _init();
+    await _init(force: true);
   }
 
   Future<void> clearRadioCache() async {

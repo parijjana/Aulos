@@ -24,7 +24,10 @@ void main() {
   setUp(() {
     mockVM = MockPodcastViewModel();
     mockSettingsVM = MockSettingsViewModel();
+    when(() => mockSettingsVM.isFolderWatcherEnabled).thenReturn(true);
     mockPlayerVM = MockPlayerViewModel();
+    when(() => mockPlayerVM.isSleepTimerActive).thenReturn(false);
+    when(() => mockPlayerVM.sleepTimeRemaining).thenReturn(Duration.zero);
     mockDisplayVM = MockDisplayViewModel();
 
     when(() => mockVM.isLoading).thenReturn(false);
@@ -37,6 +40,7 @@ void main() {
 
     when(() => mockSettingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => mockSettingsVM.isDynamicTheme).thenReturn(false);
+    when(() => mockSettingsVM.libraryViewType).thenReturn(LibraryViewType.grid);
     when(() => mockSettingsVM.addListener(any())).thenReturn(null);
     when(() => mockSettingsVM.removeListener(any())).thenReturn(null);
 

@@ -1,10 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
-import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/playback_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/domain/network/log_service.dart';
+import 'package:aulos/domain/playback/playback_track.dart';
+import 'package:aulos/core/utils/id_generator.dart';
 
-mixin PlayerBookmarkMixin on ChangeNotifier, UniversalLog {
-  AppDatabase? _dbRef;
+mixin PlayerBookmarkMixin on ChangeNotifier {
+  LogService get logService;
+  PlaybackDatabase? _playbackDb;
+  PodcastDatabase? _podcastDb;
   
   bool _isBookmarkMode = false;
   double _bookmarkStartMs = 0;
@@ -14,8 +19,9 @@ mixin PlayerBookmarkMixin on ChangeNotifier, UniversalLog {
   double get bookmarkStartMs => _bookmarkStartMs;
   double get bookmarkEndMsVal => _bookmarkEndMsVal;
 
-  void initBookmarkMixin(AppDatabase db) {
-    _dbRef = db;
+  void initBookmarkMixin(PlaybackDatabase playbackDb, PodcastDatabase podcastDb) {
+    _playbackDb = playbackDb;
+    _podcastDb = podcastDb;
   }
 
   void setBookmarkRange(double start, double end) {
@@ -36,14 +42,14 @@ mixin PlayerBookmarkMixin on ChangeNotifier, UniversalLog {
   }
 
   Future<void> saveRichBookmark({
-    required Track track,
+    required PlaybackTrack track,
     required String title,
     required bool isAudiobook,
     required bool isPodcast,
     String? tags,
     String? notes,
   }) async {
-    if (_dbRef == null) return;
+    if (_playbackDb == null) return;
     
     final startMs = _bookmarkStartMs.toInt();
     final endMs = _bookmarkEndMsVal.toInt();
@@ -53,9 +59,13 @@ mixin PlayerBookmarkMixin on ChangeNotifier, UniversalLog {
     if (isPodcast) contextType = 1;
     if (isAudiobook) contextType = 2;
 
-    log('PLAYER: Saving rich bookmark "$title" (Context: $contextType)');
+    logService.log('PLAYER: Saving rich bookmark "$title" (Context: $contextType)');
     try {
-      await _dbRef!.saveBookmark(BookmarksCompanion.insert(
+      final fingerprint = "${track.path}|$title|$startMs|$endMs|${DateTime.now().millisecondsSinceEpoch}";
+      final bookmarkId = generateContentId(fingerprint);
+
+      await _playbackDb!.saveBookmark(BookmarksCompanion.insert(
+        id: bookmarkId,
         trackPath: track.path,
         title: title,
         startTimeMs: startMs,
@@ -65,14 +75,14 @@ mixin PlayerBookmarkMixin on ChangeNotifier, UniversalLog {
         contextType: Value(contextType),
       ));
       
-      if (isAudiobook || isPodcast) {
-        await _dbRef!.updateEpisodePlayback(track.id.abs(), isPinned: true);
+      if (isPodcast && _podcastDb != null) {
+        await _podcastDb!.updateEpisodePlayback(track.id, isPinned: true);
       }
 
       _isBookmarkMode = false;
       notifyListeners();
     } catch (e) {
-      log('PLAYER_ERROR: Failed to save bookmark: $e');
+      logService.log('PLAYER_ERROR: Failed to save bookmark: $e');
     }
   }
   

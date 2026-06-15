@@ -4,6 +4,10 @@ import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'package:aulos/data/database/radio_database.dart';
 import 'package:provider/provider.dart';
+import 'package:aulos/features/radio/widgets/expandable_search.dart';
+import 'package:aulos/features/radio/widgets/radio_station_info_drawer.dart';
+import 'package:aulos/features/radio/widgets/radio_station_grid_tile.dart';
+import 'package:aulos/features/radio/widgets/radio_station_list_tile.dart';
 
 class RadioBrowserScreen extends StatefulWidget {
   final VoidCallback? onBack;
@@ -15,17 +19,20 @@ class RadioBrowserScreen extends StatefulWidget {
 
 enum _DiscoveryTab { genre, country, language }
 
-class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
+class _RadioBrowserScreenState extends State<RadioBrowserScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final ScrollController _tabScrollController = ScrollController();
-  
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   bool _isSearching = false;
   bool _searchExpanded = false;
   _DiscoveryTab _activeTab = _DiscoveryTab.genre;
-  
   String? _selectedDetailTitle;
+  RadioStation? _selectedStationForInfo;
 
   @override
   void initState() {
@@ -54,13 +61,18 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final radioVM = context.watch<RadioViewModel>();
     final playerVM = context.read<PlayerViewModel>();
     final settingsVM = context.watch<settings.SettingsViewModel>();
     final theme = Theme.of(context);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.transparent,
+      endDrawer: _selectedStationForInfo != null
+          ? RadioStationInfoDrawer(station: _selectedStationForInfo!)
+          : null,
       body: Column(
         children: [
           _buildSubBar(radioVM, theme),
@@ -68,7 +80,10 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildBody(radioVM, playerVM, settingsVM, theme),
+              child: RefreshIndicator(
+                onRefresh: () => radioVM.refresh(),
+                child: _buildBody(radioVM, playerVM, settingsVM, theme),
+              ),
             ),
           ),
         ],
@@ -83,7 +98,6 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
         height: 48,
         child: Row(
           children: [
-            // 1. SCROLLABLE CATEGORIES
             Expanded(
               child: Scrollbar(
                 controller: _tabScrollController,
@@ -111,15 +125,13 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
                       _buildTabButton('REGION', _DiscoveryTab.country, theme),
                       const SizedBox(width: 8),
                       _buildTabButton('LANG', _DiscoveryTab.language, theme),
-                      const SizedBox(width: 24), // Buffer
+                      const SizedBox(width: 24),
                     ],
                   ),
                 ),
               ),
             ),
-
-            // 2. EXPANDABLE SEARCH
-            _ExpandableSearch(
+            ExpandableSearch(
               controller: _searchController,
               focusNode: _searchFocus,
               expanded: _searchExpanded,
@@ -138,6 +150,12 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
                 });
               },
             ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              onPressed: () => vm.refresh(),
+              tooltip: 'Refresh Discovery',
+            ),
           ],
         ),
       ),
@@ -148,9 +166,9 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
     final isActive = _activeTab == tab && _selectedDetailTitle == null && !_isSearching;
     return InkWell(
       onTap: () => setState(() {
-         _activeTab = tab;
-         _selectedDetailTitle = null;
-         _isSearching = false;
+        _activeTab = tab;
+        _selectedDetailTitle = null;
+        _isSearching = false;
       }),
       borderRadius: BorderRadius.circular(18),
       child: Container(
@@ -198,7 +216,7 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
         );
       case _DiscoveryTab.country:
         return _buildGrid(
-          vm.allCountries.map((c) => c['name'] as String).toList(),
+          vm.allCountries.map((c) => c['name']?.toString() ?? 'Unknown').toList(),
           theme,
           (val) {
             setState(() => _selectedDetailTitle = 'COUNTRY: ${val.toUpperCase()}');
@@ -207,7 +225,7 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
         );
       case _DiscoveryTab.language:
         return _buildGrid(
-          vm.allLanguages.map((l) => l['name'] as String).toList(),
+          vm.allLanguages.map((l) => l['name']?.toString() ?? 'Unknown').toList(),
           theme,
           (val) {
             setState(() => _selectedDetailTitle = 'LANGUAGE: ${val.toUpperCase()}');
@@ -273,7 +291,7 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
                   controller: _scrollController,
                   itemCount: stations.length,
                   separatorBuilder: (_, __) => Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-                  itemBuilder: (context, index) => _buildStationTile(stations[index], theme, vm),
+                  itemBuilder: (context, index) => RadioStationListTile(station: stations[index], vm: vm),
                 );
               }
 
@@ -287,147 +305,25 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
                   mainAxisSpacing: 24,
                 ),
                 itemCount: stations.length,
-                itemBuilder: (context, index) => _buildStationGridTile(stations[index], theme, vm),
+                itemBuilder: (context, index) {
+                  final station = stations[index];
+                  return RadioStationGridTile(
+                    station: station,
+                    vm: vm,
+                    onInfoPressed: () {
+                      setState(() {
+                        _selectedStationForInfo = station;
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _scaffoldKey.currentState?.openEndDrawer();
+                      });
+                    },
+                  );
+                },
               );
             }
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildStationTile(RadioStation station, ThemeData theme, RadioViewModel vm) {
-    final playerVM = context.read<PlayerViewModel>();
-    final bool isAvailable = station.isAvailable;
-    
-    return Opacity(
-      opacity: isAvailable ? 1.0 : 0.4,
-      child: ListTile(
-        dense: true,
-        leading: _buildFavicon(station, theme),
-        title: Text(
-          station.name, 
-          style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            fontSize: 13,
-            decoration: isAvailable ? null : TextDecoration.lineThrough,
-          )
-        ),
-        subtitle: Row(
-          children: [
-            Text('${station.country ?? "Global"} • ${station.bitrate}kbps', style: const TextStyle(fontSize: 10)),
-            const Spacer(),
-            const Icon(Icons.thumb_up_alt_outlined, size: 10, color: Colors.white38),
-            const SizedBox(width: 4),
-            Text(station.votes.toString(), style: const TextStyle(fontSize: 10, color: Colors.white38)),
-          ],
-        ),
-        trailing: IconButton(
-          icon: Icon(station.isFavorite ? Icons.library_add_check : Icons.library_add, 
-               color: station.isFavorite ? theme.colorScheme.primary : null, size: 18),
-          onPressed: () => vm.toggleFavorite(station),
-        ),
-        onTap: () => vm.playStation(station, playerVM, isAvailable: isAvailable),
-      ),
-    );
-  }
-
-  Widget _buildStationGridTile(RadioStation station, ThemeData theme, RadioViewModel vm) {
-    final playerVM = context.read<PlayerViewModel>();
-    final bool isAvailable = station.isAvailable;
-    final onSurface = theme.colorScheme.onSurface;
-
-    return GestureDetector(
-      onTap: () => vm.playStation(station, playerVM, isAvailable: isAvailable),
-      child: Opacity(
-        opacity: isAvailable ? 1.0 : 0.4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildFavicon(station, theme, large: true),
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                      child: Icon(
-                        station.isFavorite ? Icons.library_add_check : Icons.library_add, 
-                        color: Colors.white, 
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              station.name, 
-              maxLines: 1, 
-              overflow: TextOverflow.ellipsis, 
-              style: TextStyle(
-                fontWeight: FontWeight.bold, 
-                fontSize: 12,
-                decoration: isAvailable ? null : TextDecoration.lineThrough,
-              )
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${station.country ?? "Global"} • ${station.bitrate}k', 
-                    style: TextStyle(fontSize: 9, color: onSurface.withValues(alpha: 0.38)),
-                    maxLines: 1,
-                  ),
-                ),
-                const Icon(Icons.thumb_up_alt_outlined, size: 8, color: Colors.white24),
-                const SizedBox(width: 2),
-                Text(station.votes.toString(), style: const TextStyle(fontSize: 8, color: Colors.white24)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFavicon(RadioStation station, ThemeData theme, {bool large = false}) {
-    final url = station.favicon;
-    return Stack(
-      children: [
-        Container(
-          width: large ? double.infinity : 32,
-          height: large ? double.infinity : 32,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(large ? 12 : 4),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(large ? 12 : 4),
-            child: url != null && url.isNotEmpty
-                ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.radio, size: large ? 48 : 16))
-                : Icon(Icons.radio, size: large ? 48 : 16),
-          ),
-        ),
-        if (station.lastCheck != null)
-          Positioned(
-            right: 2,
-            bottom: 2,
-            child: Container(
-              width: large ? 12 : 8,
-              height: large ? 12 : 8,
-              decoration: BoxDecoration(
-                color: station.isAvailable ? Colors.greenAccent : Colors.redAccent,
-                shape: BoxShape.circle,
-                border: Border.all(color: theme.colorScheme.surface, width: 1),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -459,68 +355,6 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> {
             },
             child: const Text('ADD'),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExpandableSearch extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool expanded;
-  final ValueChanged<bool> onToggle;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-
-  const _ExpandableSearch({
-    required this.controller,
-    required this.focusNode,
-    required this.expanded,
-    required this.onToggle,
-    required this.onSubmitted,
-    required this.onClear,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: expanded ? 200 : 40,
-      height: 36,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.search, size: 18, color: expanded ? theme.colorScheme.primary : null),
-            onPressed: () {
-              onToggle(!expanded);
-              if (expanded) {
-                onClear();
-              } else {
-                focusNode.requestFocus();
-              }
-            },
-          ),
-          if (expanded)
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                decoration: const InputDecoration(
-                  hintText: 'Search...',
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                style: const TextStyle(fontSize: 13),
-                onSubmitted: onSubmitted,
-              ),
-            ),
         ],
       ),
     );

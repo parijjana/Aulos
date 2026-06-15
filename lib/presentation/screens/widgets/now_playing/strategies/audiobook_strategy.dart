@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:drift/drift.dart' hide Column;
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/playback_database.dart';
+import 'package:aulos/data/database/audiobook_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:provider/provider.dart';
@@ -12,37 +13,55 @@ class AudiobookStrategy extends NowPlayingStrategy {
   String get sectionLabel => 'CHAPTERS';
 
   @override
-  Widget buildControls(BuildContext context, PlayerViewModel vm, ThemeData theme, double buttonSize, double primarySize) {
+  Widget buildControls(BuildContext context, PlayerViewModel vm, ThemeData theme, double buttonSize, double primarySize, {bool isOverlay = false}) {
+    final width = MediaQuery.of(context).size.width;
+    final showSecondary = width > 500 && !isOverlay;
+    final showSkips = width > 340;
+    final showReplays = width > 200;
+
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          buildSpeedSelector(vm, theme),
-          const SizedBox(width: 16),
-          buildCircularButton(Icons.skip_previous_rounded, vm.skipPrevious, buttonSize * 0.9, theme),
-          const SizedBox(width: 12),
-          buildCircularButton(Icons.replay_10_rounded, vm.skipBackward, buttonSize, theme),
-          const SizedBox(width: 16),
+          if (showSecondary) ...[
+            buildSpeedSelector(vm, theme, isOverlay: isOverlay),
+            const SizedBox(width: 16),
+          ],
+          if (showSkips) ...[
+            buildCircularButton(Icons.skip_previous_rounded, vm.skipPrevious, buttonSize * 0.9, theme, isOverlay: isOverlay),
+            const SizedBox(width: 12),
+          ],
+          if (showReplays) ...[
+            buildCircularButton(Icons.replay_10_rounded, vm.skipBackward, buttonSize, theme, isOverlay: isOverlay),
+            const SizedBox(width: 16),
+          ],
           buildAulosPlayButton(vm, theme, primarySize),
-          const SizedBox(width: 16),
-          buildCircularButton(Icons.forward_10_rounded, vm.skipForward, buttonSize, theme),
-          const SizedBox(width: 12),
-          buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize * 0.9, theme),
-          const SizedBox(width: 16),
-          buildCircularButton(
-            vm.isBookmarkMode ? Icons.check_circle : Icons.bookmark_add_outlined, 
-            () {
-              if (vm.isBookmarkMode) {
-                showRichBookmarkDialog(context, vm, theme);
-              } else {
-                vm.toggleBookmark();
-              }
-            }, 
-            buttonSize, 
-            theme,
-            color: vm.isBookmarkMode ? theme.colorScheme.primary : null,
-          ),
+          if (showReplays) ...[
+            const SizedBox(width: 16),
+            buildCircularButton(Icons.forward_10_rounded, vm.skipForward, buttonSize, theme, isOverlay: isOverlay),
+          ],
+          if (showSkips) ...[
+            const SizedBox(width: 12),
+            buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize * 0.9, theme, isOverlay: isOverlay),
+          ],
+          if (showSecondary) ...[
+            const SizedBox(width: 16),
+            buildCircularButton(
+              vm.isBookmarkMode ? Icons.check_circle : Icons.bookmark_add_outlined, 
+              () {
+                if (vm.isBookmarkMode) {
+                  showRichBookmarkDialog(context, vm, theme);
+                } else {
+                  vm.toggleBookmark();
+                }
+              }, 
+              buttonSize, 
+              theme,
+              color: vm.isBookmarkMode ? theme.colorScheme.primary : null,
+              isOverlay: isOverlay,
+            ),
+          ],
         ],
       ),
     );
@@ -50,14 +69,13 @@ class AudiobookStrategy extends NowPlayingStrategy {
 
   @override
   Widget buildContent(BuildContext context, PlayerViewModel vm, ThemeData theme) {
-    final db = context.read<AppDatabase>();
     final currentTrack = vm.currentTrack;
     final queueVM = context.watch<QueueViewModel>();
     final chapters = vm.currentChapters;
 
     return StreamBuilder<List<Bookmark>>(
       stream: currentTrack != null 
-          ? (db.select(db.bookmarks)..where((t) => t.trackPath.equals(currentTrack.path) & t.contextType.equals(2))).watch()
+          ? vm.watchAudiobookBookmarksForTrack(currentTrack.path)
           : Stream.value([]),
       builder: (context, snapshot) {
         final clips = snapshot.data ?? [];
@@ -86,9 +104,21 @@ class AudiobookStrategy extends NowPlayingStrategy {
                         child: TabBarView(
                           children: [
                             hasChapters 
-                              ? _buildChapterMarkersList(chapters, vm, theme)
-                              : _buildChaptersList(queueVM, vm, theme),
-                            _buildClipsList(clips, vm, theme),
+                              ? _ChapterMarkersList(
+                                  chapters: chapters,
+                                  playerVM: vm,
+                                  theme: theme,
+                                )
+                              : _ChaptersList(
+                                  queueVM: queueVM,
+                                  playerVM: vm,
+                                  theme: theme,
+                                ),
+                            _ClipsList(
+                              clips: clips,
+                              playerVM: vm,
+                              theme: theme,
+                            ),
                           ],
                         ),
                       ),
@@ -103,23 +133,55 @@ class AudiobookStrategy extends NowPlayingStrategy {
                   Expanded(
                     flex: 3, 
                     child: hasChapters 
-                        ? _buildChapterMarkersList(chapters, vm, theme)
-                        : _buildChaptersList(queueVM, vm, theme)
+                        ? _ChapterMarkersList(
+                            chapters: chapters,
+                            playerVM: vm,
+                            theme: theme,
+                          )
+                        : _ChaptersList(
+                            queueVM: queueVM,
+                            playerVM: vm,
+                            theme: theme,
+                          ),
                   ),
                   const VerticalDivider(width: 1),
-                  Expanded(flex: 2, child: _buildClipsList(clips, vm, theme)),
+                  Expanded(
+                    flex: 2, 
+                    child: _ClipsList(
+                      clips: clips,
+                      playerVM: vm,
+                      theme: theme,
+                    ),
+                  ),
                 ],
               );
             }
 
-            return _buildChaptersList(queueVM, vm, theme);
+            return _ChaptersList(
+              queueVM: queueVM,
+              playerVM: vm,
+              theme: theme,
+            );
           },
         );
       },
     );
   }
+}
 
-  Widget _buildChapterMarkersList(List<Chapter> chapters, PlayerViewModel playerVM, ThemeData theme) {
+class _ChapterMarkersList extends StatelessWidget {
+  final List<AudiobookChapter> chapters;
+  final PlayerViewModel playerVM;
+  final ThemeData theme;
+
+  const _ChapterMarkersList({
+    required this.chapters,
+    required this.playerVM,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final currentPos = playerVM.position.inMilliseconds;
     return ListView.builder(
       shrinkWrap: true,
@@ -158,8 +220,21 @@ class AudiobookStrategy extends NowPlayingStrategy {
       },
     );
   }
+}
 
-  Widget _buildChaptersList(QueueViewModel queueVM, PlayerViewModel playerVM, ThemeData theme) {
+class _ChaptersList extends StatelessWidget {
+  final QueueViewModel queueVM;
+  final PlayerViewModel playerVM;
+  final ThemeData theme;
+
+  const _ChaptersList({
+    required this.queueVM,
+    required this.playerVM,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -176,8 +251,21 @@ class AudiobookStrategy extends NowPlayingStrategy {
       },
     );
   }
+}
 
-  Widget _buildClipsList(List<Bookmark> clips, PlayerViewModel playerVM, ThemeData theme) {
+class _ClipsList extends StatelessWidget {
+  final List<Bookmark> clips;
+  final PlayerViewModel playerVM;
+  final ThemeData theme;
+
+  const _ClipsList({
+    required this.clips,
+    required this.playerVM,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -195,11 +283,11 @@ class AudiobookStrategy extends NowPlayingStrategy {
       },
     );
   }
+}
 
-  String _formatMs(int ms) {
-    final d = Duration(milliseconds: ms);
-    final m = d.inMinutes;
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
+String _formatMs(int ms) {
+  final d = Duration(milliseconds: ms);
+  final m = d.inMinutes;
+  final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$m:$s';
 }

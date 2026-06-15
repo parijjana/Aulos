@@ -11,52 +11,64 @@ class MusicStrategy extends NowPlayingStrategy {
   String get sectionLabel => 'UP NEXT';
 
   @override
-  Widget buildControls(BuildContext context, PlayerViewModel vm, ThemeData theme, double buttonSize, double primarySize) {
+  Widget buildControls(BuildContext context, PlayerViewModel vm, ThemeData theme, double buttonSize, double primarySize, {bool isOverlay = false}) {
     final queueVM = context.watch<QueueViewModel>();
     final currentTrack = vm.currentTrack;
     
+    final width = MediaQuery.of(context).size.width;
+    final showSecondary = width > 450 && !isOverlay;
+    final showSkips = width > 250;
+
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (currentTrack != null) ...[
+          if (showSecondary && currentTrack != null) ...[
             IconButton(
               icon: Icon(
                 currentTrack.rating == -1 ? Icons.thumb_down_alt : Icons.thumb_down_alt_outlined,
-                color: currentTrack.rating == -1 ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                color: currentTrack.rating == -1 ? theme.colorScheme.primary : (isOverlay ? Colors.white30 : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
               ),
               onPressed: () => queueVM.updateRating(currentTrack.id, -1),
             ),
             const SizedBox(width: 8),
           ],
-          IconButton(
-            icon: Icon(
-              vm.isShuffle ? Icons.shuffle : Icons.shuffle_rounded,
-              color: vm.isShuffle ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          if (showSecondary) ...[
+            IconButton(
+              icon: Icon(
+                vm.isShuffle ? Icons.shuffle : Icons.shuffle_rounded,
+                color: vm.isShuffle ? theme.colorScheme.primary : (isOverlay ? Colors.white30 : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+              ),
+              onPressed: vm.toggleShuffle,
             ),
-            onPressed: vm.toggleShuffle,
-          ),
-          const SizedBox(width: 8),
-          buildCircularButton(Icons.skip_previous_rounded, vm.skipPrevious, buttonSize, theme),
-          const SizedBox(width: 16),
+            const SizedBox(width: 8),
+          ],
+          if (showSkips) ...[
+            buildCircularButton(Icons.skip_previous_rounded, vm.skipPrevious, buttonSize, theme, isOverlay: isOverlay),
+            const SizedBox(width: 16),
+          ],
           buildAulosPlayButton(vm, theme, primarySize),
-          const SizedBox(width: 16),
-          buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize, theme),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: Icon(
-              vm.repeatMode == engine_domain.RepeatMode.one ? Icons.repeat_one : Icons.repeat,
-              color: vm.repeatMode != engine_domain.RepeatMode.off ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          if (showSkips) ...[
+            const SizedBox(width: 16),
+            buildCircularButton(Icons.skip_next_rounded, vm.skipNext, buttonSize, theme, isOverlay: isOverlay),
+          ],
+          if (showSecondary) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(
+                vm.repeatMode == engine_domain.RepeatMode.one ? Icons.repeat_one : Icons.repeat,
+                color: vm.repeatMode != engine_domain.RepeatMode.off ? theme.colorScheme.primary : (isOverlay ? Colors.white30 : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+              ),
+              onPressed: vm.toggleRepeat,
             ),
-            onPressed: vm.toggleRepeat,
-          ),
-          if (currentTrack != null) ...[
+          ],
+          if (showSecondary && currentTrack != null) ...[
             const SizedBox(width: 8),
             IconButton(
               icon: Icon(
                 currentTrack.rating == 1 ? Icons.favorite : Icons.favorite_border,
-                color: currentTrack.rating == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                color: currentTrack.rating == 1 ? theme.colorScheme.primary : (isOverlay ? Colors.white30 : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
               ),
               onPressed: () => queueVM.updateRating(currentTrack.id, 1),
             ),

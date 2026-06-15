@@ -1,20 +1,23 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/library/artwork_service.dart';
 import 'package:aulos/data/library/ensemble_artwork_service.dart';
 import 'package:aulos/domain/network/log_service.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
 
 enum IndexerState { idle, scanning, optimizing, hardening, paused, error }
 
-class LibraryIndexerService extends ChangeNotifier with UniversalLog {
+class LibraryIndexerService extends ChangeNotifier {
   final AppDatabase _db;
   final SharedPreferences _prefs;
   final ArtworkService _artworkService;
   final EnsembleArtworkService _ensembleService;
+  final LogService _logService;
 
   IndexerState _state = IndexerState.idle;
   int? _scanningFolderType; // 0 for Music, 1 for Audiobooks
@@ -28,18 +31,156 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
 
   static const String _progressKey = 'indexer_progress_offset';
   bool _shouldPause = false;
+  bool _disposed = false;
+
+  SettingsViewModel? _settingsVM;
+  PersistentLibraryService? _libService;
+  Timer? _watchDebounceTimer;
+  final List<StreamSubscription> _watchSubscriptions = [];
+  bool? _lastWatcherEnabled;
+  List<String>? _lastMonitoredFolders;
+  List<String>? _lastAudiobookFolders;
 
   LibraryIndexerService({
     required AppDatabase db,
     required SharedPreferences prefs,
     required ArtworkService artworkService,
     required EnsembleArtworkService ensembleService,
+    LogService? logService,
+    SettingsViewModel? settingsVM,
+    PersistentLibraryService? libService,
   }) : _db = db,
        _prefs = prefs,
        _artworkService = artworkService,
-       _ensembleService = ensembleService {
+       _ensembleService = ensembleService,
+       _logService = logService ?? NoOpLogService(),
+       _settingsVM = settingsVM,
+       _libService = libService {
     unawaited(_resumeIfNeeded());
     unawaited(_updateTotalCount());
+    if (settingsVM != null && libService != null) {
+      settingsVM.addListener(_onSettingsChanged);
+      _lastWatcherEnabled = settingsVM.isFolderWatcherEnabled;
+      _lastMonitoredFolders = List.from(settingsVM.monitoredFolders);
+      _lastAudiobookFolders = List.from(settingsVM.audiobookFolders);
+      updateWatcherSubscriptions();
+    }
+  }
+
+  void log(String message) => _logService.log(message);
+
+  void _onSettingsChanged() {
+    if (_settingsVM == null) return;
+    final enabled = _settingsVM!.isFolderWatcherEnabled;
+    final monitored = _settingsVM!.monitoredFolders;
+    final audiobooks = _settingsVM!.audiobookFolders;
+
+    bool listEquals(List<String> a, List<String> b) {
+      if (a.length != b.length) return false;
+      for (int i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) return false;
+      }
+      return true;
+    }
+
+    if (_lastWatcherEnabled == enabled &&
+        _lastMonitoredFolders != null &&
+        listEquals(_lastMonitoredFolders!, monitored) &&
+        _lastAudiobookFolders != null &&
+        listEquals(_lastAudiobookFolders!, audiobooks)) {
+      return;
+    }
+
+    _lastWatcherEnabled = enabled;
+    _lastMonitoredFolders = List.from(monitored);
+    _lastAudiobookFolders = List.from(audiobooks);
+
+    updateWatcherSubscriptions();
+  }
+
+  void updateWatcherSubscriptions() {
+    if (_settingsVM == null || _libService == null) return;
+
+    for (var sub in _watchSubscriptions) {
+      sub.cancel();
+    }
+    _watchSubscriptions.clear();
+    _watchDebounceTimer?.cancel();
+
+    if (!_settingsVM!.isFolderWatcherEnabled) {
+      log('INDEXER: Folder watcher is disabled in settings.');
+      return;
+    }
+
+    for (final folderPath in _settingsVM!.monitoredFolders) {
+      _watchFolder(folderPath, folderType: 0);
+    }
+
+    for (final folderPath in _settingsVM!.audiobookFolders) {
+      _watchFolder(folderPath, folderType: 1);
+    }
+  }
+
+  void _watchFolder(String path, {required int folderType}) {
+    final dir = Directory(path);
+    if (!dir.existsSync()) return;
+
+    log('INDEXER: Starting filesystem watcher on: $path');
+    try {
+      late StreamSubscription sub;
+      sub = dir.watch(recursive: true).listen((event) {
+        log('INDEXER: Detected FS change in $path: ${event.type} on ${event.path}');
+        _triggerDebouncedScan();
+      }, onError: (e) {
+        log('INDEXER: FS Watcher error on $path: $e');
+        sub.cancel();
+        _watchSubscriptions.remove(sub);
+      }, onDone: () {
+        log('INDEXER: FS Watcher closed on $path');
+        sub.cancel();
+        _watchSubscriptions.remove(sub);
+      });
+      _watchSubscriptions.add(sub);
+    } catch (e) {
+      log('INDEXER: Failed to start FS Watcher on $path: $e');
+    }
+  }
+
+  void _triggerDebouncedScan() {
+    if (_settingsVM == null || _libService == null) return;
+    _watchDebounceTimer?.cancel();
+    _watchDebounceTimer = Timer(const Duration(seconds: 3), () {
+      if (_state == IndexerState.idle) {
+        log('INDEXER: Debounce timer fired. Running background library scan.');
+        unawaited(scanLibrary(_settingsVM!.monitoredFolders, _libService!, folderType: 0).then((_) {
+          if (_settingsVM!.audiobookFolders.isNotEmpty) {
+            unawaited(scanLibrary(_settingsVM!.audiobookFolders, _libService!, folderType: 1));
+          }
+        }));
+      } else {
+        log('INDEXER: Library indexer is busy (${_state.name}), deferring background scan.');
+        _watchDebounceTimer = Timer(const Duration(seconds: 5), _triggerDebouncedScan);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _settingsVM?.removeListener(_onSettingsChanged);
+    for (var sub in _watchSubscriptions) {
+      sub.cancel();
+    }
+    _watchSubscriptions.clear();
+    _watchDebounceTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
   }
 
   IndexerState get state => _state;
@@ -67,8 +208,17 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
       final allArtists = await _db.getAllArtists();
       final allAlbums = await service.getAlbums();
 
-      final missingArtAlbums = allAlbums.where((a) => a.coverArt == null).toList();
-      final missingPhotoArtists = allArtists.where((a) => a.photo == null).toList();
+      // Exclude audiobooks from MusicBrainz cover art fetching
+      final missingArtAlbums = allAlbums.where((a) => a.coverArt == null && !a.isAudiobook).toList();
+
+      // Exclude audiobook-only authors from MusicBrainz photo fetching
+      final musicArtistIds = allAlbums
+          .where((a) => !a.isAudiobook && a.artistId != null)
+          .map((a) => a.artistId!)
+          .toSet();
+      final missingPhotoArtists = allArtists
+          .where((a) => a.photo == null && musicArtistIds.contains(a.id))
+          .toList();
       
       final int totalTasks = missingArtAlbums.length + missingPhotoArtists.length;
       if (totalTasks == 0) {
@@ -214,8 +364,19 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
     }
   }
 
+
+
   Future<void> rebuildFromScratch() async {
     log('INDEXER: Wiping library and rebuilding from scratch...');
+    if (_state != IndexerState.idle) {
+      log('INDEXER: Indexer is busy ($_state). Requesting pause and waiting for idle...');
+      _shouldPause = true;
+      int attempts = 0;
+      while (_state != IndexerState.idle && attempts < 20) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+    }
     _shouldPause = true;
     await Future<void>.delayed(const Duration(milliseconds: 500));
     await _db.delete(_db.artistAlbumRelations).go();
@@ -229,7 +390,13 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
     _filesDiscovered = 0;
     _totalFilesStored = 0;
     log('INDEXER: Library wiped. Starting fresh index...');
-    unawaited(_startOptimizing(startOffset: 0));
+    
+    _shouldPause = false;
+    if (_settingsVM != null && _libService != null && _settingsVM!.monitoredFolders.isNotEmpty) {
+      unawaited(scanLibrary(_settingsVM!.monitoredFolders, _libService!, folderType: 0));
+    } else {
+      unawaited(_startOptimizing(startOffset: 0));
+    }
   }
 
   Future<void> scanLibrary(
@@ -270,12 +437,24 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
         notifyListeners();
       }
 
+      if (_shouldPause) {
+        _statusMessage = 'Scan Stopped';
+        _state = IndexerState.idle;
+        _scanningFolderType = null;
+        notifyListeners();
+        return;
+      }
+
       await _updateTotalCount();
       log('INDEXER: Discovered $_filesDiscovered new files across $_foldersScanned folders.');
       
-      _statusMessage = 'Scan Complete. Optimizing Database...';
-      notifyListeners();
-      await _startOptimizing(startOffset: 0);
+      if (_filesDiscovered > 0) {
+        _statusMessage = 'Scan Complete. Optimizing Database...';
+        notifyListeners();
+        await _startOptimizing(startOffset: 0);
+      } else {
+        log('INDEXER: No new files discovered. Skipping database optimization.');
+      }
 
       _statusMessage = _shouldPause ? 'Scan Stopped' : 'Ready';
       _state = IndexerState.idle;
@@ -323,7 +502,7 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
 
         final artist = allArtists[i];
         final artistTracks = await _db.getTracksForArtist(artist.id);
-        final Map<int, int> albumCounts = {};
+        final Map<String, int> albumCounts = {};
         for (var track in artistTracks) {
           if (track.albumId != null) {
             albumCounts[track.albumId!] =
@@ -350,7 +529,9 @@ class LibraryIndexerService extends ChangeNotifier with UniversalLog {
         await _prefs.setInt(_progressKey, processed);
         notifyListeners();
 
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        if (i % 20 == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 2));
+        }
       }
 
       log('INDEXER: Database optimization complete.');

@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/presentation/screens/widgets/now_playing/music_waveform_progress_bar.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/viewmodels/display_view_model.dart';
 import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
+import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
 import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:aulos/data/database/app_database.dart';
@@ -23,12 +25,15 @@ class MockConnectivityViewModel extends Mock implements ConnectivityViewModel {}
 
 class MockSettingsViewModel extends Mock implements SettingsViewModel {}
 
+class MockNoiseViewModel extends Mock implements NoiseViewModel {}
+
 void main() {
   late MockPlayerViewModel mockPlayerVM;
   late MockQueueViewModel mockQueueVM;
   late MockDisplayViewModel mockDisplayVM;
   late MockConnectivityViewModel mockConnectivityVM;
   late MockSettingsViewModel mockSettingsVM;
+  late MockNoiseViewModel mockNoiseVM;
 
   setUpAll(() {
     registerFallbackValue(domain.PlaybackState.idle);
@@ -36,16 +41,22 @@ void main() {
 
   setUp(() {
     mockPlayerVM = MockPlayerViewModel();
+    when(() => mockPlayerVM.isSleepTimerActive).thenReturn(false);
+    when(() => mockPlayerVM.sleepTimeRemaining).thenReturn(Duration.zero);
     mockQueueVM = MockQueueViewModel();
     mockDisplayVM = MockDisplayViewModel();
     mockConnectivityVM = MockConnectivityViewModel();
     mockSettingsVM = MockSettingsViewModel();
+    mockNoiseVM = MockNoiseViewModel();
+
+    when(() => mockNoiseVM.masterVolume).thenReturn(0.5);
+    when(() => mockNoiseVM.addListener(any())).thenReturn(null);
+    when(() => mockNoiseVM.removeListener(any())).thenReturn(null);
 
     when(() => mockPlayerVM.state).thenReturn(domain.PlaybackState.idle);
     when(() => mockPlayerVM.position).thenReturn(Duration.zero);
     when(() => mockPlayerVM.duration).thenReturn(Duration.zero);
     when(() => mockPlayerVM.isPlaying).thenReturn(false);
-    when(() => mockPlayerVM.isMuted).thenReturn(false);
     when(() => mockPlayerVM.isRemoteMode).thenReturn(false);
     when(() => mockPlayerVM.isHostMode).thenReturn(false);
     when(() => mockPlayerVM.volume).thenReturn(1.0);
@@ -59,6 +70,10 @@ void main() {
     when(() => mockPlayerVM.currentShowNotes).thenReturn(null);
     when(() => mockPlayerVM.currentStreamMetadata).thenReturn(null);
     when(() => mockPlayerVM.currentImageUrl).thenReturn(null);
+    when(() => mockPlayerVM.isBookmarkMode).thenReturn(false);
+    when(() => mockPlayerVM.isBuffering).thenReturn(false);
+    when(() => mockPlayerVM.extractedColor).thenReturn(null);
+    when(() => mockPlayerVM.playbackSpeed).thenReturn(1.0);
     when(() => mockPlayerVM.addListener(any())).thenReturn(null);
     when(() => mockPlayerVM.removeListener(any())).thenReturn(null);
 
@@ -80,6 +95,8 @@ void main() {
     
     when(() => mockSettingsVM.themeModel).thenReturn(AulosAudioTheme.model);
     when(() => mockSettingsVM.isDynamicTheme).thenReturn(false);
+    when(() => mockSettingsVM.isVisualizerEnabled).thenReturn(false);
+    when(() => mockSettingsVM.visualizerPluginId).thenReturn('bar_spectrum');
     when(() => mockSettingsVM.addListener(any())).thenReturn(null);
     when(() => mockSettingsVM.removeListener(any())).thenReturn(null);
   });
@@ -104,6 +121,9 @@ void main() {
               ChangeNotifierProvider<SettingsViewModel>.value(
                 value: mockSettingsVM,
               ),
+              ChangeNotifierProvider<NoiseViewModel>.value(
+                value: mockNoiseVM,
+              ),
             ],
             child: const NowPlayingScreen(),
           ),
@@ -114,11 +134,22 @@ void main() {
 
   group('NowPlayingScreen', () {
     testWidgets('should render progress bar', (tester) async {
+      final track = Track(
+        id: '1',
+        title: 'Test',
+        path: 'path',
+        folderId: '1',
+        rating: 0,
+        isFavorite: false,
+        playCount: 0,
+        isAudiobook: false,
+        isPlayed: false,
+      );
+      when(() => mockPlayerVM.currentTrack).thenReturn(track.toDomain());
+
       await tester.pumpWidget(buildTestableWidget());
-      expect(
-        find.byType(Slider),
-        findsNWidgets(2),
-      ); 
+      expect(find.byType(MusicWaveformProgressBar), findsOneWidget);
+      expect(find.byType(Slider), findsOneWidget); 
     });
 
     testWidgets('should trigger like and dislike on tap', (tester) async {
@@ -126,15 +157,17 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
 
       final track = Track(
-        id: 1,
+        id: '1',
         title: 'Test',
         path: 'path',
-        folderId: 1,
+        folderId: '1',
         rating: 0,
         isFavorite: false,
         playCount: 0,
+        isAudiobook: false,
+        isPlayed: false,
       );
-      when(() => mockPlayerVM.currentTrack).thenReturn(track);
+      when(() => mockPlayerVM.currentTrack).thenReturn(track.toDomain());
       when(
         () => mockQueueVM.updateRating(any(), any()),
       ).thenAnswer((_) async => {});
@@ -144,15 +177,66 @@ void main() {
       final favFinder = find.byIcon(Icons.favorite_border);
       await tester.ensureVisible(favFinder);
       await tester.tap(favFinder);
-      verify(() => mockQueueVM.updateRating(1, 1)).called(1);
+      verify(() => mockQueueVM.updateRating('1', 1)).called(1);
 
       final thumbFinder = find.byIcon(Icons.thumb_down_alt_outlined);
       await tester.ensureVisible(thumbFinder);
       await tester.tap(thumbFinder);
-      verify(() => mockQueueVM.updateRating(1, -1)).called(1);
+      verify(() => mockQueueVM.updateRating('1', -1)).called(1);
 
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+    });
+
+    testWidgets('should render seekbar and controls in overlay when height is compact', (tester) async {
+      tester.view.physicalSize = const Size(800, 400);
+      tester.view.devicePixelRatio = 1.0;
+
+      final track = Track(
+        id: '1',
+        title: 'Test',
+        path: 'path',
+        folderId: '1',
+        rating: 0,
+        isFavorite: false,
+        playCount: 0,
+        isAudiobook: false,
+        isPlayed: false,
+      );
+      when(() => mockPlayerVM.currentTrack).thenReturn(track.toDomain());
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MusicWaveformProgressBar), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsWidgets);
+
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    });
+
+    testWidgets('should show at least playpause button when screen is extremely small', (tester) async {
+      tester.view.physicalSize = const Size(180, 180);
+      tester.view.devicePixelRatio = 1.0;
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    });
+
+    testWidgets('should show countdown timer when sleep timer is active', (tester) async {
+      when(() => mockPlayerVM.isSleepTimerActive).thenReturn(true);
+      when(() => mockPlayerVM.sleepTimeRemaining).thenReturn(const Duration(minutes: 15, seconds: 30));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.snooze_rounded), findsOneWidget);
+      expect(find.text('15:30'), findsOneWidget);
     });
   });
 }

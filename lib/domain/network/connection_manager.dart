@@ -13,7 +13,7 @@ class ConnectionManager extends ChangeNotifier {
   final HandshakeService _handshake;
   final SocketService _socket;
   final SharedPreferences _prefs;
-  final MediaLogService _logService;
+  final LogService _logService;
 
   bool _isAuthenticated = false;
   ConnectionRole _role = ConnectionRole.none;
@@ -30,12 +30,12 @@ class ConnectionManager extends ChangeNotifier {
     required HandshakeService handshake,
     required SocketService socket,
     required SharedPreferences prefs,
-    required MediaLogService logService,
+    LogService? logService,
   }) : _discovery = discovery,
        _handshake = handshake,
        _socket = socket,
        _prefs = prefs,
-       _logService = logService {
+       _logService = logService ?? NoOpLogService() {
     _loadBannedDevices();
     _socket.setEncryptionHooks(
       encrypt: (data) => _handshake.encryptPayload(data),

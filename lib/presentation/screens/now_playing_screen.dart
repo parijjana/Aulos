@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
+import 'package:aulos/features/visualizer/widgets/winamp_visualizer.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/features/library/screens/insights_screen.dart';
-import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:aulos/presentation/screens/widgets/now_playing/strategies/now_playing_strategy.dart';
 import 'package:aulos/presentation/screens/widgets/now_playing/strategies/music_strategy.dart';
 import 'package:aulos/presentation/screens/widgets/now_playing/strategies/audiobook_strategy.dart';
@@ -11,11 +10,16 @@ import 'package:aulos/presentation/screens/widgets/now_playing/strategies/podcas
 import 'package:aulos/presentation/screens/widgets/now_playing/strategies/radio_strategy.dart';
 import 'package:aulos/presentation/screens/widgets/now_playing/strategies/noise_strategy.dart';
 import 'package:provider/provider.dart';
+import 'widgets/sleep_timer_dialog.dart';
 
 import 'widgets/now_playing/now_playing_controls.dart';
 import 'widgets/now_playing/now_playing_progress.dart';
 import 'widgets/now_playing/now_playing_volume.dart';
 import 'widgets/now_playing/now_playing_content.dart';
+import 'widgets/now_playing/now_playing_background.dart';
+import 'widgets/now_playing/now_playing_insights_grab_bar.dart';
+import 'widgets/now_playing/now_playing_track_info.dart';
+import 'widgets/now_playing/now_playing_artwork.dart';
 
 class NowPlayingScreen extends StatefulWidget {
   final bool isTabbed;
@@ -50,6 +54,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     }
   }
 
+  String _formatSleepTime(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -75,10 +85,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           final bool isCompact = constraints.maxHeight < 550 || constraints.maxWidth < 400;
+          final bool useArtworkOverlay = constraints.maxHeight < 550;
 
           return Stack(
             children: [
-              if (!widget.isTabbed) _buildBackground(theme, playerVM),
+              NowPlayingBackground(vm: playerVM),
               Scrollbar(
                 controller: _scrollController,
                 child: CustomScrollView(
@@ -89,7 +100,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
                       hasScrollBody: false,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: _buildMainPlayer(playerVM, theme, constraints, isCompact, strategy),
+                        child: _buildMainPlayer(playerVM, theme, constraints, isCompact, useArtworkOverlay, strategy),
                       ),
                     ),
                     _buildSectionHeader(theme, strategy),
@@ -100,7 +111,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
                   ],
                 ),
               ),
-              _buildInsightsGrabBar(theme, primaryColor),
+              NowPlayingInsightsGrabBar(
+                primaryColor: primaryColor,
+                onTap: () => _scaffoldKey.currentState?.openEndDrawer(),
+              ),
             ],
           );
         },
@@ -108,16 +122,85 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     );
   }
 
-  Widget _buildMainPlayer(PlayerViewModel vm, ThemeData theme, BoxConstraints constraints, bool isCompact, NowPlayingStrategy strategy) {
-    final double artSize = (constraints.maxHeight * 0.45).clamp(180.0, isCompact ? 400.0 : 500.0);
+  Widget _buildMainPlayer(PlayerViewModel vm, ThemeData theme, BoxConstraints constraints, bool isCompact, bool useArtworkOverlay, NowPlayingStrategy strategy) {
+    final settingsVM = context.read<SettingsViewModel>();
+    final double artSize = (constraints.maxHeight * 0.45).clamp(140.0, isCompact ? 400.0 : 500.0);
+    
+    // Hide headers if constraints.maxHeight is extremely small (e.g. < 300) to avoid vertical overflow
+    final bool showHeader = constraints.maxHeight >= 300 && constraints.maxWidth >= 240;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(height: 20),
-        _buildAlbumArtWithControls(vm, theme, artSize, isCompact),
-        const SizedBox(height: 32),
-        _buildTrackInfo(theme, vm, isCompact),
-        if (!isCompact) ...[
+        if (showHeader) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(width: 48),
+              Text(
+                'NOW PLAYING',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      (vm.isSleepTimerActive == true) ? Icons.snooze_rounded : Icons.timer_outlined,
+                      color: (vm.isSleepTimerActive == true) ? Colors.amber : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      size: 20,
+                    ),
+                    tooltip: 'Sleep Timer',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const SleepTimerDialog(),
+                      );
+                    },
+                  ),
+                  if (vm.isSleepTimerActive == true) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatSleepTime(vm.sleepTimeRemaining),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+        NowPlayingArtwork(
+          vm: vm,
+          size: artSize,
+          isCompact: useArtworkOverlay,
+          strategy: strategy,
+        ),
+        if (constraints.maxHeight >= 220) ...[
+          const SizedBox(height: 16),
+          NowPlayingTrackInfo(vm: vm, isCompact: isCompact),
+        ],
+        if (!useArtworkOverlay) ...[
+          if (!isCompact && (settingsVM.isVisualizerEnabled == true) && vm.currentMediaType == MediaType.music) ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: WinampVisualizer(pluginId: settingsVM.visualizerPluginId ?? 'bar_spectrum'),
+            ),
+          ],
           const SizedBox(height: 24),
           if (strategy.showProgress) const NowPlayingProgress(),
           const SizedBox(height: 16),
@@ -125,86 +208,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
           const SizedBox(height: 24),
           const NowPlayingVolume(),
         ],
-        const SizedBox(height: 40),
-        Icon(Icons.keyboard_arrow_down, color: theme.colorScheme.onSurface.withValues(alpha: 0.1), size: 24),
-      ],
-    );
-  }
-
-  Widget _buildAlbumArtWithControls(PlayerViewModel vm, ThemeData theme, double size, bool isCompact) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Hero(
-          tag: 'now_playing_art',
-          child: GlassCard(
-            padding: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(40),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(40),
-              child: Container(
-                width: size,
-                height: size,
-                color: Colors.transparent,
-                child: vm.currentTrack?.coverArt != null
-                    ? Image.memory(
-                        vm.currentTrack!.coverArt!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.music_note, size: 80, color: Colors.white10),
-                      )
-                    : vm.currentImageUrl != null
-                        ? Image.network(
-                            vm.currentImageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.music_note, size: 80, color: Colors.white10),
-                          )
-                        : const Icon(Icons.music_note, size: 80, color: Colors.white10),
-              ),
-            ),
-          ),
-        ),
-        if (isCompact)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(40), color: Colors.black45),
-              child: const NowPlayingControls(isOverlay: true),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTrackInfo(ThemeData theme, PlayerViewModel vm, bool isCompact) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        children: [
-          if (vm.errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  vm.errorMessage!,
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          Text(vm.displayTitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: isCompact ? 22 : 32, fontWeight: FontWeight.w900, letterSpacing: -1.0),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 8),
-          Text(vm.currentArtistName,
-              style: TextStyle(color: theme.colorScheme.primary, fontSize: isCompact ? 14 : 18, fontWeight: FontWeight.w500)),
+        if (showHeader) ...[
+          const SizedBox(height: 20),
+          Icon(Icons.keyboard_arrow_down, color: theme.colorScheme.onSurface.withValues(alpha: 0.1), size: 24),
         ],
-      ),
+      ],
     );
   }
 
@@ -217,42 +225,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
           const SizedBox(height: 8),
           const Divider(height: 1, color: Colors.white10),
         ]),
-      ),
-    );
-  }
-
-  Widget _buildInsightsGrabBar(ThemeData theme, Color primary) {
-    return Positioned(
-      right: 0,
-      top: 0,
-      bottom: 0,
-      child: Center(
-        child: GestureDetector(
-          key: const Key('insights_grab_bar'),
-          onTap: () => _scaffoldKey.currentState?.openEndDrawer(),
-          child: Container(
-            width: 24,
-            height: 100,
-            decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-              border: Border.all(color: primary.withValues(alpha: 0.1)),
-            ),
-            child: Icon(Icons.insights, size: 16, color: primary.withValues(alpha: 0.5)),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBackground(ThemeData theme, PlayerViewModel vm) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [theme.colorScheme.primary.withValues(alpha: 0.1), theme.colorScheme.surface],
-        ),
       ),
     );
   }

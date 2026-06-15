@@ -14,7 +14,7 @@ class LogsAboutSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logService = context.watch<MediaLogService>();
+    final logService = context.watch<LogService>();
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
 
@@ -55,7 +55,7 @@ class LogsAboutSection extends StatelessWidget {
                 child: Scrollbar(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(12),
-                    child: SelectableText(
+                    child: Text(
                       logBuffer,
                       style: const TextStyle(
                         color: Colors.greenAccent, 
@@ -63,8 +63,6 @@ class LogsAboutSection extends StatelessWidget {
                         fontFamily: 'monospace', 
                         height: 1.4,
                       ),
-                      // Ensure selection is enabled
-                      enableInteractiveSelection: true,
                     ),
                   ),
                 ),

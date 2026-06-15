@@ -1,39 +1,50 @@
 import 'package:drift/drift.dart';
-import 'package:path/path.dart' as p;
 
 class Folders extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get path => text().unique()();
   TextColumn get name => text()();
-  IntColumn get parentId =>
-      integer().nullable().references(Folders, #id)(); // Hierarchical Folders
+  TextColumn get parentId =>
+      text().nullable().references(Folders, #id)(); // Hierarchical Folders
   IntColumn get folderType => integer().withDefault(const Constant(0))(); // 0: Music, 1: Audiobooks
 }
 
 class Artists extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get name => text().unique()();
   BlobColumn get photo => blob().nullable()();
+  TextColumn get bio => text().nullable()(); 
+  TextColumn get photoUrl => text().nullable()(); 
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();
 }
 
 class Albums extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get name => text()();
-  IntColumn get artistId => integer().nullable().references(Artists, #id)();
+  TextColumn get artistId => text().nullable().references(Artists, #id)();
   BlobColumn get coverArt => blob().nullable()();
+  TextColumn get coverArtUrl => text().nullable()(); 
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();
   BoolColumn get isAudiobook => boolean().withDefault(const Constant(false))();
   
   // Audiobook/Series Metadata
+  TextColumn get asin => text().nullable()();
+  TextColumn get subtitle => text().nullable()();
   TextColumn get seriesName => text().nullable()();
+  IntColumn get seriesPosition => integer().nullable()();
   TextColumn get narrator => text().nullable()();
   TextColumn get description => text().nullable()();
+  TextColumn get publisher => text().nullable()();
+  DateTimeColumn get publishedDate => dateTime().nullable()();
   BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
+  
+  // LibriVox specific fields
+  TextColumn get librivoxId => text().nullable()();
+  BoolColumn get isDownloadedViaAulos => boolean().withDefault(const Constant(false))();
 
   @override
   List<Set<Column>> get uniqueKeys => [
@@ -42,20 +53,20 @@ class Albums extends Table {
 }
 
 class Genres extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get name => text().unique()();
 }
 
 class Tracks extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get path => text().unique()();
   TextColumn get title => text()();
-  IntColumn get artistId => integer().nullable().references(Artists, #id)();
-  IntColumn get albumId => integer().nullable().references(Albums, #id)();
-  IntColumn get genreId => integer().nullable().references(Genres, #id)();
+  TextColumn get artistId => text().nullable().references(Artists, #id)();
+  TextColumn get albumId => text().nullable().references(Albums, #id)();
+  TextColumn get genreId => text().nullable().references(Genres, #id)();
   IntColumn get year => integer().nullable()();
   IntColumn get durationSeconds => integer().nullable()();
-  IntColumn get folderId => integer().references(Folders, #id)();
+  TextColumn get folderId => text().references(Folders, #id)();
   IntColumn get rating => integer().withDefault(const Constant(0))();
   BlobColumn get coverArt => blob().nullable()();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
@@ -63,11 +74,13 @@ class Tracks extends Table {
   DateTimeColumn get lastPlayed => dateTime().nullable()();
   BoolColumn get isAudiobook => boolean().withDefault(const Constant(false))();
   BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
+  BoolColumn get isStream => boolean().nullable()();
+  TextColumn get duplicateOf => text().nullable()(); // Added for collision duplicate tracking
 }
 
 class ArtistAlbumRelations extends Table {
-  IntColumn get artistId => integer().references(Artists, #id)();
-  IntColumn get albumId => integer().references(Albums, #id)();
+  TextColumn get artistId => text().references(Artists, #id)();
+  TextColumn get albumId => text().references(Albums, #id)();
   IntColumn get trackCount => integer().withDefault(const Constant(0))();
 
   @override
@@ -75,15 +88,15 @@ class ArtistAlbumRelations extends Table {
 }
 
 class Playlists extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get name => text().unique()();
   BoolColumn get isSmart => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 class PlaylistTracks extends Table {
-  IntColumn get playlistId => integer().references(Playlists, #id)();
-  IntColumn get trackId => integer().references(Tracks, #id)();
+  TextColumn get playlistId => text().references(Playlists, #id)();
+  TextColumn get trackId => text().references(Tracks, #id)();
   IntColumn get position => integer()();
 
   @override
@@ -91,13 +104,13 @@ class PlaylistTracks extends Table {
 }
 
 class QueueTracks extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get trackId => integer().references(Tracks, #id)();
+  TextColumn get id => text()();
+  TextColumn get trackId => text().references(Tracks, #id)();
   IntColumn get position => integer()();
 }
 
 class Podcasts extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get feedUrl => text().unique()();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
@@ -112,8 +125,8 @@ class Podcasts extends Table {
 }
 
 class Episodes extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get podcastId => integer().references(Podcasts, #id)();
+  TextColumn get id => text()();
+  TextColumn get podcastId => text().references(Podcasts, #id)();
   TextColumn get guid => text().unique()();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
@@ -129,17 +142,18 @@ class Episodes extends Table {
       integer().withDefault(const Constant(0))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();
+  TextColumn get duplicateOf => text().nullable()(); // Added for collision duplicate tracking
 }
 
 class RadioListeningStats extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get stationUuid => text().unique()();
   IntColumn get timeSpentSeconds => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastListened => dateTime().nullable()();
 }
 
 class Bookmarks extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get trackPath => text()();
   TextColumn get title => text()();
   IntColumn get startTimeMs => integer()();
@@ -151,15 +165,15 @@ class Bookmarks extends Table {
 }
 
 class Chapters extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get trackId => integer().references(Tracks, #id)();
+  TextColumn get id => text()();
+  TextColumn get trackId => text().references(Tracks, #id)();
   TextColumn get title => text()();
   IntColumn get startTimeMs => integer()();
   IntColumn get durationMs => integer().nullable()();
 }
 
 class PlaybackPositions extends Table {
-  IntColumn get trackId => integer()();
+  TextColumn get trackId => text()();
   IntColumn get positionMs => integer()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
@@ -169,8 +183,79 @@ class PlaybackPositions extends Table {
 
 @DataClassName('SavedMix')
 class SavedMixes extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();
   TextColumn get name => text().unique()();
   TextColumn get mixData => text()(); // JSON map of soundId -> volume
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class AudiobookFolders extends Table {
+  TextColumn get id => text()();
+  TextColumn get path => text().unique()();
+  TextColumn get name => text()();
+  TextColumn get parentId =>
+      text().nullable().references(AudiobookFolders, #id)(); 
+}
+
+class AudiobookArtists extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().unique()();
+  BlobColumn get photo => blob().nullable()();
+  TextColumn get bio => text().nullable()(); 
+  TextColumn get photoUrl => text().nullable()(); 
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
+}
+
+class Audiobooks extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get artistId => text().nullable().references(AudiobookArtists, #id)(); // References author in AudiobookArtists table
+  BlobColumn get coverArt => blob().nullable()();
+  TextColumn get coverArtUrl => text().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
+  TextColumn get asin => text().nullable()();
+  TextColumn get subtitle => text().nullable()();
+  TextColumn get seriesName => text().nullable()();
+  IntColumn get seriesPosition => integer().nullable()();
+  TextColumn get narrator => text().nullable()();
+  TextColumn get description => text().nullable()();
+  TextColumn get publisher => text().nullable()();
+  DateTimeColumn get publishedDate => dateTime().nullable()();
+  BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
+  TextColumn get librivoxId => text().nullable()();
+  BoolColumn get isDownloadedViaAulos => boolean().withDefault(const Constant(false))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {name, artistId},
+  ];
+}
+
+class AudiobookTracks extends Table {
+  TextColumn get id => text()();
+  TextColumn get path => text().unique()();
+  TextColumn get title => text()();
+  TextColumn get artistId => text().nullable().references(AudiobookArtists, #id)();
+  TextColumn get audiobookId => text().nullable().references(Audiobooks, #id)();
+  IntColumn get durationSeconds => integer().nullable()();
+  IntColumn get rating => integer().withDefault(const Constant(0))();
+  BlobColumn get coverArt => blob().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayed => dateTime().nullable()();
+  BoolColumn get isPlayed => boolean().withDefault(const Constant(false))();
+  BoolColumn get isStream => boolean().nullable()();
+  TextColumn get duplicateOf => text().nullable()(); // Added for collision duplicate tracking
+}
+
+class AudiobookChapters extends Table {
+  TextColumn get id => text()();
+  TextColumn get audiobookTrackId => text().references(AudiobookTracks, #id)();
+  TextColumn get title => text()();
+  IntColumn get startTimeMs => integer()();
+  IntColumn get durationMs => integer().nullable()();
 }

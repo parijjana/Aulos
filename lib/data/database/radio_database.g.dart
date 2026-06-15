@@ -1198,6 +1198,328 @@ class RadioCategoriesCompanion extends UpdateCompanion<RadioCategory> {
   }
 }
 
+class $RadioListeningStatsTable extends RadioListeningStats
+    with TableInfo<$RadioListeningStatsTable, RadioListeningStat> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RadioListeningStatsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _stationUuidMeta = const VerificationMeta(
+    'stationUuid',
+  );
+  @override
+  late final GeneratedColumn<String> stationUuid = GeneratedColumn<String>(
+    'station_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _timeSpentSecondsMeta = const VerificationMeta(
+    'timeSpentSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> timeSpentSeconds = GeneratedColumn<int>(
+    'time_spent_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastListenedMeta = const VerificationMeta(
+    'lastListened',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastListened = GeneratedColumn<DateTime>(
+    'last_listened',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    stationUuid,
+    timeSpentSeconds,
+    lastListened,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'radio_listening_stats';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RadioListeningStat> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('station_uuid')) {
+      context.handle(
+        _stationUuidMeta,
+        stationUuid.isAcceptableOrUnknown(
+          data['station_uuid']!,
+          _stationUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_stationUuidMeta);
+    }
+    if (data.containsKey('time_spent_seconds')) {
+      context.handle(
+        _timeSpentSecondsMeta,
+        timeSpentSeconds.isAcceptableOrUnknown(
+          data['time_spent_seconds']!,
+          _timeSpentSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_listened')) {
+      context.handle(
+        _lastListenedMeta,
+        lastListened.isAcceptableOrUnknown(
+          data['last_listened']!,
+          _lastListenedMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RadioListeningStat map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RadioListeningStat(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      stationUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}station_uuid'],
+      )!,
+      timeSpentSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}time_spent_seconds'],
+      )!,
+      lastListened: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_listened'],
+      ),
+    );
+  }
+
+  @override
+  $RadioListeningStatsTable createAlias(String alias) {
+    return $RadioListeningStatsTable(attachedDatabase, alias);
+  }
+}
+
+class RadioListeningStat extends DataClass
+    implements Insertable<RadioListeningStat> {
+  final int id;
+  final String stationUuid;
+  final int timeSpentSeconds;
+  final DateTime? lastListened;
+  const RadioListeningStat({
+    required this.id,
+    required this.stationUuid,
+    required this.timeSpentSeconds,
+    this.lastListened,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['station_uuid'] = Variable<String>(stationUuid);
+    map['time_spent_seconds'] = Variable<int>(timeSpentSeconds);
+    if (!nullToAbsent || lastListened != null) {
+      map['last_listened'] = Variable<DateTime>(lastListened);
+    }
+    return map;
+  }
+
+  RadioListeningStatsCompanion toCompanion(bool nullToAbsent) {
+    return RadioListeningStatsCompanion(
+      id: Value(id),
+      stationUuid: Value(stationUuid),
+      timeSpentSeconds: Value(timeSpentSeconds),
+      lastListened: lastListened == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastListened),
+    );
+  }
+
+  factory RadioListeningStat.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RadioListeningStat(
+      id: serializer.fromJson<int>(json['id']),
+      stationUuid: serializer.fromJson<String>(json['stationUuid']),
+      timeSpentSeconds: serializer.fromJson<int>(json['timeSpentSeconds']),
+      lastListened: serializer.fromJson<DateTime?>(json['lastListened']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'stationUuid': serializer.toJson<String>(stationUuid),
+      'timeSpentSeconds': serializer.toJson<int>(timeSpentSeconds),
+      'lastListened': serializer.toJson<DateTime?>(lastListened),
+    };
+  }
+
+  RadioListeningStat copyWith({
+    int? id,
+    String? stationUuid,
+    int? timeSpentSeconds,
+    Value<DateTime?> lastListened = const Value.absent(),
+  }) => RadioListeningStat(
+    id: id ?? this.id,
+    stationUuid: stationUuid ?? this.stationUuid,
+    timeSpentSeconds: timeSpentSeconds ?? this.timeSpentSeconds,
+    lastListened: lastListened.present ? lastListened.value : this.lastListened,
+  );
+  RadioListeningStat copyWithCompanion(RadioListeningStatsCompanion data) {
+    return RadioListeningStat(
+      id: data.id.present ? data.id.value : this.id,
+      stationUuid: data.stationUuid.present
+          ? data.stationUuid.value
+          : this.stationUuid,
+      timeSpentSeconds: data.timeSpentSeconds.present
+          ? data.timeSpentSeconds.value
+          : this.timeSpentSeconds,
+      lastListened: data.lastListened.present
+          ? data.lastListened.value
+          : this.lastListened,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RadioListeningStat(')
+          ..write('id: $id, ')
+          ..write('stationUuid: $stationUuid, ')
+          ..write('timeSpentSeconds: $timeSpentSeconds, ')
+          ..write('lastListened: $lastListened')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, stationUuid, timeSpentSeconds, lastListened);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RadioListeningStat &&
+          other.id == this.id &&
+          other.stationUuid == this.stationUuid &&
+          other.timeSpentSeconds == this.timeSpentSeconds &&
+          other.lastListened == this.lastListened);
+}
+
+class RadioListeningStatsCompanion extends UpdateCompanion<RadioListeningStat> {
+  final Value<int> id;
+  final Value<String> stationUuid;
+  final Value<int> timeSpentSeconds;
+  final Value<DateTime?> lastListened;
+  const RadioListeningStatsCompanion({
+    this.id = const Value.absent(),
+    this.stationUuid = const Value.absent(),
+    this.timeSpentSeconds = const Value.absent(),
+    this.lastListened = const Value.absent(),
+  });
+  RadioListeningStatsCompanion.insert({
+    this.id = const Value.absent(),
+    required String stationUuid,
+    this.timeSpentSeconds = const Value.absent(),
+    this.lastListened = const Value.absent(),
+  }) : stationUuid = Value(stationUuid);
+  static Insertable<RadioListeningStat> custom({
+    Expression<int>? id,
+    Expression<String>? stationUuid,
+    Expression<int>? timeSpentSeconds,
+    Expression<DateTime>? lastListened,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (stationUuid != null) 'station_uuid': stationUuid,
+      if (timeSpentSeconds != null) 'time_spent_seconds': timeSpentSeconds,
+      if (lastListened != null) 'last_listened': lastListened,
+    });
+  }
+
+  RadioListeningStatsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? stationUuid,
+    Value<int>? timeSpentSeconds,
+    Value<DateTime?>? lastListened,
+  }) {
+    return RadioListeningStatsCompanion(
+      id: id ?? this.id,
+      stationUuid: stationUuid ?? this.stationUuid,
+      timeSpentSeconds: timeSpentSeconds ?? this.timeSpentSeconds,
+      lastListened: lastListened ?? this.lastListened,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (stationUuid.present) {
+      map['station_uuid'] = Variable<String>(stationUuid.value);
+    }
+    if (timeSpentSeconds.present) {
+      map['time_spent_seconds'] = Variable<int>(timeSpentSeconds.value);
+    }
+    if (lastListened.present) {
+      map['last_listened'] = Variable<DateTime>(lastListened.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RadioListeningStatsCompanion(')
+          ..write('id: $id, ')
+          ..write('stationUuid: $stationUuid, ')
+          ..write('timeSpentSeconds: $timeSpentSeconds, ')
+          ..write('lastListened: $lastListened')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$RadioDatabase extends GeneratedDatabase {
   _$RadioDatabase(QueryExecutor e) : super(e);
   $RadioDatabaseManager get managers => $RadioDatabaseManager(this);
@@ -1205,6 +1527,8 @@ abstract class _$RadioDatabase extends GeneratedDatabase {
   late final $RadioCategoriesTable radioCategories = $RadioCategoriesTable(
     this,
   );
+  late final $RadioListeningStatsTable radioListeningStats =
+      $RadioListeningStatsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1212,6 +1536,7 @@ abstract class _$RadioDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     radioStations,
     radioCategories,
+    radioListeningStats,
   ];
 }
 
@@ -1809,6 +2134,203 @@ typedef $$RadioCategoriesTableProcessedTableManager =
       RadioCategory,
       PrefetchHooks Function()
     >;
+typedef $$RadioListeningStatsTableCreateCompanionBuilder =
+    RadioListeningStatsCompanion Function({
+      Value<int> id,
+      required String stationUuid,
+      Value<int> timeSpentSeconds,
+      Value<DateTime?> lastListened,
+    });
+typedef $$RadioListeningStatsTableUpdateCompanionBuilder =
+    RadioListeningStatsCompanion Function({
+      Value<int> id,
+      Value<String> stationUuid,
+      Value<int> timeSpentSeconds,
+      Value<DateTime?> lastListened,
+    });
+
+class $$RadioListeningStatsTableFilterComposer
+    extends Composer<_$RadioDatabase, $RadioListeningStatsTable> {
+  $$RadioListeningStatsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stationUuid => $composableBuilder(
+    column: $table.stationUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timeSpentSeconds => $composableBuilder(
+    column: $table.timeSpentSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastListened => $composableBuilder(
+    column: $table.lastListened,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RadioListeningStatsTableOrderingComposer
+    extends Composer<_$RadioDatabase, $RadioListeningStatsTable> {
+  $$RadioListeningStatsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stationUuid => $composableBuilder(
+    column: $table.stationUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get timeSpentSeconds => $composableBuilder(
+    column: $table.timeSpentSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastListened => $composableBuilder(
+    column: $table.lastListened,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RadioListeningStatsTableAnnotationComposer
+    extends Composer<_$RadioDatabase, $RadioListeningStatsTable> {
+  $$RadioListeningStatsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get stationUuid => $composableBuilder(
+    column: $table.stationUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get timeSpentSeconds => $composableBuilder(
+    column: $table.timeSpentSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastListened => $composableBuilder(
+    column: $table.lastListened,
+    builder: (column) => column,
+  );
+}
+
+class $$RadioListeningStatsTableTableManager
+    extends
+        RootTableManager<
+          _$RadioDatabase,
+          $RadioListeningStatsTable,
+          RadioListeningStat,
+          $$RadioListeningStatsTableFilterComposer,
+          $$RadioListeningStatsTableOrderingComposer,
+          $$RadioListeningStatsTableAnnotationComposer,
+          $$RadioListeningStatsTableCreateCompanionBuilder,
+          $$RadioListeningStatsTableUpdateCompanionBuilder,
+          (
+            RadioListeningStat,
+            BaseReferences<
+              _$RadioDatabase,
+              $RadioListeningStatsTable,
+              RadioListeningStat
+            >,
+          ),
+          RadioListeningStat,
+          PrefetchHooks Function()
+        > {
+  $$RadioListeningStatsTableTableManager(
+    _$RadioDatabase db,
+    $RadioListeningStatsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RadioListeningStatsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RadioListeningStatsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$RadioListeningStatsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> stationUuid = const Value.absent(),
+                Value<int> timeSpentSeconds = const Value.absent(),
+                Value<DateTime?> lastListened = const Value.absent(),
+              }) => RadioListeningStatsCompanion(
+                id: id,
+                stationUuid: stationUuid,
+                timeSpentSeconds: timeSpentSeconds,
+                lastListened: lastListened,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String stationUuid,
+                Value<int> timeSpentSeconds = const Value.absent(),
+                Value<DateTime?> lastListened = const Value.absent(),
+              }) => RadioListeningStatsCompanion.insert(
+                id: id,
+                stationUuid: stationUuid,
+                timeSpentSeconds: timeSpentSeconds,
+                lastListened: lastListened,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RadioListeningStatsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$RadioDatabase,
+      $RadioListeningStatsTable,
+      RadioListeningStat,
+      $$RadioListeningStatsTableFilterComposer,
+      $$RadioListeningStatsTableOrderingComposer,
+      $$RadioListeningStatsTableAnnotationComposer,
+      $$RadioListeningStatsTableCreateCompanionBuilder,
+      $$RadioListeningStatsTableUpdateCompanionBuilder,
+      (
+        RadioListeningStat,
+        BaseReferences<
+          _$RadioDatabase,
+          $RadioListeningStatsTable,
+          RadioListeningStat
+        >,
+      ),
+      RadioListeningStat,
+      PrefetchHooks Function()
+    >;
 
 class $RadioDatabaseManager {
   final _$RadioDatabase _db;
@@ -1817,4 +2339,6 @@ class $RadioDatabaseManager {
       $$RadioStationsTableTableManager(_db, _db.radioStations);
   $$RadioCategoriesTableTableManager get radioCategories =>
       $$RadioCategoriesTableTableManager(_db, _db.radioCategories);
+  $$RadioListeningStatsTableTableManager get radioListeningStats =>
+      $$RadioListeningStatsTableTableManager(_db, _db.radioListeningStats);
 }

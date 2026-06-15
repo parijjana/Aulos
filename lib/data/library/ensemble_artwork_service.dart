@@ -67,9 +67,19 @@ class EnsembleArtworkService {
     }
 
     if (artistImages.isEmpty) return null;
-    if (artistImages.length == 1) return artistImages.first;
+    if (artistImages.length == 1) {
+      final singleImage = artistImages.first;
+      if (localFolder != null) {
+        unawaited(_artworkService.saveToLocalFolder(localFolder, 'artist.jpg', singleImage));
+      }
+      return singleImage;
+    }
 
-    return _stitchImages(artistImages);
+    final stitched = _stitchImages(artistImages);
+    if (stitched != null && localFolder != null) {
+      unawaited(_artworkService.saveToLocalFolder(localFolder, 'artist.jpg', stitched));
+    }
+    return stitched;
   }
 
   Uint8List? _stitchImages(List<Uint8List> images) {

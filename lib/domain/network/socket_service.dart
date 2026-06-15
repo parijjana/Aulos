@@ -52,7 +52,7 @@ class MediaCommand {
   factory MediaCommand.fromJson(String source) {
     final data = jsonDecode(source) as Map<String, dynamic>;
     return MediaCommand(
-      type: CommandType.values.byName(data['type'] as String),
+      type: CommandType.values.byName(data['type']?.toString() ?? ''),
       payload: data['payload'] as Map<String, dynamic>?,
     );
   }

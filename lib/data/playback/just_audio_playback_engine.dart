@@ -7,21 +7,28 @@ import 'package:audio_session/audio_session.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:aulos/domain/playback/playback_engine.dart'
     as domain;
+import 'package:aulos/domain/playback/playback_track.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/playback/audio_service_handler.dart';
 import 'package:aulos/domain/network/log_service.dart';
 
-class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
+class JustAudioPlaybackEngine extends domain.PlaybackEngine {
   final AulosAudioHandler _handler;
+  final LogService _logService;
   final BehaviorSubject<domain.PlaybackState> _stateController =
       BehaviorSubject<domain.PlaybackState>.seeded(domain.PlaybackState.idle);
-  final StreamController<Track?> _currentTrackController =
-      StreamController<Track?>.broadcast();
+  final StreamController<PlaybackTrack?> _currentTrackController =
+      StreamController<PlaybackTrack?>.broadcast();
 
-  JustAudioPlaybackEngine({required AulosAudioHandler handler})
-      : _handler = handler {
+  JustAudioPlaybackEngine({
+    required AulosAudioHandler handler,
+    LogService? logService,
+  })  : _handler = handler,
+        _logService = logService ?? NoOpLogService() {
     _init();
   }
+
+  void log(String message) => _logService.log(message);
 
   void _init() {
     _handler.playbackState.listen((state) {
@@ -61,8 +68,19 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
   Future<void> setSource(String path) async {
     await _ensureSession();
     try {
-      log('ENGINE: Streaming source (Buffered Playback): $path');
-      await _handler.setSource(Uri.file(io.File(path).absolute.path));
+      log('ENGINE: Preparing source: $path');
+      Uri uri;
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        uri = Uri.parse(path);
+      } else {
+        final file = io.File(path);
+        if (!file.existsSync()) {
+          log('ENGINE_FAILURE: File does not exist at path: $path');
+          return;
+        }
+        uri = Uri.file(file.absolute.path);
+      }
+      await _handler.setSource(uri);
     } catch (e) {
       log('ENGINE_ERROR: Failed to set source: $e');
     }
@@ -115,13 +133,10 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
     await _handler.setRepeatMode(am);
   }
 
-  @override
-  Future<void> setMetadata(String title, String artist, {String? album, Uint8List? art}) async {
-    // MediaItem setup is usually handled within the handler when a source is loaded
-  }
+
 
   @override
-  Future<void> loadTrack(Track track) async {
+  Future<void> loadTrack(PlaybackTrack track) async {
     log('ENGINE: Loading track: "${track.title}"');
     _currentTrackController.add(track);
     
@@ -141,14 +156,13 @@ class JustAudioPlaybackEngine extends domain.PlaybackEngine with UniversalLog {
   @override
   Stream<Duration?> get durationStream => _handler.player.durationStream;
 
-  @override
-  Stream<domain.PlaybackState> get stateStream => _stateController.stream;
+
 
   @override
   Stream<domain.PlaybackState> get playbackStateStream => _stateController.stream;
 
   @override
-  Stream<Track?> get currentTrackStream => _currentTrackController.stream;
+  Stream<PlaybackTrack?> get currentTrackStream => _currentTrackController.stream;
 
   @override
   Stream<String> get externalCommandStream => _handler.customEventStream.cast<String>();

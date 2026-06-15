@@ -4,21 +4,40 @@ import 'package:aulos/data/database/radio_database.dart';
 import 'package:aulos/data/library/radio_browser_service.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class RadioSyncManager with UniversalLog {
+class RadioSyncManager {
   final RadioBrowserService _api;
   final RadioDatabase _db;
+  final LogService _logService;
   bool _isSyncing = false;
 
   RadioSyncManager({
     required RadioBrowserService api,
     required RadioDatabase db,
-  }) : _api = api, _db = db;
+    LogService? logService,
+  }) : _api = api, _db = db, _logService = logService ?? NoOpLogService();
+
+  void log(String message) => _logService.log(message);
 
   bool get isSyncing => _isSyncing;
 
-  Future<void> runInitialSync() async {
+  Future<void> runInitialSync({bool force = false}) async {
     if (_isSyncing) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final lastSyncStr = prefs.getString('last_radio_sync_time');
+    if (lastSyncStr != null && !force) {
+      final lastSync = DateTime.tryParse(lastSyncStr);
+      if (lastSync != null) {
+        final elapsed = DateTime.now().difference(lastSync);
+        if (elapsed.inDays < 30) {
+          log('RADIO: Cache is fresh (${elapsed.inDays} days old). Skipping initial sync.');
+          return;
+        }
+      }
+    }
+
     _isSyncing = true;
     
     try {
@@ -38,6 +57,7 @@ class RadioSyncManager with UniversalLog {
       await _commitStations(topStations);
       log('RADIO: Synced top 100 global stations.');
 
+      await prefs.setString('last_radio_sync_time', DateTime.now().toIso8601String());
       log('RADIO: Discovery sync complete.');
     } catch (e) {
       log('RADIO: Discovery sync failed: $e');

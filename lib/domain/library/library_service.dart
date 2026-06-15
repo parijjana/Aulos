@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 abstract class LibraryService {
-  Future<List<AudioFile>> scanDirectory(String path);
+  Future<List<AudioFile>> scanDirectory(String path, {Set<String>? existingPaths});
   Future<List<AudioFile>> discoverTracks();
 }
 

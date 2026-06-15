@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/features/audiobooks/widgets/audiobook_library_view.dart';
 import 'package:aulos/features/audiobooks/widgets/audiobook_bookmarks_sidebar.dart';
+import 'package:aulos/features/audiobooks/widgets/librivox_discover_view.dart';
 import 'package:provider/provider.dart';
 
 class AudiobookRootScreen extends StatefulWidget {
@@ -54,7 +55,7 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
                   onPageChanged: (index) => setState(() => _activeTab = index),
                   children: [
                     const AudiobookLibraryView(),
-                    _buildDiscoverPlaceholder(theme),
+                    const LibriVoxDiscoverView(),
                   ],
                 ),
               ),
@@ -107,17 +108,22 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
 
   Widget _buildUnifiedHeader(LibraryViewModel vm) {
     final theme = Theme.of(context);
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizontalPadding = screenWidth < 360 ? 12 : 24;
+    final double buttonSpacing = screenWidth < 360 ? 4 : 8;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
           if (!_isSearchExpanded) ...[
             _buildNavButton('LIBRARY', 0, _activeTab == 0, theme),
-            const SizedBox(width: 8),
+            SizedBox(width: buttonSpacing),
             _buildNavButton('DISCOVER', 1, _activeTab == 1, theme),
           ],
           const Spacer(),
-          _buildSearchArea(vm, theme),
+          if (_activeTab == 0)
+            _buildSearchArea(vm, theme),
         ],
       ),
     );
@@ -137,13 +143,8 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(
-              _isSearchExpanded ? Icons.close_rounded : Icons.search_rounded,
-              size: 18,
-              color: _isSearchExpanded ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-            onPressed: () {
+          InkWell(
+            onTap: () {
               setState(() {
                 _isSearchExpanded = !_isSearchExpanded;
                 if (!_isSearchExpanded) {
@@ -152,7 +153,18 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
                 }
               });
             },
-            visualDensity: VisualDensity.compact,
+            borderRadius: BorderRadius.circular(18),
+            child: SizedBox(
+              width: 34,
+              height: 34,
+              child: Center(
+                child: Icon(
+                  _isSearchExpanded ? Icons.close_rounded : Icons.search_rounded,
+                  size: 18,
+                  color: _isSearchExpanded ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
           ),
           if (_isSearchExpanded)
             Expanded(
@@ -176,11 +188,16 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
   }
 
   Widget _buildNavButton(String label, int index, bool isActive, ThemeData theme) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizPadding = screenWidth < 360 ? 10 : 16;
+    final double vertPadding = screenWidth < 360 ? 5 : 8;
+    final double fontSize = screenWidth < 360 ? 9 : 10;
+
     return InkWell(
       onTap: () => _navigateToPage(index),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: horizPadding, vertical: vertPadding),
         decoration: BoxDecoration(
           color: isActive ? theme.colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
@@ -189,27 +206,11 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: fontSize,
             fontWeight: FontWeight.w900,
             color: isActive ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDiscoverPlaceholder(ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.public_rounded, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-          const SizedBox(height: 16),
-          Text(
-            'LibriVox & Internet Archive Integration Coming Soon',
-            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.24), fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-        ],
       ),
     );
   }

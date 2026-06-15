@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart';
 import 'package:aulos/features/noise/models/noise_item.dart';
 import 'package:aulos/data/playback/ambient_mixer_service.dart';
-import 'package:aulos/data/database/app_database.dart';
-import 'package:aulos/domain/playback/playback_engine.dart' as engine_domain;
+import 'package:aulos/data/database/noise_database.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'package:aulos/core/utils/id_generator.dart';
 
 class NoiseViewModel extends ChangeNotifier {
   final AmbientMixerService _mixerService;
-  final AppDatabase _db;
+  final NoiseDatabase _db;
 
   final List<NoiseItem> _items = [
     // NATURE
@@ -138,7 +138,7 @@ class NoiseViewModel extends ChangeNotifier {
 
   NoiseViewModel({
     required AmbientMixerService mixerService,
-    required AppDatabase db,
+    required NoiseDatabase db,
   }) : _mixerService = mixerService,
        _db = db {
     _init();
@@ -235,7 +235,9 @@ class NoiseViewModel extends ChangeNotifier {
     if (_activeVolumes.isEmpty) return;
     
     final mixData = jsonEncode(_activeVolumes);
+    final mixId = generateContentId("$name|$mixData|${DateTime.now().millisecondsSinceEpoch}");
     await _db.saveMix(SavedMixesCompanion.insert(
+      id: mixId,
       name: name,
       mixData: mixData,
       createdAt: Value(DateTime.now()),
@@ -245,7 +247,7 @@ class NoiseViewModel extends ChangeNotifier {
 
   Future<void> playMix(SavedMix mix) async {
     await clearMix();
-    final Map<String, dynamic> data = jsonDecode(mix.mixData);
+    final Map<String, dynamic> data = jsonDecode(mix.mixData) as Map<String, dynamic>;
     
     for (final entry in data.entries) {
       final id = entry.key;
@@ -272,7 +274,7 @@ class NoiseViewModel extends ChangeNotifier {
     return sources;
   }
 
-  Future<void> deleteMix(int id) async {
+  Future<void> deleteMix(String id) async {
     await _db.deleteMix(id);
     await _loadSavedMixes();
   }

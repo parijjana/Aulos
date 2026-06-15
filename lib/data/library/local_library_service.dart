@@ -4,9 +4,6 @@ import 'package:aulos/domain/library/library_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:on_audio_query_pluse/on_audio_query.dart';
 import 'dart:developer' as developer;
-import 'dart:convert';
-import 'dart:io' show Platform;
-
 import 'package:platform/platform.dart';
 
 import 'package:aulos/domain/core/permission_service.dart';
@@ -40,7 +37,7 @@ class LocalLibraryService implements LibraryService {
        _platform = platform;
 
   @override
-  Future<List<AudioFile>> scanDirectory(String path) async {
+  Future<List<AudioFile>> scanDirectory(String path, {Set<String>? existingPaths}) async {
     developer.log('Scanner: Accessing path $path', name: 'LocalLibraryService');
     final directory = _fileSystem.directory(path);
 
@@ -54,6 +51,17 @@ class LocalLibraryService implements LibraryService {
     try {
       await for (final entity in directory.list(recursive: true, followLinks: false)) {
         if (entity is File && _isAudioFile(entity.path)) {
+          if (existingPaths != null && existingPaths.contains(entity.path)) {
+            files.add(
+              AudioFile(
+                path: entity.path,
+                title: p.basenameWithoutExtension(entity.path),
+                artist: 'Unknown Artist',
+                chapters: const [],
+              ),
+            );
+            continue;
+          }
           try {
             final tag = await _tagsWrapper.read(entity.path);
             
@@ -63,9 +71,9 @@ class LocalLibraryService implements LibraryService {
             files.add(
               AudioFile(
                 path: entity.path,
-                title: cueData['title'] ?? tag?.title ?? p.basenameWithoutExtension(entity.path),
-                artist: cueData['artist'] ?? tag?.trackArtist ?? tag?.albumArtist ?? 'Unknown Artist',
-                album: cueData['album'] ?? tag?.album,
+                title: (cueData['title'] as String?) ?? tag?.title ?? p.basenameWithoutExtension(entity.path),
+                artist: (cueData['artist'] as String?) ?? tag?.trackArtist ?? tag?.albumArtist ?? 'Unknown Artist',
+                album: (cueData['album'] as String?) ?? tag?.album,
                 albumArtist: tag?.albumArtist,
                 genre: tag?.genre,
                 year: tag?.year,

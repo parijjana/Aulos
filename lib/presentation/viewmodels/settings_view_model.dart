@@ -21,9 +21,14 @@ enum LibraryViewType { list, grid, orbit }
 
 class SettingsViewModel extends ChangeNotifier {
   final SharedPreferences _prefs;
+  VoidCallback? _onWatcherSettingsChanged;
 
   SettingsViewModel(this._prefs) {
     _loadSettings();
+  }
+
+  void setWatcherSettingsChangedCallback(VoidCallback cb) {
+    _onWatcherSettingsChanged = cb;
   }
 
   String _appName = 'Aulos';
@@ -34,6 +39,9 @@ class SettingsViewModel extends ChangeNotifier {
   bool _isDynamicTheme = true;
   ArtworkShape _artworkShape = ArtworkShape.square;
   LibraryViewType _libraryViewType = LibraryViewType.grid;
+  bool _isFolderWatcherEnabled = true;
+  bool _isVisualizerEnabled = false;
+  String _visualizerPluginId = 'bar_spectrum';
 
   int _mainTabIndex = 0;
   int _libraryHubTabIndex = 0;
@@ -43,13 +51,14 @@ class SettingsViewModel extends ChangeNotifier {
 
   // Last Played Session State
   String? _lastRadioStationUuid;
-  int? _lastPodcastEpisodeId;
+  String? _lastPodcastEpisodeId;
 
   // Podcast Settings
   String? _podcastStorageLocation;
   bool _autoDownloadNewEpisodes = false;
   int _podcastKeepCount = 5; 
   int _podcastKeepDays = 30; 
+  DateTime? _lastPodcastRefreshTime;
 
   // Getters
   String get appName => _appName;
@@ -66,11 +75,15 @@ class SettingsViewModel extends ChangeNotifier {
   bool get showHostAnimation => _showHostAnimation;
   bool get showRemoteAnimation => _showRemoteAnimation;
   String? get lastRadioStationUuid => _lastRadioStationUuid;
-  int? get lastPodcastEpisodeId => _lastPodcastEpisodeId;
+  String? get lastPodcastEpisodeId => _lastPodcastEpisodeId;
   String? get podcastStorageLocation => _podcastStorageLocation;
   bool get autoDownloadNewEpisodes => _autoDownloadNewEpisodes;
   int get podcastKeepCount => _podcastKeepCount;
   int get podcastKeepDays => _podcastKeepDays;
+  DateTime? get lastPodcastRefreshTime => _lastPodcastRefreshTime;
+  bool get isFolderWatcherEnabled => _isFolderWatcherEnabled;
+  bool get isVisualizerEnabled => _isVisualizerEnabled;
+  String get visualizerPluginId => _visualizerPluginId;
 
   final List<ThemerModel> _availableThemes = [
     AulosAudioTheme.model,
@@ -103,11 +116,20 @@ class SettingsViewModel extends ChangeNotifier {
     _showHostAnimation = _prefs.getBool('show_host_animation') ?? true;
     _showRemoteAnimation = _prefs.getBool('show_remote_animation') ?? true;
     _lastRadioStationUuid = _prefs.getString('last_radio_station_uuid');
-    _lastPodcastEpisodeId = _prefs.getInt('last_podcast_episode_id');
+    try {
+      _lastPodcastEpisodeId = _prefs.getString('last_podcast_episode_id');
+    } catch (_) {
+      _lastPodcastEpisodeId = _prefs.get('last_podcast_episode_id')?.toString();
+    }
     _podcastStorageLocation = _prefs.getString('podcast_storage_location');
     _autoDownloadNewEpisodes = _prefs.getBool('auto_download_podcasts') ?? false;
     _podcastKeepCount = _prefs.getInt('podcast_keep_count') ?? 5;
     _podcastKeepDays = _prefs.getInt('podcast_keep_days') ?? 30;
+    _isFolderWatcherEnabled = _prefs.getBool('is_folder_watcher_enabled') ?? true;
+    _isVisualizerEnabled = _prefs.getBool('is_visualizer_enabled') ?? false;
+    _visualizerPluginId = _prefs.getString('visualizer_plugin_id') ?? 'bar_spectrum';
+    final refreshStr = _prefs.getString('last_podcast_refresh_time');
+    _lastPodcastRefreshTime = refreshStr != null ? DateTime.tryParse(refreshStr) : null;
 
     final themeName = _prefs.getString('theme_name');
     if (themeName != null) {
@@ -129,12 +151,12 @@ class SettingsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setLastPodcastEpisode(int? id) async {
+  Future<void> setLastPodcastEpisode(String? id) async {
     _lastPodcastEpisodeId = id;
     if (id == null) {
       await _prefs.remove('last_podcast_episode_id');
     } else {
-      await _prefs.setInt('last_podcast_episode_id', id);
+      await _prefs.setString('last_podcast_episode_id', id);
     }
     notifyListeners();
   }
@@ -161,6 +183,7 @@ class SettingsViewModel extends ChangeNotifier {
     if (!_monitoredFolders.contains(path)) {
       _monitoredFolders.add(path);
       await _prefs.setStringList('monitored_folders', _monitoredFolders);
+      _onWatcherSettingsChanged?.call();
       notifyListeners();
     }
   }
@@ -168,6 +191,7 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> removeMonitoredFolder(String path) async {
     if (_monitoredFolders.remove(path)) {
       await _prefs.setStringList('monitored_folders', _monitoredFolders);
+      _onWatcherSettingsChanged?.call();
       notifyListeners();
     }
   }
@@ -176,6 +200,7 @@ class SettingsViewModel extends ChangeNotifier {
     if (!_audiobookFolders.contains(path)) {
       _audiobookFolders.add(path);
       await _prefs.setStringList('audiobook_folders', _audiobookFolders);
+      _onWatcherSettingsChanged?.call();
       notifyListeners();
     }
   }
@@ -183,6 +208,7 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> removeAudiobookFolder(String path) async {
     if (_audiobookFolders.remove(path)) {
       await _prefs.setStringList('audiobook_folders', _audiobookFolders);
+      _onWatcherSettingsChanged?.call();
       notifyListeners();
     }
   }
@@ -219,6 +245,13 @@ class SettingsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setIsFolderWatcherEnabled(bool val) async {
+    _isFolderWatcherEnabled = val;
+    await _prefs.setBool('is_folder_watcher_enabled', val);
+    _onWatcherSettingsChanged?.call();
+    notifyListeners();
+  }
+
   Future<void> setPodcastStorageLocation(String path) async {
     _podcastStorageLocation = path;
     await _prefs.setString('podcast_storage_location', path);
@@ -240,6 +273,24 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> setPodcastKeepDays(int days) async {
     _podcastKeepDays = days;
     await _prefs.setInt('podcast_keep_days', days);
+    notifyListeners();
+  }
+
+  Future<void> setLastPodcastRefreshTime(DateTime time) async {
+    _lastPodcastRefreshTime = time;
+    await _prefs.setString('last_podcast_refresh_time', time.toIso8601String());
+    notifyListeners();
+  }
+
+  Future<void> setIsVisualizerEnabled(bool val) async {
+    _isVisualizerEnabled = val;
+    await _prefs.setBool('is_visualizer_enabled', val);
+    notifyListeners();
+  }
+
+  Future<void> setVisualizerPluginId(String id) async {
+    _visualizerPluginId = id;
+    await _prefs.setString('visualizer_plugin_id', id);
     notifyListeners();
   }
 }

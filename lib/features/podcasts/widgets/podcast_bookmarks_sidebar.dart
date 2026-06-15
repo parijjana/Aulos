@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/playback_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 
@@ -8,7 +9,7 @@ class PodcastBookmarksSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final db = context.read<AppDatabase>();
+    final db = context.read<PlaybackDatabase>();
     final playerVM = context.read<PlayerViewModel>();
     final theme = Theme.of(context);
 
@@ -79,7 +80,7 @@ class _BookmarkCard extends StatelessWidget {
   final Bookmark bookmark;
   final PlayerViewModel playerVM;
   final ThemeData theme;
-  final AppDatabase db;
+  final PlaybackDatabase db;
 
   const _BookmarkCard({required this.bookmark, required this.playerVM, required this.theme, required this.db});
 

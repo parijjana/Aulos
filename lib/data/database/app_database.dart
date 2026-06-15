@@ -7,8 +7,10 @@ import 'package:path/path.dart' as p;
 import 'tables.dart';
 import 'daos/library_dao.dart';
 import 'daos/playlist_dao.dart';
-import 'daos/podcast_dao.dart';
 import 'daos/analytics_dao.dart';
+import '../../core/utils/id_generator.dart';
+
+import 'package:aulos/domain/playback/playback_track.dart' as dom_track;
 
 export 'tables.dart';
 
@@ -25,18 +27,10 @@ part 'app_database.g.dart';
     PlaylistTracks,
     QueueTracks,
     ArtistAlbumRelations,
-    Podcasts,
-    Episodes,
-    Bookmarks,
-    RadioListeningStats,
-    PlaybackPositions,
-    SavedMixes,
-    Chapters,
   ],
   daos: [
     LibraryDao,
     PlaylistDao,
-    PodcastDao,
     AnalyticsDao,
   ],
 )
@@ -45,235 +39,111 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 25;
+
+  Future<void> _safeAddColumn(Migrator m, TableInfo table, GeneratedColumn column) async {
+    try {
+      await m.addColumn(table, column);
+    } catch (e) {
+      final err = e.toString().toLowerCase();
+      if (err.contains('duplicate column name') || 
+          err.contains('already exists') || 
+          err.contains('sqlite_error')) {
+        // Ignored duplicate column
+        return;
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _safeDeleteTable(Migrator m, String tableName) async {
+    try {
+      await m.deleteTable(tableName);
+    } catch (e) {
+      final err = e.toString().toLowerCase();
+      if (err.contains('no such table') || err.contains('sqlite_error')) {
+        return;
+      }
+      rethrow;
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
       await into(playlists).insert(
-        PlaylistsCompanion.insert(name: 'Likes', isSmart: const Value(true)),
+        PlaylistsCompanion.insert(id: generateContentId('Likes'), name: 'Likes', isSmart: const Value(true)),
       );
       await into(playlists).insert(
-        PlaylistsCompanion.insert(name: 'Dislikes', isSmart: const Value(true)),
+        PlaylistsCompanion.insert(id: generateContentId('Dislikes'), name: 'Dislikes', isSmart: const Value(true)),
       );
     },
     onUpgrade: (m, from, to) async {
-      if (from < 7) {
+      if (from < 25) {
+        // Recreate all tables to migrate from old integer primary keys to text/string primary keys
         for (final table in allTables) {
-          await m.deleteTable(table.actualTableName);
+          await _safeDeleteTable(m, table.actualTableName);
         }
         await m.createAll();
         await into(playlists).insert(
-          PlaylistsCompanion.insert(name: 'Likes', isSmart: const Value(true)),
+          PlaylistsCompanion.insert(id: generateContentId('Likes'), name: 'Likes', isSmart: const Value(true)),
         );
         await into(playlists).insert(
-          PlaylistsCompanion.insert(
-            name: 'Dislikes',
-            isSmart: const Value(true),
-          ),
+          PlaylistsCompanion.insert(id: generateContentId('Dislikes'), name: 'Dislikes', isSmart: const Value(true)),
         );
-      } else if (from < 8) {
-        await m.addColumn(artists, artists.photo);
-      }
-      if (from < 9) {
-        await m.createTable(podcasts);
-        await m.createTable(episodes);
-      }
-      if (from < 10) {
-        try {
-          await m.addColumn(episodes, episodes.localFilePath);
-          await m.addColumn(episodes, episodes.downloadState);
-        } catch (_) {}
-      }
-      if (from < 11) {
-        try {
-          await m.addColumn(podcasts, podcasts.image);
-        } catch (_) {}
-      }
-      if (from < 12) {
-        try {
-          await m.addColumn(episodes, episodes.isPinned);
-        } catch (_) {}
-      }
-      if (from < 13) {
-        await m.createTable(bookmarks);
-      }
-      if (from < 14) {
-        await m.createTable(radioListeningStats);
-        await m.addColumn(tracks, tracks.isFavorite);
-        await m.addColumn(tracks, tracks.playCount);
-        await m.addColumn(tracks, tracks.lastPlayed);
-        await m.addColumn(artists, artists.isFavorite);
-        await m.addColumn(artists, artists.playCount);
-        await m.addColumn(artists, artists.lastPlayed);
-        await m.addColumn(albums, albums.isFavorite);
-        await m.addColumn(albums, albums.playCount);
-        await m.addColumn(albums, albums.lastPlayed);
-        await m.addColumn(podcasts, podcasts.isFavorite);
-        await m.addColumn(podcasts, podcasts.playCount);
-        await m.addColumn(podcasts, podcasts.lastPlayed);
-        await m.addColumn(episodes, episodes.playCount);
-        await m.addColumn(episodes, episodes.lastPlayed);
-      }
-      if (from < 15) {
-        await m.addColumn(bookmarks, bookmarks.endTimeMs);
-      }
-      if (from < 16) {
-        // RESET: Drop and recreate bookmarks due to previous schema corruption
-        await m.deleteTable(bookmarks.actualTableName);
-        await m.createTable(bookmarks);
-      }
-      if (from < 17) {
-        await m.createTable(playbackPositions);
-      }
-      if (from < 18) {
-        await m.createTable(savedMixes);
-      }
-      if (from < 19) {
-        await m.addColumn(folders, folders.folderType);
-        await m.addColumn(albums, albums.isAudiobook);
-        await m.addColumn(tracks, tracks.isAudiobook);
-      }
-      if (from < 20) {
-        await m.addColumn(albums, albums.seriesName);
-        await m.addColumn(albums, albums.narrator);
-        await m.addColumn(albums, albums.description);
-        await m.addColumn(albums, albums.isPlayed);
-        await m.addColumn(tracks, tracks.isPlayed);
-        await m.addColumn(bookmarks, bookmarks.contextType);
-      }
-      if (from < 21) {
-        await m.createTable(chapters);
       }
     },
   );
 
   // Delegation methods
-  Future<int> addFolder(FoldersCompanion folder) => libraryDao.addFolder(folder);
+  Future<void> addFolder(FoldersCompanion folder) => libraryDao.addFolder(folder);
   Future<List<Folder>> getAllFolders() => libraryDao.getAllFolders();
-  Future<List<Folder>> getRootFolders() => libraryDao.getRootFolders();
-  Future<List<Folder>> getSubFolders(int parentId) => libraryDao.getSubFolders(parentId);
-  Future<int> ensureFolder(String path, {int? parentId, int folderType = 0}) => libraryDao.ensureFolder(path, parentId: parentId, folderType: folderType);
-  Future<int> ensureArtist(String name) => libraryDao.ensureArtist(name);
-  Future<int> ensureAlbum(String name, int? artistId, {Uint8List? coverArt, bool isAudiobook = false}) => libraryDao.ensureAlbum(name, artistId, coverArt: coverArt, isAudiobook: isAudiobook);
-  Future<int> ensureGenre(String name) => libraryDao.ensureGenre(name);
+  Future<List<Folder>> getRootFolders({int folderType = 0}) => libraryDao.getRootFolders(folderType: folderType);
+  Future<List<Folder>> getSubFolders(String parentId, {int folderType = 0}) => libraryDao.getSubFolders(parentId, folderType: folderType);
+  Future<String> ensureFolder(String path, {String? parentId, int folderType = 0}) => libraryDao.ensureFolder(path, parentId: parentId, folderType: folderType);
+  Future<String> ensureArtist(String name) => libraryDao.ensureArtist(name);
+  Future<String> ensureAlbum(String name, String? artistId, {Uint8List? coverArt, bool isAudiobook = false}) => libraryDao.ensureAlbum(name, artistId, coverArt: coverArt, isAudiobook: isAudiobook);
+  Future<String> ensureGenre(String name) => libraryDao.ensureGenre(name);
   Future<List<Artist>> getAllArtists() => libraryDao.getAllArtists();
   Future<List<Album>> getAllAlbums() => libraryDao.getAllAlbums();
   Future<List<Genre>> getAllGenres() => libraryDao.getAllGenres();
   Future<List<int>> getAllYears() => libraryDao.getAllYears();
-  Future<List<Track>> getTracksForArtist(int artistId) => libraryDao.getTracksForArtist(artistId);
-  Future<List<Track>> getTracksForAlbum(int albumId) => libraryDao.getTracksForAlbum(albumId);
-  Future<List<Track>> getTracksForGenre(int genreId) => libraryDao.getTracksForGenre(genreId);
+  Future<List<Track>> getTracksForArtist(String artistId) => libraryDao.getTracksForArtist(artistId);
+  Future<List<Track>> getTracksForAlbum(String albumId) => libraryDao.getTracksForAlbum(albumId);
+  Future<List<Track>> getTracksForGenre(String genreId) => libraryDao.getTracksForGenre(genreId);
   Future<List<Track>> getTracksForYear(int year) => libraryDao.getTracksForYear(year);
-  Future<void> updateAlbumArt(int albumId, Uint8List art) => libraryDao.updateAlbumArt(albumId, art);
-  Future<void> updateArtistPhoto(int artistId, Uint8List photo) => libraryDao.updateArtistPhoto(artistId, photo);
-  Future<void> updateTrackArt(int trackId, Uint8List art) => libraryDao.updateTrackArt(trackId, art);
-  Future<List<Track>> getTracksForArtistInAlbum(int artistId, int albumId) => libraryDao.getTracksForArtistInAlbum(artistId, albumId);
+  Future<void> updateAlbumArt(String albumId, Uint8List art) => libraryDao.updateAlbumArt(albumId, art);
+  Future<void> updateArtistPhoto(String artistId, Uint8List photo) => libraryDao.updateArtistPhoto(artistId, photo);
+  Future<void> updateTrackArt(String trackId, Uint8List art) => libraryDao.updateTrackArt(trackId, art);
+  Future<List<Track>> getTracksForArtistInAlbum(String artistId, String albumId) => libraryDao.getTracksForArtistInAlbum(artistId, albumId);
   Future<void> cacheArtistAlbumRelations(List<ArtistAlbumRelation> relations) => libraryDao.cacheArtistAlbumRelations(relations);
   Future<void> addTracks(List<TracksCompanion> trackCompanions) => libraryDao.addTracks(trackCompanions);
-  Future<List<Track>> getTracksForFolder(int folderId) => libraryDao.getTracksForFolder(folderId);
+  Future<List<Track>> getTracksForFolder(String folderId) => libraryDao.getTracksForFolder(folderId);
   Future<List<Track>> getAllTracks() => libraryDao.getAllTracks();
-  Future<void> updateTrackRating(int trackId, int rating) => libraryDao.updateTrackRating(trackId, rating);
+  Future<void> updateTrackRating(String trackId, int rating) => libraryDao.updateTrackRating(trackId, rating);
   Future<List<Track>> getLikedTracks() => libraryDao.getLikedTracks();
   Future<List<Track>> getDislikedTracks() => libraryDao.getDislikedTracks();
 
-  // Audiobook Specific
-  Future<List<Album>> getAudiobooks() => (select(albums)..where((a) => a.isAudiobook.equals(true))).get();
-  Future<List<Track>> getChaptersForBook(int bookId) => (select(tracks)..where((t) => t.albumId.equals(bookId))).get();
-
-  Future<void> addChapters(List<ChaptersCompanion> companions) => libraryDao.addChapters(companions);
-  Future<List<Chapter>> getChaptersForTrack(int trackId) => libraryDao.getChaptersForTrack(trackId);
-
   Future<List<Playlist>> getAllPlaylists() => playlistDao.getAllPlaylists();
-  Future<void> deletePlaylist(int id) => playlistDao.deletePlaylist(id);
-  Future<void> savePlaylistWithTracks(String name, List<int> trackIds, {bool isSmart = false}) => playlistDao.savePlaylistWithTracks(name, trackIds, isSmart: isSmart);
-  Future<List<Track>> getTracksForPlaylist(int playlistId) => playlistDao.getTracksForPlaylist(playlistId);
+  Future<void> deletePlaylist(String id) => playlistDao.deletePlaylist(id);
+  Future<void> savePlaylistWithTracks(String name, List<String> trackIds, {bool isSmart = false}) => playlistDao.savePlaylistWithTracks(name, trackIds, isSmart: isSmart);
+  Future<List<Track>> getTracksForPlaylist(String playlistId) => playlistDao.getTracksForPlaylist(playlistId);
   Future<void> clearQueue() => playlistDao.clearQueue();
-  Future<void> saveQueue(List<int> trackIds) => playlistDao.saveQueue(trackIds);
+  Future<void> saveQueue(List<String> trackIds) => playlistDao.saveQueue(trackIds);
   Future<List<Track>> getQueue() => playlistDao.getQueue();
 
-  Future<int> addPodcast(PodcastsCompanion podcast) => podcastDao.addPodcast(podcast);
-  Future<void> updatePodcast(int id, PodcastsCompanion podcast) => podcastDao.updatePodcast(id, podcast);
-  Future<void> deletePodcast(int id) => podcastDao.deletePodcast(id);
-  Future<List<Podcast>> getAllPodcasts() => podcastDao.getAllPodcasts();
-  Future<Podcast?> getPodcastByFeedUrl(String url) => podcastDao.getPodcastByFeedUrl(url);
-  Future<void> addEpisodes(List<EpisodesCompanion> companions) => podcastDao.addEpisodes(companions);
-  Future<List<Episode>> getEpisodesForPodcast(int podcastId) => podcastDao.getEpisodesForPodcast(podcastId);
-  
-  Future<void> updateEpisodePlayback(
-    int id, {
-    int? positionSeconds,
-    bool? isPlayed,
-    int? downloadState,
-    String? localFilePath,
-    bool? isPinned,
-  }) => podcastDao.updateEpisodePlayback(
-        id,
-        positionSeconds: positionSeconds,
-        isPlayed: isPlayed,
-        downloadState: downloadState,
-        localFilePath: localFilePath,
-        isPinned: isPinned,
-      );
-
-  Future<int> saveBookmark(BookmarksCompanion companion) => into(bookmarks).insert(companion);
-  Future<List<Bookmark>> getBookmarksForTrack(String path) => (select(bookmarks)..where((t) => t.trackPath.equals(path))).get();
-  
-  // Segregated Bookmarks
-  Future<List<Bookmark>> getPodcastBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(1))).get();
-  Future<List<Bookmark>> getAudiobookBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(2))).get();
-  Stream<List<Bookmark>> watchAudiobookBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(2))).watch();
-  Stream<List<Bookmark>> watchPodcastBookmarks() => (select(bookmarks)..where((t) => t.contextType.equals(1))).watch();
-
-  Future<void> deleteBookmark(int id) => (delete(bookmarks)..where((t) => t.id.equals(id))).go();
-  Future<void> deleteBookmarksForTrack(String path) => (delete(bookmarks)..where((t) => t.trackPath.equals(path))).go();
-  Future<void> updateBookmarkPaths(String oldPath, String newPath) {
-    return (update(bookmarks)..where((t) => t.trackPath.equals(oldPath)))
-        .write(BookmarksCompanion(trackPath: Value(newPath)));
-  }
-
-  // Playback Positions
-  Future<void> savePlaybackPosition(int trackId, int positionMs) {
-    return into(playbackPositions).insert(
-      PlaybackPositionsCompanion(
-        trackId: Value(trackId),
-        positionMs: Value(positionMs),
-        updatedAt: Value(DateTime.now()),
-      ),
-      mode: InsertMode.insertOrReplace,
-    );
-  }
-
-  Future<PlaybackPosition?> getPlaybackPosition(int trackId) {
-    return (select(playbackPositions)..where((t) => t.trackId.equals(trackId)))
-        .getSingleOrNull();
-  }
-
-  Future<void> deletePlaybackPosition(int trackId) {
-    return (delete(playbackPositions)..where((t) => t.trackId.equals(trackId))).go();
-  }
-
-  // Saved Mixes (Ambient Mixer)
-  Future<int> saveMix(SavedMixesCompanion companion) => into(savedMixes).insert(companion, mode: InsertMode.insertOrReplace);
-  Future<List<SavedMix>> getAllMixes() => select(savedMixes).get();
-  Future<void> deleteMix(int id) => (delete(savedMixes)..where((t) => t.id.equals(id))).go();
-
   // Analytics Delegation
-  Future<void> setTrackFavorite(int id, bool favorite) => analyticsDao.setTrackFavorite(id, favorite);
-  Future<void> setArtistFavorite(int id, bool favorite) => analyticsDao.setArtistFavorite(id, favorite);
-  Future<void> setAlbumFavorite(int id, bool favorite) => analyticsDao.setAlbumFavorite(id, favorite);
-  Future<void> setPodcastFavorite(int id, bool favorite) => analyticsDao.setPodcastFavorite(id, favorite);
-  Future<void> recordTrackPlay(int id) => analyticsDao.recordTrackPlay(id);
-  Future<void> recordArtistPlay(int id) => analyticsDao.recordArtistPlay(id);
-  Future<void> recordAlbumPlay(int id) => analyticsDao.recordAlbumPlay(id);
-  Future<void> recordRadioListen(String uuid, int seconds) => analyticsDao.recordRadioListen(uuid, seconds);
+  Future<void> setTrackFavorite(String id, bool favorite) => analyticsDao.setTrackFavorite(id, favorite);
+  Future<void> setArtistFavorite(String id, bool favorite) => analyticsDao.setArtistFavorite(id, favorite);
+  Future<void> setAlbumFavorite(String id, bool favorite) => analyticsDao.setAlbumFavorite(id, favorite);
+  Future<void> recordTrackPlay(String id) => analyticsDao.recordTrackPlay(id);
+  Future<void> recordArtistPlay(String id) => analyticsDao.recordArtistPlay(id);
+  Future<void> recordAlbumPlay(String id) => analyticsDao.recordAlbumPlay(id);
   Stream<List<Track>> watchFavoriteTracks() => analyticsDao.watchFavoriteTracks();
   Stream<List<Artist>> watchFavoriteArtists() => analyticsDao.watchFavoriteArtists();
   Stream<List<Album>> watchFavoriteAlbums() => analyticsDao.watchFavoriteAlbums();
-  Stream<List<Podcast>> watchFavoritePodcasts() => analyticsDao.watchFavoritePodcasts();
   Stream<List<Track>> watchMostPlayedTracks({int limit = 20}) => analyticsDao.watchMostPlayedTracks(limit: limit);
-  Stream<List<RadioListeningStat>> watchRadioStats({int limit = 10}) => analyticsDao.watchRadioStats(limit: limit);
 }
 
 LazyDatabase _openConnection() {
@@ -282,4 +152,28 @@ LazyDatabase _openConnection() {
     final file = File(p.join(dbFolder.path, 'localaudio.sqlite'));
     return NativeDatabase(file);
   });
+}
+
+extension TrackToDomain on Track {
+  dom_track.PlaybackTrack toDomain() {
+    return dom_track.PlaybackTrack(
+      id: id,
+      path: path,
+      title: title,
+      artistId: artistId,
+      albumId: albumId,
+      genreId: genreId,
+      year: year,
+      duration: durationSeconds != null ? Duration(seconds: durationSeconds!) : null,
+      folderId: folderId,
+      rating: rating,
+      coverArt: coverArt,
+      isFavorite: isFavorite,
+      playCount: playCount,
+      lastPlayed: lastPlayed,
+      isAudiobook: isAudiobook,
+      isPlayed: isPlayed,
+      isStream: isStream,
+    );
+  }
 }

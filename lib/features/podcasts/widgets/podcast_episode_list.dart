@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class PodcastEpisodeList extends StatelessWidget {
   final List<Episode> episodes;
@@ -18,7 +20,8 @@ class PodcastEpisodeList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final podcastVM = context.read<PodcastViewModel>();
+    final podcastVM = context.watch<PodcastViewModel>();
+    final episodePositions = podcastVM.episodePositions;
 
     return Column(
       children: [
@@ -34,7 +37,7 @@ class PodcastEpisodeList extends StatelessWidget {
         ),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () => podcastVM.loadEpisodes(episodes.isNotEmpty ? episodes.first.podcastId : 0),
+            onRefresh: () => podcastVM.loadEpisodes(episodes.isNotEmpty ? episodes.first.podcastId : ''),
             child: episodes.isEmpty
                 ? _buildEmptyState(theme, podcastVM.isLoading)
                 : ListView.separated(
@@ -45,6 +48,9 @@ class PodcastEpisodeList extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final ep = episodes[index];
                       final isSelected = selectedEpisode?.id == ep.id;
+                      final positionMs = episodePositions[ep.id] ?? 0;
+                      final durationSec = ep.durationSeconds ?? 0;
+
                       return ListTile(
                         selected: isSelected,
                         selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.05),
@@ -58,7 +64,30 @@ class PodcastEpisodeList extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        subtitle: Text(ep.pubDate?.toString().split(' ')[0] ?? '', style: const TextStyle(fontSize: 10)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              ep.pubDate != null ? DateFormat.yMMMd().format(ep.pubDate!) : 'Unknown Date',
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                            if (positionMs > 0 && durationSec > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value: (positionMs / 1000) / durationSec,
+                                    minHeight: 3,
+                                    backgroundColor: Colors.white10,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isSelected ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
-import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/features/library/widgets/library_grid_view.dart';
 import 'package:aulos/features/library/widgets/library_sub_list.dart';
 import 'package:provider/provider.dart';
@@ -86,6 +85,8 @@ class _AudiobookLibraryViewState extends State<AudiobookLibraryView> {
           _buildSortPill('SERIES', AudiobookSort.series, theme, vm),
           const SizedBox(width: 8),
           _buildSortPill('PLAYED', AudiobookSort.played, theme, vm),
+          const Spacer(),
+          _buildAulosFilterPill(theme, vm),
         ],
       ),
     );
@@ -110,6 +111,37 @@ class _AudiobookLibraryViewState extends State<AudiobookLibraryView> {
             fontWeight: FontWeight.w900,
             color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.4),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAulosFilterPill(ThemeData theme, LibraryViewModel vm) {
+    final bool isActive = vm.bookFilterAulos;
+    return InkWell(
+      onTap: () => vm.setBookFilterAulos(!isActive),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.teal.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: isActive ? Colors.teal : theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome, size: 10, color: isActive ? Colors.teal : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+            const SizedBox(width: 4),
+            Text(
+              'AULOS',
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                color: isActive ? Colors.teal : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+          ],
         ),
       ),
     );

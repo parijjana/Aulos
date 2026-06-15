@@ -48,6 +48,8 @@ dependencies:
   http: ^1.6.0
   url_launcher: ^6.3.2
   audio_video_progress_bar: ^2.0.3
+  archive: ^4.0.9
+  xxh3: ^0.0.2+1
 
 dev_dependencies:
   flutter_test:

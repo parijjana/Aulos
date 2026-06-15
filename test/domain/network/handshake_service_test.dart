@@ -1,19 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aulos/domain/network/handshake_service.dart';
+import 'package:aulos/data/network/cryptographic_handshake_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockSharedPreferences extends Mock implements SharedPreferences {}
 
 void main() {
-  late HandshakeService service;
+  late CryptographicHandshakeService service;
   late MockSharedPreferences mockPrefs;
 
   setUp(() {
     mockPrefs = MockSharedPreferences();
     when(() => mockPrefs.getStringList(any())).thenReturn([]);
     when(() => mockPrefs.setStringList(any(), any())).thenAnswer((_) async => true);
-    service = HandshakeService(mockPrefs);
+    service = CryptographicHandshakeService(mockPrefs);
   });
 
   group('HandshakeService', () {

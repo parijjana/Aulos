@@ -3,12 +3,16 @@ import 'package:aulos/domain/playback/playback_engine.dart'
     as engine_domain;
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/data/database/audiobook_database.dart';
+import 'package:aulos/data/database/playback_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
 import 'package:aulos/domain/network/connection_manager.dart';
 import 'package:aulos/domain/network/socket_service.dart';
 import 'package:aulos/domain/network/log_service.dart';
+import 'package:aulos/domain/playback/playback_track.dart';
 import 'mixins/player_bookmark_mixin.dart';
 import 'mixins/player_analytics_mixin.dart';
 import 'package:palette_generator/palette_generator.dart';
@@ -19,17 +23,23 @@ import 'dart:typed_data';
 
 enum MediaType { music, podcast, radio, audiobook, noise }
 
-class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMixin, PlayerAnalyticsMixin {
+class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAnalyticsMixin {
   final engine_domain.PlaybackEngine _engine;
   final QueueViewModel _queueVM;
   final ConnectionManager _connectionManager;
   final AppDatabase _db;
   final RadioDatabase _radioDb;
+  final PlaybackDatabase _playbackDb;
+  final AudiobookDatabase _audiobookDb;
+  final PodcastDatabase _podcastDb;
   final SettingsViewModel _settingsVM;
-  final http.Client _httpClient = http.Client();
+  final LogService _logService;
   NoiseViewModel? _noiseVM;
 
-  Track? _currentTrack;
+  @override
+  LogService get logService => _logService;
+
+  PlaybackTrack? _currentTrack;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
@@ -46,18 +56,28 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
   Color? _extractedColor;
   PaletteGenerator? _currentPalette;
 
-  List<Chapter> _currentChapters = [];
+  List<AudiobookChapter> _currentChapters = [];
 
-  StreamSubscription<Track?>? _trackSub;
+  StreamSubscription<PlaybackTrack?>? _trackSub;
   StreamSubscription<engine_domain.PlaybackState>? _stateSub;
   StreamSubscription<Duration>? _posSub;
   StreamSubscription<Duration?>? _durSub;
   StreamSubscription<MediaCommand>? _remoteSub;
   StreamSubscription<String?>? _icySub;
+  StreamSubscription<String>? _externalCmdSub;
 
   int? _bookmarkEndMs;
   bool _isResumingBookmark = false;
   MediaType? _forcedMediaType;
+  MediaType _activeMediaType = MediaType.music;
+  bool _isLoadingNewTrack = false;
+
+  Timer? _sleepTimer;
+  Timer? _sleepFadeTimer;
+  Timer? _countdownTicker;
+  DateTime? _sleepTimerEndTime;
+  Duration? _sleepDurationTotal;
+  bool _isSleepTimerActive = false;
 
   DateTime? _lastSkipTime;
   Timer? _resumeSaveTimer;
@@ -72,26 +92,36 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
     required ConnectionManager connectionManager,
     required AppDatabase db,
     required RadioDatabase radioDb,
+    required PlaybackDatabase playbackDb,
+    required AudiobookDatabase audiobookDb,
+    required PodcastDatabase podcastDb,
     required SettingsViewModel settingsVM,
+    LogService? logService,
   }) : _engine = engine,
        _queueVM = queueVM,
        _connectionManager = connectionManager,
        _db = db,
        _radioDb = radioDb,
-       _settingsVM = settingsVM {
+       _playbackDb = playbackDb,
+       _audiobookDb = audiobookDb,
+       _podcastDb = podcastDb,
+       _settingsVM = settingsVM,
+       _logService = logService ?? NoOpLogService() {
     _init();
-    initBookmarkMixin(db);
-    initAnalyticsMixin(db);
+    initBookmarkMixin(playbackDb, podcastDb);
+    initAnalyticsMixin(db, radioDb);
     _remoteSub = _connectionManager.remoteCommands.listen(_handleRemoteCommand);
     
     _resumeSaveTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (isPlaying && (currentMediaType == MediaType.podcast || currentMediaType == MediaType.audiobook)) {
         if (_currentTrack != null) {
-          unawaited(_db.savePlaybackPosition(_currentTrack!.id, _position.inMilliseconds));
+          unawaited(_playbackDb.savePlaybackPosition(_currentTrack!.id, _position.inMilliseconds));
         }
       }
     });
   }
+
+  void log(String message) => _logService.log(message);
 
   void setNoiseViewModel(NoiseViewModel vm) {
     _noiseVM = vm;
@@ -100,6 +130,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
 
   void forceMediaType(MediaType type) {
     _forcedMediaType = type;
+    _activeMediaType = type;
     notifyListeners();
   }
 
@@ -123,7 +154,11 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
         }
 
         // LOAD CHAPTERS
-        _currentChapters = await _db.getChaptersForTrack(track.id);
+        if (track.isAudiobook) {
+          _currentChapters = await _audiobookDb.getChaptersForTrack(track.id);
+        } else {
+          _currentChapters = [];
+        }
       }
       notifyListeners();
       _broadcastState();
@@ -140,6 +175,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
       }
 
       if (state == engine_domain.PlaybackState.completed) {
+        if (_isLoadingNewTrack) return;
         if (currentMediaType == MediaType.music || currentMediaType == MediaType.podcast) {
            _debouncedSkipNext();
         } else {
@@ -173,7 +209,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
       _broadcastState();
     });
 
-    _engine.icyMetadataStream.listen((metadata) {
+    _icySub = _engine.icyMetadataStream.listen((metadata) {
       if (metadata != null && metadata.isNotEmpty) {
         _currentStreamMetadata = metadata;
         if (currentMediaType == MediaType.radio) {
@@ -188,16 +224,29 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
         notifyListeners();
       }
     });
+
+    _externalCmdSub = _engine.externalCommandStream.listen((cmd) {
+      if (cmd == 'skipNext') {
+        skipNext();
+      } else if (cmd == 'skipPrevious') {
+        skipPrevious();
+      }
+    });
   }
 
   Future<void> loadTrack(Track track, {String? description, String? artistName, String? albumName, String? imageUrl, bool isAvailable = true}) async {
+    final intendedType = _getMediaTypeForTrack(track);
+    _isLoadingNewTrack = true;
     _lastSkipTime = DateTime.now();
     _position = Duration.zero; _duration = Duration.zero;
     _playbackState = engine_domain.PlaybackState.loading;
     _currentShowNotes = description; _currentImageUrl = imageUrl;
-    _errorMessage = null; _currentArtistName = artistName ?? 'Loading...'; _currentAlbumName = albumName ?? 'Loading...';
+    _errorMessage = null;
+    _currentArtistName = artistName ?? (intendedType == MediaType.radio ? 'Internet Radio' : 'Loading...');
+    _currentAlbumName = albumName ?? (intendedType == MediaType.radio ? 'Radio' : 'Loading...');
+    _currentRadioStation = null;
     
-    final intendedType = _getMediaTypeForTrack(track);
+    _activeMediaType = intendedType;
     _forcedMediaType = null; _isCurrentStationFavorite = false; resetBookmarkState();
     notifyListeners();
 
@@ -206,6 +255,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
       _errorMessage = 'Media verified unavailable';
       _playbackState = engine_domain.PlaybackState.error;
       _forcedMediaType = intendedType;
+      _isLoadingNewTrack = false;
       notifyListeners(); return;
     }
 
@@ -215,18 +265,51 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
        if (uuid != null) {
          unawaited(_settingsVM.setLastRadioStation(uuid));
          final station = await (_radioDb.select(_radioDb.radioStations)..where((t) => t.stationUuid.equals(uuid))).getSingleOrNull();
-         _isCurrentStationFavorite = station?.isFavorite ?? false;
+         if (station != null) {
+           _currentRadioStation = station;
+           _isCurrentStationFavorite = station.isFavorite;
+           if (artistName == null) {
+             final locationInfo = [
+               if (station.country != null && station.country!.isNotEmpty) station.country,
+               if (station.language != null && station.language!.isNotEmpty) station.language,
+             ].join(', ');
+             _currentArtistName = locationInfo.isNotEmpty ? locationInfo : 'Internet Radio';
+           }
+           notifyListeners();
+         }
        }
     } else if (intendedType == MediaType.podcast) {
-       unawaited(_settingsVM.setLastPodcastEpisode(track.id.abs()));
+       unawaited(_settingsVM.setLastPodcastEpisode(track.id.replaceFirst('podcast_', '')));
     } else if (intendedType == MediaType.music || intendedType == MediaType.audiobook) {
       if (artistName == null && track.artistId != null) {
-        final artist = await (_db.select(_db.artists)..where((a) => a.id.equals(track.artistId!))).getSingleOrNull();
-        if (artist != null) _currentArtistName = artist.name;
+        if (intendedType == MediaType.audiobook) {
+          final artist = await (_audiobookDb.select(_audiobookDb.audiobookArtists)..where((a) => a.id.equals(track.artistId!))).getSingleOrNull();
+          if (artist != null) _currentArtistName = artist.name;
+        } else {
+          final artist = await (_db.select(_db.artists)..where((a) => a.id.equals(track.artistId!))).getSingleOrNull();
+          if (artist != null) _currentArtistName = artist.name;
+        }
       }
-      if (albumName == null && track.albumId != null) {
-        final album = await (_db.select(_db.albums)..where((a) => a.id.equals(track.albumId!))).getSingleOrNull();
-        if (album != null) _currentAlbumName = album.name;
+      
+      Uint8List? resolvedArt = track.coverArt;
+      if (track.albumId != null) {
+        if (intendedType == MediaType.audiobook) {
+          final album = await (_audiobookDb.select(_audiobookDb.audiobooks)..where((a) => a.id.equals(track.albumId!))).getSingleOrNull();
+          if (album != null) {
+            if (albumName == null) _currentAlbumName = album.name;
+            if (resolvedArt == null) resolvedArt = album.coverArt;
+          }
+        } else {
+          final album = await (_db.select(_db.albums)..where((a) => a.id.equals(track.albumId!))).getSingleOrNull();
+          if (album != null) {
+            if (albumName == null) _currentAlbumName = album.name;
+            if (resolvedArt == null) resolvedArt = album.coverArt;
+          }
+        }
+      }
+
+      if (resolvedArt != null) {
+        track = track.copyWith(coverArt: Value(resolvedArt));
       }
     }
 
@@ -236,12 +319,12 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
         if (_noiseVM?.isMixerActive ?? false) unawaited(_noiseVM?.clearMix());
       }
 
-      await _engine.loadTrack(track);
+      await _engine.loadTrack(track.toDomain());
       play();
 
       unawaited(() async {
         if (intendedType == MediaType.podcast || intendedType == MediaType.audiobook) {
-          final saved = await _db.getPlaybackPosition(track.id);
+          final saved = await _playbackDb.getPlaybackPosition(track.id);
           if (saved != null && saved.positionMs > 5000) await _engine.seek(Duration(milliseconds: saved.positionMs));
         }
       }());
@@ -249,6 +332,7 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
       _errorMessage = 'Failed to load media';
       _playbackState = engine_domain.PlaybackState.error;
     } finally {
+      _isLoadingNewTrack = false;
       notifyListeners();
     }
   }
@@ -273,6 +357,18 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
     notifyListeners();
   }
 
+  void togglePlay() {
+    if (isPlaying) {
+      if (currentMediaType == MediaType.noise) {
+        stop();
+      } else {
+        pause();
+      }
+    } else {
+      play();
+    }
+  }
+
   void _broadcastState() {
     if (_connectionManager.isHost) {
       _connectionManager.broadcastState(
@@ -288,26 +384,32 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
   MediaType get currentMediaType {
     if (_forcedMediaType != null) return _forcedMediaType!;
     
-    // Check Noise state without calling isPlaying to avoid recursion
-    if (_noiseVM?.isPlaying ?? false) return MediaType.noise;
-    
     final bool mainEngineIsActive = _isPlaying || _playbackState == engine_domain.PlaybackState.loading || _playbackState == engine_domain.PlaybackState.buffering;
-    if (mainEngineIsActive || _currentTrack != null) return _getMediaTypeForTrack(_currentTrack);
+    if (mainEngineIsActive || _currentTrack != null) return _activeMediaType;
     
+    if (_noiseVM?.isPlaying ?? false) return MediaType.noise;
     if (_noiseVM?.isMixerActive ?? false) return MediaType.noise;
     return MediaType.music;
   }
 
-  List<Chapter> get currentChapters => _currentChapters;
+  List<AudiobookChapter> get currentChapters => _currentChapters;
 
-  Track? get currentTrack => _currentTrack;
+  PlaybackTrack? get currentTrack => _currentTrack;
   Duration get position => _position;
   Duration get duration => _duration;
+
+  bool get isSleepTimerActive => _isSleepTimerActive;
+  Duration get sleepTimeRemaining {
+    if (_sleepTimerEndTime == null) return Duration.zero;
+    final diff = _sleepTimerEndTime!.difference(DateTime.now());
+    return diff.isNegative ? Duration.zero : diff;
+  }
   
   bool get isPlaying {
-    // Determine context manually to avoid recursive currentMediaType call
+    final bool mainEngineIsActive = _isPlaying || _playbackState == engine_domain.PlaybackState.loading || _playbackState == engine_domain.PlaybackState.buffering;
+    if (mainEngineIsActive) return true;
     if (_noiseVM?.isPlaying ?? false) return true;
-    return _isPlaying || _playbackState == engine_domain.PlaybackState.loading || _playbackState == engine_domain.PlaybackState.buffering;
+    return false;
   }
   
   bool get isBuffering => _playbackState == engine_domain.PlaybackState.loading || _playbackState == engine_domain.PlaybackState.buffering;
@@ -321,6 +423,9 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
   String? get currentShowNotes => currentMediaType == MediaType.noise ? _noiseVM?.activeAttributions : _currentShowNotes;
   String? get currentStreamMetadata => _currentStreamMetadata;
   String? get currentImageUrl => _currentImageUrl;
+
+  RadioStation? _currentRadioStation;
+  RadioStation? get currentRadioStation => _currentRadioStation;
 
   String _currentArtistName = 'Unknown Artist';
   String _currentAlbumName = 'Unknown Album';
@@ -365,17 +470,112 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
     Future.delayed(const Duration(milliseconds: 500), () => _isResumingBookmark = false);
   }
 
+  Stream<List<Bookmark>> watchAudiobookClips(String albumId) {
+    return Stream.fromFuture(_audiobookDb.getTracksForBook(albumId)).asyncExpand((tracks) {
+      final paths = tracks.map((t) => t.path).toList();
+      if (paths.isEmpty) {
+        return Stream.value(<Bookmark>[]);
+      }
+      return (_playbackDb.select(_playbackDb.bookmarks)
+            ..where((t) => t.trackPath.isIn(paths) & t.contextType.equals(2)))
+          .watch();
+    });
+  }
+
+  Stream<List<Bookmark>> watchBookmarksForTrack(String trackPath) {
+    return _playbackDb.watchBookmarksForTrack(trackPath);
+  }
+
+  Stream<List<Bookmark>> watchAudiobookBookmarksForTrack(String trackPath) {
+    return _playbackDb.watchAudiobookBookmarksForTrack(trackPath);
+  }
+
+  Future<void> deleteBookmark(String id) async {
+    await _playbackDb.deleteBookmark(id);
+  }
+
+  void startSleepTimer(Duration duration) {
+    cancelSleepTimer();
+    _sleepDurationTotal = duration;
+    _sleepTimerEndTime = DateTime.now().add(duration);
+    _isSleepTimerActive = true;
+    
+    _countdownTicker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      notifyListeners();
+    });
+    
+    _sleepTimer = Timer(duration, () {
+      _startSleepFadeOut();
+    });
+    notifyListeners();
+  }
+
+  void _startSleepFadeOut() {
+    _countdownTicker?.cancel();
+    _countdownTicker = null;
+    
+    final double startVolume = _volume;
+    const fadeSteps = 30;
+    const fadeStepDuration = Duration(milliseconds: 1000); // 30 seconds total fade out
+    int currentStep = 0;
+    
+    _sleepFadeTimer = Timer.periodic(fadeStepDuration, (timer) {
+      currentStep++;
+      final double nextVolume = startVolume * (1.0 - (currentStep / fadeSteps));
+      if (nextVolume <= 0.0 || currentStep >= fadeSteps) {
+        timer.cancel();
+        pause();
+        setVolume(startVolume); // Restore original volume for when they resume playing later
+        _isSleepTimerActive = false;
+        _sleepTimerEndTime = null;
+        _sleepDurationTotal = null;
+      } else {
+        _engine.setVolume(nextVolume);
+      }
+      notifyListeners();
+    });
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepFadeTimer?.cancel();
+    _sleepFadeTimer = null;
+    _countdownTicker?.cancel();
+    _countdownTicker = null;
+    
+    if (_isSleepTimerActive) {
+      _isSleepTimerActive = false;
+      _engine.setVolume(_volume); // Restore volume
+      _sleepTimerEndTime = null;
+      _sleepDurationTotal = null;
+    }
+    notifyListeners();
+  }
+
   void skipForward() => seek(_position + const Duration(seconds: 15));
   void skipBackward() => seek(_position - const Duration(seconds: 10));
 
   void skipNext() {
-    _lastSkipTime = DateTime.now(); _queueVM.skipNext();
+    final now = DateTime.now();
+    if (_lastSkipTime != null && now.difference(_lastSkipTime!) < const Duration(milliseconds: 500)) {
+      log('PLAYER: Ignoring rapid next skip (throttled)');
+      return;
+    }
+    _lastSkipTime = now;
+    _queueVM.skipNext();
     final next = _queueVM.currentTrack;
     if (next != null) loadTrack(next);
   }
 
   void skipPrevious() {
-    _lastSkipTime = DateTime.now(); _queueVM.skipPrevious();
+    final now = DateTime.now();
+    if (_lastSkipTime != null && now.difference(_lastSkipTime!) < const Duration(milliseconds: 500)) {
+      log('PLAYER: Ignoring rapid previous skip (throttled)');
+      return;
+    }
+    _lastSkipTime = now;
+    _queueVM.skipPrevious();
     final prev = _queueVM.currentTrack;
     if (prev != null) loadTrack(prev);
   }
@@ -394,22 +594,16 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
   MediaType _getMediaTypeForTrack(Track? track) {
     if (track == null) return MediaType.music;
     if (track.isAudiobook) return MediaType.audiobook;
-    if (track.id < -2000000) return MediaType.noise;
-    if (track.id < -1000000) return MediaType.audiobook;
-    if (track.id < 0) return MediaType.podcast;
-    if (track.id == 0) return MediaType.radio;
+    if (track.id.startsWith('noise_')) return MediaType.noise;
+    if (track.id.startsWith('audiobook_')) return MediaType.audiobook;
+    if (track.id.startsWith('podcast_')) return MediaType.podcast;
+    if (track.id.startsWith('radio_')) return MediaType.radio;
     return MediaType.music;
   }
 
   void toggleShuffle() { _isShuffle = !_isShuffle; _queueVM.setShuffle(_isShuffle); notifyListeners(); }
   void toggleRepeat() { _queueVM.toggleRepeat(); _repeatMode = _queueVM.repeatMode; _engine.setRepeatMode(_repeatMode); notifyListeners(); }
 
-  String _formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
 
   void _debouncedSkipNext() {
     final now = DateTime.now();
@@ -451,7 +645,11 @@ class PlayerViewModel extends ChangeNotifier with UniversalLog, PlayerBookmarkMi
     _noiseVM?.removeListener(notifyListeners);
     _posSub?.cancel(); _durSub?.cancel(); _stateSub?.cancel();
     _trackSub?.cancel(); _remoteSub?.cancel(); _icySub?.cancel();
-    _resumeSaveTimer?.cancel(); _httpClient.close();
+    _externalCmdSub?.cancel();
+    _resumeSaveTimer?.cancel();
+    _sleepTimer?.cancel();
+    _sleepFadeTimer?.cancel();
+    _countdownTicker?.cancel();
     super.dispose();
   }
 }

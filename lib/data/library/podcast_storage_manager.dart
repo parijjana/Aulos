@@ -1,16 +1,14 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:aulos/data/database/app_database.dart';
-import 'package:aulos/data/library/discovery_sync_manager.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
-import 'package:path/path.dart' as p;
 
 class PodcastStorageManager {
-  final AppDatabase _db;
+  final PodcastDatabase _db;
   final SettingsViewModel _settingsVM;
   
   PodcastStorageManager({
-    required AppDatabase db,
+    required PodcastDatabase db,
     required SettingsViewModel settingsVM,
   }) : _db = db, _settingsVM = settingsVM;
 
@@ -43,16 +41,17 @@ class PodcastStorageManager {
           shouldPrune = true;
         }
 
-        // Condition 2: Age exceeds keepDays
-        if (!shouldPrune && ep.pubDate != null) {
-          final age = DateTime.now().difference(ep.pubDate!);
+        final pubDate = ep.pubDate;
+        if (!shouldPrune && pubDate != null) {
+          final age = DateTime.now().difference(pubDate);
           if (age.inDays >= keepDays) {
             shouldPrune = true;
           }
         }
 
-        if (shouldPrune && ep.localFilePath != null) {
-          await _deleteFile(ep.localFilePath!);
+        final localFilePath = ep.localFilePath;
+        if (shouldPrune && localFilePath != null) {
+          await _deleteFile(localFilePath);
           await _db.updateEpisodePlayback(ep.id, downloadState: 0, localFilePath: null);
           debugPrint('PodcastStorageManager: Pruned ${ep.title} (Reason: ${i >= keepCount ? "Count Limit" : "Age Limit"})');
         }

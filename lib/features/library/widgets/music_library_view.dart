@@ -93,7 +93,11 @@ class _MusicLibraryViewState extends State<MusicLibraryView>
     // Sync internal tab controller if mode changed externally
     final int targetIndex = _getInitialTabIndex(viewModel.mode);
     if (!_subTabController.indexIsChanging && _subTabController.index != targetIndex) {
-      _subTabController.index = targetIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _subTabController.index != targetIndex) {
+          _subTabController.index = targetIndex;
+        }
+      });
     }
 
     if (_currentKey != viewModel.mode.name) {

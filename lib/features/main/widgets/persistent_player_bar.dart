@@ -99,7 +99,7 @@ class PersistentPlayerBar extends StatelessWidget {
 
   Widget _buildMiniPlayButton(PlayerViewModel vm, ThemeData theme) {
     return IconButton(
-      onPressed: vm.isPlaying ? vm.pause : vm.play,
+      onPressed: vm.togglePlay,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(),
       icon: Container(

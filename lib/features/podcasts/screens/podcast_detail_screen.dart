@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:aulos/data/database/discovery_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/screens/widgets/glass_card.dart';
@@ -17,14 +17,16 @@ class PodcastDetailScreen extends StatelessWidget {
     
     if (detail == null) return const SizedBox.shrink();
 
-    final iTunesId = detail['iTunesId'] as String;
-    final title = detail['title'] as String;
-    final artist = detail['artist'] as String;
-    final imageUrl = detail['imageUrl'] as String?;
-    final feedUrl = detail['feedUrl'] as String?;
+    final iTunesId = detail['iTunesId']?.toString() ?? '';
+    final title = detail['title']?.toString() ?? 'Unknown';
+    final artist = detail['artist']?.toString() ?? 'Unknown';
+    final imageUrl = detail['imageUrl']?.toString();
+    final feedUrl = detail['feedUrl']?.toString();
 
     // Trigger detail sync
-    vm.loadPodcastDetails(iTunesId, feedUrl);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      vm.loadPodcastDetails(iTunesId, feedUrl);
+    });
 
     return Stack(
       children: [
@@ -219,7 +221,8 @@ class PodcastDetailScreen extends StatelessWidget {
   }
 
   Widget _buildEpisodeTile(BuildContext context, DiscoveredEpisode ep, ThemeData theme, PodcastViewModel vm, String podcastTitle) {
-    final dateStr = ep.pubDate != null ? DateFormat.yMMMd().format(ep.pubDate!) : 'Unknown Date';
+    final pubDate = ep.pubDate;
+    final dateStr = pubDate != null ? DateFormat.yMMMd().format(pubDate) : 'Unknown Date';
     final playerVM = context.read<PlayerViewModel>();
 
     return Padding(

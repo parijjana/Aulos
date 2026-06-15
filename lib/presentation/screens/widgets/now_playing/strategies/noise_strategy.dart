@@ -10,32 +10,39 @@ class NoiseStrategy extends NowPlayingStrategy {
   String get sectionLabel => 'LOOP ATTRIBUTION';
 
   @override
-  Widget buildControls(BuildContext context, PlayerViewModel vm, ThemeData theme, double buttonSize, double primarySize) {
+  Widget buildControls(BuildContext context, PlayerViewModel vm, ThemeData theme, double buttonSize, double primarySize, {bool isOverlay = false}) {
     final displayVM = context.read<DisplayViewModel>();
+    final width = MediaQuery.of(context).size.width;
+    final showSecondary = width > 280 && !isOverlay;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        IconButton(
-          onPressed: () {
-            displayVM.setTabIndex(5); // NOISE tab
-            if (displayVM.mode != UIContextMode.highContext) {
-              displayVM.setMode(UIContextMode.highContext);
-            }
-          },
-          icon: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
+        if (showSecondary) ...[
+          IconButton(
+            onPressed: () {
+              displayVM.setTabIndex(5); // NOISE tab
+              if (displayVM.mode != UIContextMode.highContext) {
+                displayVM.setMode(UIContextMode.highContext);
+              }
+            },
+            icon: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.tune_rounded, color: theme.colorScheme.primary, size: 20),
             ),
-            child: Icon(Icons.tune_rounded, color: theme.colorScheme.primary, size: 20),
+            tooltip: 'Modify Soundscape',
           ),
-          tooltip: 'Modify Soundscape',
-        ),
-        const SizedBox(width: 32),
+          const SizedBox(width: 32),
+        ],
         buildAulosPlayButton(vm, theme, primarySize),
-        const SizedBox(width: 32),
-        const SizedBox(width: 48), 
+        if (showSecondary) ...[
+          const SizedBox(width: 32),
+          const SizedBox(width: 48), 
+        ],
       ],
     );
   }

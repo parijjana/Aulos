@@ -121,10 +121,9 @@ class _CreateBookmarkSheetState extends State<CreateBookmarkSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                widget.playerVM.setBookmarkRange(_values.start, _values.end);
                 widget.playerVM.saveBookmark(
                   title: _titleController.text,
-                  startMs: _values.start.toInt(),
-                  endMs: _values.end.toInt(),
                 );
                 Navigator.pop(context);
               },

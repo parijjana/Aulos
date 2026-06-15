@@ -32,25 +32,82 @@ class RadioCategories extends Table {
   IntColumn get stationCount => integer().withDefault(const Constant(0))();
 }
 
-@DriftDatabase(tables: [RadioStations, RadioCategories])
+class RadioListeningStats extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get stationUuid => text().unique()();
+  IntColumn get timeSpentSeconds => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastListened => dateTime().nullable()();
+}
+
+@DriftDatabase(tables: [RadioStations, RadioCategories, RadioListeningStats])
 class RadioDatabase extends _$RadioDatabase {
   RadioDatabase() : super(_openConnection());
+  RadioDatabase.testing(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
+
+  Future<void> _safeAddColumn(Migrator m, TableInfo table, GeneratedColumn column) async {
+    try {
+      await m.addColumn(table, column);
+    } catch (e) {
+      final err = e.toString().toLowerCase();
+      if (err.contains('duplicate column name') || 
+          err.contains('already exists') || 
+          err.contains('sqlite_error')) {
+        // Ignored duplicate column
+        return;
+      }
+      rethrow;
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) {
-        await m.addColumn(radioStations, radioStations.isPinned);
+        await _safeAddColumn(m, radioStations, radioStations.isPinned);
       }
       if (from < 3) {
-        await m.addColumn(radioStations, radioStations.isHidden);
-        await m.addColumn(radioStations, radioStations.isAvailable);
+        await _safeAddColumn(m, radioStations, radioStations.isHidden);
+        await _safeAddColumn(m, radioStations, radioStations.isAvailable);
+      }
+      if (from < 4) {
+        await m.createTable(radioListeningStats);
       }
     },
   );
+
+  Future<void> recordRadioListen(String uuid, int seconds) async {
+    final existing = await (select(radioListeningStats)
+          ..where((t) => t.stationUuid.equals(uuid)))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      await (update(radioListeningStats)..where((t) => t.stationUuid.equals(uuid))).write(
+        RadioListeningStatsCompanion(
+          timeSpentSeconds: Value(existing.timeSpentSeconds + seconds),
+          lastListened: Value(DateTime.now()),
+        ),
+      );
+    } else {
+      await into(radioListeningStats).insert(
+        RadioListeningStatsCompanion.insert(
+          stationUuid: uuid,
+          timeSpentSeconds: Value(seconds),
+          lastListened: Value(DateTime.now()),
+        ),
+      );
+    }
+  }
+
+  Stream<List<RadioListeningStat>> watchRadioStats({int limit = 10}) =>
+      (select(radioListeningStats)
+            ..where((t) => t.timeSpentSeconds.isBiggerThanValue(0))
+            ..orderBy([(t) => OrderingTerm.desc(t.timeSpentSeconds)])
+            ..limit(limit))
+          .watch();
+
 
   // Persistence Operations
   Future<void> upsertStations(List<RadioStationsCompanion> stations) async {

@@ -9,6 +9,9 @@ class RateLimitDispatcher {
     'itunes': Duration(milliseconds: 500),
     'musicbrainz': Duration(seconds: 1),
     'radio-browser': Duration(milliseconds: 200),
+    'audnexus': Duration(seconds: 1),
+    'librivox': Duration(seconds: 1),
+    'jamendo': Duration(milliseconds: 500),
   };
 
   Future<T> dispatch<T>({

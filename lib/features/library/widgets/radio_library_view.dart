@@ -38,6 +38,7 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
     final settingsVM = context.watch<settings.SettingsViewModel>();
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
+    final double screenWidth = MediaQuery.of(context).size.width;
 
     return Column(
       children: [
@@ -92,7 +93,7 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
           child: Row(
             children: [
               Text(
-                'FAVORITE STATIONS',
+                screenWidth <= 380 ? 'FAVORITES' : 'FAVORITE STATIONS',
                 style: TextStyle(
                   color: theme.colorScheme.primary.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w900,
@@ -106,7 +107,9 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                 icon: Icon(radioVM.isShowingHidden ? Icons.visibility : Icons.visibility_off, size: 14),
                 label: Text(
-                  radioVM.isShowingHidden ? 'HIDE HIDDEN' : 'SHOW HIDDEN',
+                  screenWidth <= 380
+                      ? (radioVM.isShowingHidden ? 'HIDE' : 'SHOW')
+                      : (radioVM.isShowingHidden ? 'HIDE HIDDEN' : 'SHOW HIDDEN'),
                   style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900),
                 ),
               ),
@@ -298,7 +301,7 @@ class _RadioLibraryViewState extends State<RadioLibraryView> with AutomaticKeepA
                     bottom: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () => _showGridMenu(null, station, vm),
+                      onTapDown: (details) => _showGridMenu(details.globalPosition, station, vm),
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
@@ -469,9 +472,14 @@ class _ExpandableSearch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double targetWidth = expanded
+        ? (screenWidth < 380 ? 120 : 200)
+        : 40;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: expanded ? 200 : 40,
+      width: targetWidth,
       height: 36,
       decoration: BoxDecoration(
         color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
@@ -479,9 +487,8 @@ class _ExpandableSearch extends StatelessWidget {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.search, size: 18, color: expanded ? theme.colorScheme.primary : null),
-            onPressed: () {
+          InkWell(
+            onTap: () {
               onToggle(!expanded);
               if (expanded) {
                 onClear();
@@ -489,6 +496,18 @@ class _ExpandableSearch extends StatelessWidget {
                 focusNode.requestFocus();
               }
             },
+            borderRadius: BorderRadius.circular(18),
+            child: SizedBox(
+              width: 40,
+              height: 36,
+              child: Center(
+                child: Icon(
+                  Icons.search,
+                  size: 18,
+                  color: expanded ? theme.colorScheme.primary : null,
+                ),
+              ),
+            ),
           ),
           if (expanded)
             Expanded(

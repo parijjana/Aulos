@@ -1,24 +1,31 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
-import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/podcast_database.dart';
 import 'package:drift/drift.dart';
 import 'dart:async';
 import 'package:aulos/domain/network/log_service.dart';
 
-class PodcastDownloadService with UniversalLog {
-  final AppDatabase _db;
+class PodcastDownloadService {
+  final PodcastDatabase _db;
   final http.Client _client;
+  final LogService _logService;
 
-  PodcastDownloadService({required AppDatabase db, http.Client? client})
-      : _db = db,
-        _client = client ?? http.Client();
+  PodcastDownloadService({
+    required PodcastDatabase db,
+    LogService? logService,
+    http.Client? client,
+  })  : _db = db,
+        _client = client ?? http.Client(),
+        _logService = logService ?? NoOpLogService();
 
-  final Map<int, double> _progressMap = {};
-  final StreamController<Map<int, double>> _progressController =
-      StreamController<Map<int, double>>.broadcast();
+  void log(String message) => _logService.log(message);
 
-  Stream<Map<int, double>> get progressStream => _progressController.stream;
+  final Map<String, double> _progressMap = {};
+  final StreamController<Map<String, double>> _progressController =
+      StreamController<Map<String, double>>.broadcast();
+
+  Stream<Map<String, double>> get progressStream => _progressController.stream;
 
   Future<void> downloadEpisode(Episode episode, String storageDir) async {
     if (episode.downloadState == 2) {
@@ -93,12 +100,7 @@ class PodcastDownloadService with UniversalLog {
     return name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
   }
 
-  Future<void> _updateDownloadState(int id, int state, {String? path}) async {
-    await (_db.update(_db.episodes)..where((t) => t.id.equals(id))).write(
-      EpisodesCompanion(
-        downloadState: Value(state),
-        localFilePath: path != null ? Value(path) : const Value.absent(),
-      ),
-    );
+  Future<void> _updateDownloadState(String id, int state, {String? path}) async {
+    await _db.updateEpisodePlayback(id, downloadState: state, localFilePath: path);
   }
 }

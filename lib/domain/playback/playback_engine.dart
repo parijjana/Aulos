@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/domain/playback/playback_track.dart';
 
 abstract class PlaybackEngine {
   Future<void> play();
@@ -9,22 +9,14 @@ abstract class PlaybackEngine {
   Future<void> setSpeed(double speed);
   Future<void> setSource(String path);
   Future<void> setVolume(double volume);
-  Future<void> setMetadata(
-    String title,
-    String artist, {
-    String? album,
-    Uint8List? art,
-  });
-
   // Added methods for PlayerViewModel parity
-  Future<void> loadTrack(Track track);
+  Future<void> loadTrack(PlaybackTrack track);
   void setRepeatMode(RepeatMode mode);
 
   Stream<Duration?> get durationStream;
   Stream<Duration> get positionStream;
-  Stream<PlaybackState> get stateStream;
   Stream<PlaybackState> get playbackStateStream; // Alias/Added for parity
-  Stream<Track?> get currentTrackStream;
+  Stream<PlaybackTrack?> get currentTrackStream;
   Stream<String> get externalCommandStream;
   Stream<String?> get icyMetadataStream;
 }

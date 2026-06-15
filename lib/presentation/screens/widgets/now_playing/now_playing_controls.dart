@@ -17,8 +17,7 @@ Widget buildAulosPlayButton(PlayerViewModel vm, ThemeData theme, double size) {
   final bool isBuffering = vm.isBuffering;
 
   return IconButton(
-    // UX FIX: Allow pausing even while buffering/loading to prevent feeling "stuck"
-    onPressed: isPlaying ? (vm.currentMediaType == MediaType.noise ? vm.stop : vm.pause) : vm.play,
+    onPressed: vm.togglePlay,
     padding: EdgeInsets.zero,
     icon: Container(
       width: size,
@@ -165,7 +164,14 @@ class NowPlayingControls extends StatelessWidget {
     final double buttonSize = isOverlay ? 36 : 48;
     final double primaryButtonSize = isOverlay ? 72 : 96;
 
-    return strategy.buildControls(context, vm, theme, buttonSize, primaryButtonSize);
+    return strategy.buildControls(
+      context,
+      vm,
+      theme,
+      buttonSize,
+      primaryButtonSize,
+      isOverlay: isOverlay,
+    );
   }
 
   NowPlayingStrategy _getStrategy(MediaType type) {

@@ -52,8 +52,6 @@ void main() {
     when(() => mockLibraryVM.selectedItem).thenReturn(null);
     when(() => mockLibraryVM.isAtRoot).thenReturn(true);
     when(() => mockLibraryVM.isPartialView).thenReturn(false);
-    when(() => mockLibraryVM.wasRevealed).thenReturn(false);
-    when(() => mockLibraryVM.isShowingSubContent).thenReturn(false);
     when(() => mockLibraryVM.subFolders).thenReturn([]);
     when(() => mockLibraryVM.subAlbums).thenReturn([]);
     when(() => mockLibraryVM.mode).thenReturn(LibraryMode.folders);
@@ -111,7 +109,7 @@ void main() {
 
   group('LibraryScreen', () {
     testWidgets('should render folder list when at root', (tester) async {
-      final mockFolders = [Folder(id: 1, path: '/m1', name: 'Music 1')];
+      final mockFolders = [Folder(id: '1', path: '/m1', name: 'Music 1', folderType: 0)];
       when(() => mockLibraryVM.folders).thenReturn(mockFolders);
 
       await tester.pumpWidget(buildTestableWidget());
@@ -119,16 +117,18 @@ void main() {
     });
 
     testWidgets('should render track list when in a folder', (tester) async {
-      final mockFolder = Folder(id: 1, path: '/m1', name: 'Music 1');
+      final mockFolder = Folder(id: '1', path: '/m1', name: 'Music 1', folderType: 0);
       final mockTracks = [
         Track(
-          id: 1,
+          id: '1',
           path: '/m1/s1.mp3',
           title: 'Song 1',
-          folderId: 1,
+          folderId: '1',
           rating: 0,
           isFavorite: false,
           playCount: 0,
+          isAudiobook: false,
+          isPlayed: false,
         ),
       ];
       when(() => mockLibraryVM.isAtRoot).thenReturn(false);

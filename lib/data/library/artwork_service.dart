@@ -8,13 +8,20 @@ import 'dart:io';
 import 'dart:async';
 import 'package:aulos/domain/network/log_service.dart';
 
-class ArtworkService with UniversalLog {
+class ArtworkService {
   final RateLimitDispatcher? _rateLimitDispatcher;
+  final LogService _logService;
   MediaFetcher? _fetcher;
   MediaCache? _cache;
   bool _isInitialized = false;
 
-  ArtworkService({RateLimitDispatcher? rateLimitDispatcher}) : _rateLimitDispatcher = rateLimitDispatcher;
+  ArtworkService({
+    LogService? logService,
+    RateLimitDispatcher? rateLimitDispatcher,
+  })  : _logService = logService ?? NoOpLogService(),
+        _rateLimitDispatcher = rateLimitDispatcher;
+
+  void log(String message) => _logService.log(message);
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -24,7 +31,7 @@ class ArtworkService with UniversalLog {
       _cache = MediaCache(cachePath: cachePath);
       
       _fetcher = MediaFetcher(
-        userAgent: 'AulosAudio/1.2.0 ( contact@aulos.audio )',
+        userAgent: 'AulosAudio/1.2.0 ( overengineeredhobbies@gmail.com )',
         cache: _cache,
         universalDispatcher: _rateLimitDispatcher != null 
           ? <T>(call) => _rateLimitDispatcher!.dispatch<T>(apiId: 'musicbrainz', call: call)
@@ -34,7 +41,7 @@ class ArtworkService with UniversalLog {
     } catch (e) {
       log('ARTWORK: Failed to init cache: $e');
       _fetcher = MediaFetcher(
-        userAgent: 'AulosAudio/1.2.0 ( contact@aulos.audio )',
+        userAgent: 'AulosAudio/1.2.0 ( overengineeredhobbies@gmail.com )',
         universalDispatcher: _rateLimitDispatcher != null 
           ? <T>(call) => _rateLimitDispatcher!.dispatch<T>(apiId: 'musicbrainz', call: call)
           : null,
@@ -88,7 +95,7 @@ class ArtworkService with UniversalLog {
     final bytes = await _fetcher?.getAlbumArt(artist, album);
     
     if (bytes != null && localFolder != null) {
-      unawaited(_saveToLocalFolder(localFolder, 'cover.jpg', bytes));
+      unawaited(saveToLocalFolder(localFolder, 'cover.jpg', bytes));
     }
     
     return bytes;
@@ -99,13 +106,13 @@ class ArtworkService with UniversalLog {
     final bytes = await _fetcher?.getArtistPhoto(artist);
 
     if (bytes != null && localFolder != null) {
-      unawaited(_saveToLocalFolder(localFolder, 'artist.jpg', bytes));
+      unawaited(saveToLocalFolder(localFolder, 'artist.jpg', bytes));
     }
 
     return bytes;
   }
 
-  Future<void> _saveToLocalFolder(String parentPath, String filename, Uint8List bytes) async {
+  Future<void> saveToLocalFolder(String parentPath, String filename, Uint8List bytes) async {
     try {
       final artworkDir = Directory(p.join(parentPath, '.artwork'));
       if (!artworkDir.existsSync()) {

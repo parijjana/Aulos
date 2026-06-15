@@ -11,6 +11,7 @@ class MediaFetcher {
   final MusicBrainzClient _client;
   final MediaCache? _cache;
   final http.Client _httpClient;
+  final String _userAgent;
 
   MediaFetcher({
     required String userAgent,
@@ -20,6 +21,7 @@ class MediaFetcher {
     void Function(String message)? onLog,
   }) : _httpClient = httpClient ?? http.Client(),
        _cache = cache,
+       _userAgent = userAgent,
        _client = MusicBrainzClient(
          userAgent: userAgent,
          client: httpClient,
@@ -83,7 +85,10 @@ class MediaFetcher {
 
   Future<Uint8List?> _download(String url) async {
     try {
-      final response = await _httpClient.get(Uri.parse(url));
+      final response = await _httpClient.get(
+        Uri.parse(url),
+        headers: {'User-Agent': _userAgent},
+      );
       if (response.statusCode == 200) {
         return response.bodyBytes;
       }

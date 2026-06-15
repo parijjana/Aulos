@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:aulos/presentation/screens/widgets/remote_control_glow.dart';
 import '../widgets/main_tab_header.dart';
 import '../widgets/persistent_player_bar.dart';
+import '../widgets/indexer_progress_overlay.dart';
 
 class HighContextTabbedScreen extends StatefulWidget {
   const HighContextTabbedScreen({super.key});
@@ -141,6 +142,9 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
                     ),
                 ],
               ),
+            ),
+            IndexerProgressOverlay(
+              bottomOffset: _tabController.index != 0 ? 80.0 : 16.0,
             ),
           ],
         ),

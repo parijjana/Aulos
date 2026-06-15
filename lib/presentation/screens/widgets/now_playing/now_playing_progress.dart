@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+import 'music_waveform_progress_bar.dart';
 
 class NowPlayingProgress extends StatelessWidget {
-  const NowPlayingProgress({super.key});
+  final bool isOverlay;
+
+  const NowPlayingProgress({super.key, this.isOverlay = false});
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +53,7 @@ class NowPlayingProgress extends StatelessWidget {
 
       return Container(
         height: 120,
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+        padding: EdgeInsets.symmetric(horizontal: isOverlay ? 16 : 40),
         child: Column(
           children: [
             Expanded(
@@ -69,7 +72,7 @@ class NowPlayingProgress extends StatelessWidget {
                           height: 4,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                            color: isOverlay ? Colors.white24 : theme.colorScheme.onSurface.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -156,23 +159,31 @@ class NowPlayingProgress extends StatelessWidget {
       );
     }
 
-    // 3. Standard Progress Bar
+    // 3. Dynamic Waveform Seekbar for Music
+    if (mediaType == MediaType.music) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: isOverlay ? 16 : 40),
+        child: MusicWaveformProgressBar(isOverlay: isOverlay),
+      );
+    }
+
+    // 4. Standard Progress Bar for other media (podcasts, audiobooks)
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: isOverlay ? 16 : 40),
       child: ProgressBar(
         progress: vm.position,
         total: total > 0 ? vm.duration : const Duration(milliseconds: 1),
         onSeek: vm.seek,
-        baseBarColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+        baseBarColor: isOverlay ? Colors.white24 : theme.colorScheme.onSurface.withValues(alpha: 0.1),
         progressBarColor: theme.colorScheme.primary,
         bufferedBarColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-        thumbColor: theme.colorScheme.primary,
+        thumbColor: isOverlay ? Colors.white : theme.colorScheme.primary,
         barHeight: 4,
         thumbRadius: 6,
-        timeLabelLocation: TimeLabelLocation.below,
+        timeLabelLocation: isOverlay ? TimeLabelLocation.none : TimeLabelLocation.below,
         timeLabelType: TimeLabelType.remainingTime,
         timeLabelTextStyle: TextStyle(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.38), 
+          color: isOverlay ? Colors.white60 : theme.colorScheme.onSurface.withValues(alpha: 0.38), 
           fontSize: 10, 
           fontWeight: FontWeight.bold
         ),
