@@ -61,20 +61,30 @@ class LibriVoxBookItem extends StatelessWidget {
     final bool isStreaming = libraryVM.books.any((b) => b.librivoxId == book.id && !b.isDownloadedViaAulos);
     final double? progress = vm.downloadProgress[book.id];
     final bool isSelected = vm.selectedBook?.id == book.id;
+    final String firstLetter = book.title.isNotEmpty ? book.title[0].toUpperCase() : '';
 
-    return GestureDetector(
-      onTap: () {
-        vm.selectBook(book);
-        final isWide = MediaQuery.of(context).size.width >= 720;
-        if (!isWide) {
-          DefaultTabController.maybeOf(context)?.animateTo(1);
-        }
-      },
+    return SizedBox(
+      width: 120,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: AspectRatio(
-              aspectRatio: 0.68,
+          AspectRatio(
+            aspectRatio: 0.68,
+            child: InkWell(
+              onTap: () {
+                vm.selectBook(book);
+                final isWide = MediaQuery.of(context).size.width >= 720;
+                if (!isWide) {
+                  DefaultTabController.maybeOf(context)?.animateTo(1);
+                }
+              },
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(3),
+                bottomLeft: Radius.circular(3),
+                topRight: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 decoration: _buildCoverDecoration(theme, hue, isSelected),
@@ -147,49 +157,40 @@ class LibriVoxBookItem extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Title and Author
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 16, 10, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            book.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 3,
-                                  color: Colors.black45,
-                                  offset: Offset(1, 1),
-                                ),
-                              ],
-                            ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
+                    // Center decorative letter emblem (Publisher style)
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 1,
                           ),
-                          const Spacer(),
-                          Text(
-                            book.authorNames,
+                        ),
+                        child: Center(
+                          child: Text(
+                            firstLetter,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.75),
-                              fontSize: 9,
-                              fontStyle: FontStyle.italic,
-                              shadows: const [
-                                Shadow(
-                                  blurRadius: 2,
-                                  color: Colors.black38,
-                                  offset: Offset(0.5, 0.5),
-                                ),
-                              ],
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'serif',
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
+                        ),
+                      ),
+                    ),
+                    // Headphone audio badge at the bottom
+                    Positioned(
+                      bottom: 8,
+                      left: 16,
+                      child: Icon(
+                        Icons.headphones_rounded,
+                        size: 14,
+                        color: Colors.white.withValues(alpha: 0.35),
                       ),
                     ),
                     // Progress and badges
@@ -222,7 +223,27 @@ class LibriVoxBookItem extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
+          Text(
+            book.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            book.authorNames,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 9,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
         ],
       ),
     );

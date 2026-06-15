@@ -164,7 +164,7 @@ class LibriVoxStorefrontBody extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 180,
-              childAspectRatio: 0.62,
+              childAspectRatio: 0.55,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
