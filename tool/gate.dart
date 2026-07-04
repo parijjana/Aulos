@@ -346,6 +346,7 @@ Future<bool> _runTests(Map<String, dynamic> report) async {
 
   try {
     final process = await Process.start('flutter', ['test', '--coverage', '--reporter=json'], runInShell: true);
+    final stderrDone = process.stderr.drain<void>();
     final failures = <Map<String, String>>[];
     final testNames = <int, String>{};
     int total = 0;
@@ -383,6 +384,7 @@ Future<bool> _runTests(Map<String, dynamic> report) async {
       } catch (_) {}
     }
 
+    await stderrDone;
     final exitCode = await process.exitCode;
 
     report['tests'] = {
