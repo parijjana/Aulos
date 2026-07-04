@@ -66,7 +66,7 @@ mixin PlayerAnalyticsMixin on ChangeNotifier {
         if (existing != null) {
           await (_podcastDbRef!.update(_podcastDbRef!.episodes)..where((e) => e.id.equals(track.id))).write(
             EpisodesCompanion(
-              playCount: Value((existing.playCount ?? 0) + 1),
+playCount: Value((existing.playCount) + 1),
               lastPlayed: Value(DateTime.now()),
               isPlayed: const Value(true),
             ),

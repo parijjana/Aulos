@@ -98,7 +98,7 @@ void main() {
       final archive = Archive();
       final mp3File = ArchiveFile('01_chapter1.mp3', 5, utf8.encode('dummy'));
       archive.addFile(mp3File);
-      final zipBytes = ZipEncoder().encode(archive)!;
+      final zipBytes = ZipEncoder().encode(archive);
 
       // Stub client.send to return the zip bytes
       final responseStream = Stream.value(zipBytes);

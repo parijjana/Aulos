@@ -115,7 +115,7 @@ class RadioViewModel extends ChangeNotifier {
       
       bool needsMetaSync = force || cachedCountries == null || cachedLanguages == null || lastMetaSyncStr == null;
       if (!needsMetaSync) {
-        final lastMetaSync = DateTime.tryParse(lastMetaSyncStr!);
+        final lastMetaSync = DateTime.tryParse(lastMetaSyncStr);
         if (lastMetaSync == null || DateTime.now().difference(lastMetaSync).inDays >= 30) {
           needsMetaSync = true;
         }
@@ -141,7 +141,7 @@ class RadioViewModel extends ChangeNotifier {
       // HEALTH CHECK: Run health checks for library stations (cached monthly or forced)
       final lastHealthCheckStr = prefs.getString('last_radio_health_check_time');
       bool needsHealthCheck = force || lastHealthCheckStr == null;
-      if (!needsHealthCheck && lastHealthCheckStr != null) {
+      if (!needsHealthCheck) {
         final lastHealthCheck = DateTime.tryParse(lastHealthCheckStr);
         if (lastHealthCheck == null || DateTime.now().difference(lastHealthCheck).inDays >= 30) {
           needsHealthCheck = true;

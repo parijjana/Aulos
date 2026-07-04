@@ -20,9 +20,9 @@ class LibriVoxAuthor {
 
   factory LibriVoxAuthor.fromJson(JsonMap json) {
     return LibriVoxAuthor(
-      id: (json['id']?.toString() ?? '') as String,
-      firstName: (json['first_name']?.toString() ?? '') as String,
-      lastName: (json['last_name']?.toString() ?? '') as String,
+      id: (json['id']?.toString() ?? ''),
+      firstName: (json['first_name']?.toString() ?? ''),
+      lastName: (json['last_name']?.toString() ?? ''),
     );
   }
 
@@ -76,7 +76,7 @@ class LibriVoxBook {
         final readersList = sec['readers'] as List? ?? [];
         for (var r in readersList) {
           if (r is JsonMap) {
-            final name = r['display_name']?.toString()?.trim() ?? '';
+            final name = r['display_name']?.toString().trim() ?? '';
             if (name.isNotEmpty) {
               uniqueNarrators.add(name);
             }
@@ -87,14 +87,14 @@ class LibriVoxBook {
     final narrators = uniqueNarrators.toList()..sort();
 
     return LibriVoxBook(
-      id: (json['id']?.toString() ?? '') as String,
-      title: (json['title']?.toString() ?? 'Unknown Title') as String,
+      id: (json['id']?.toString() ?? ''),
+      title: (json['title']?.toString() ?? 'Unknown Title'),
       description: TextSanitizer.sanitize(json['description']?.toString() ?? ''),
       totalTimeSecs: int.tryParse(json['totaltimesecs']?.toString() ?? '0') ?? 0,
       authors: parsedAuthors,
-      urlRss: (json['url_rss']?.toString() ?? '') as String,
-      urlZipFile: (json['url_zip_file']?.toString() ?? '') as String,
-      language: (json['language']?.toString() ?? 'English') as String,
+      urlRss: (json['url_rss']?.toString() ?? ''),
+      urlZipFile: (json['url_zip_file']?.toString() ?? ''),
+      language: (json['language']?.toString() ?? 'English'),
       narrators: narrators,
     );
   }

@@ -24,9 +24,9 @@ class PodcastSearchResult {
 
   factory PodcastSearchResult.fromJson(JsonMap json) {
     return PodcastSearchResult(
-      title: (json['collectionName']?.toString() ?? 'Unknown Podcast') as String,
-      artist: (json['artistName']?.toString() ?? 'Unknown Artist') as String,
-      feedUrl: (json['feedUrl']?.toString() ?? '') as String,
+      title: (json['collectionName']?.toString() ?? 'Unknown Podcast'),
+      artist: (json['artistName']?.toString() ?? 'Unknown Artist'),
+      feedUrl: (json['feedUrl']?.toString() ?? ''),
       imageUrl: (json['artworkUrl600'] ?? json['artworkUrl100'])?.toString(),
       itunesId: json['collectionId']?.toString(),
       description: json['description']?.toString(),

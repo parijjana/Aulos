@@ -28,12 +28,12 @@ class MusicBrainzClient {
        _onLog = onLog;
 
   void _log(String message) {
-    if (_onLog != null) _onLog!(message);
+    if (_onLog != null) _onLog(message);
   }
 
   Future<T> _run<T>(Future<T> Function() task) {
     if (_universalDispatcher != null) {
-      return _universalDispatcher!<T>(task);
+      return _universalDispatcher<T>(task);
     }
     return _legacyLimiter!.run(task);
   }

@@ -32,7 +32,7 @@ class MediaFetcher {
     // 1. Check Cache
     final cacheKey = 'art_${artist}_$album'.replaceAll(' ', '_').toLowerCase();
     if (_cache != null) {
-      final cached = await _cache!.get(cacheKey);
+      final cached = await _cache.get(cacheKey);
       if (cached != null) return cached;
     }
 
@@ -49,7 +49,7 @@ class MediaFetcher {
     
     // 5. Store in Cache
     if (bytes != null && _cache != null) {
-      await _cache!.put(cacheKey, bytes);
+      await _cache.put(cacheKey, bytes);
     }
 
     return bytes;
@@ -59,7 +59,7 @@ class MediaFetcher {
     // 1. Check Cache
     final cacheKey = 'artist_$artist'.replaceAll(' ', '_').toLowerCase();
     if (_cache != null) {
-      final cached = await _cache!.get(cacheKey);
+      final cached = await _cache.get(cacheKey);
       if (cached != null) return cached;
     }
 
@@ -76,7 +76,7 @@ class MediaFetcher {
 
     // 5. Store in Cache
     if (bytes != null && _cache != null) {
-      await _cache!.put(cacheKey, bytes);
+      await _cache.put(cacheKey, bytes);
     }
 
     return bytes;

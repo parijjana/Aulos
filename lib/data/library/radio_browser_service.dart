@@ -51,9 +51,9 @@ class RadioStationResult {
 
   factory RadioStationResult.fromJson(JsonMap json) {
     return RadioStationResult(
-      stationuuid: (json['stationuuid']?.toString() ?? '') as String,
-      name: (json['name']?.toString() ?? 'Unknown Station') as String,
-      url: (json['url_resolved']?.toString() ?? json['url']?.toString() ?? '') as String,
+      stationuuid: (json['stationuuid']?.toString() ?? ''),
+      name: (json['name']?.toString() ?? 'Unknown Station'),
+      url: (json['url_resolved']?.toString() ?? json['url']?.toString() ?? ''),
       favicon: json['favicon']?.toString(),
       tags: json['tags']?.toString(),
       country: json['country']?.toString(),

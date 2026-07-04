@@ -98,7 +98,7 @@ class LibriVoxViewModel extends ChangeNotifier {
       
       bool needsSync = force || lastSyncStr == null || cachedPreviewsJson == null;
       if (!needsSync) {
-        final lastSync = DateTime.tryParse(lastSyncStr!);
+        final lastSync = DateTime.tryParse(lastSyncStr);
         if (lastSync == null || DateTime.now().difference(lastSync).inDays >= 30) {
           needsSync = true;
         }

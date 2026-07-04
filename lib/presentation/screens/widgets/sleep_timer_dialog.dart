@@ -20,7 +20,7 @@ class _SleepTimerDialogState extends State<SleepTimerDialog> {
     final onSurface = theme.colorScheme.onSurface;
 
     final isActive = playerVM.isSleepTimerActive == true;
-    final remaining = playerVM.sleepTimeRemaining ?? Duration.zero;
+final remaining = playerVM.sleepTimeRemaining;
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),

@@ -29,14 +29,14 @@ class JamendoTrack {
 
   factory JamendoTrack.fromJson(JsonMap json) {
     return JamendoTrack(
-      id: (json['id']?.toString() ?? '') as String,
-      title: (json['name']?.toString() ?? 'Unknown Track') as String,
-      artistName: (json['artist_name']?.toString() ?? 'Unknown Artist') as String,
-      albumName: (json['album_name']?.toString() ?? 'Unknown Album') as String,
+      id: (json['id']?.toString() ?? ''),
+      title: (json['name']?.toString() ?? 'Unknown Track'),
+      artistName: (json['artist_name']?.toString() ?? 'Unknown Artist'),
+      albumName: (json['album_name']?.toString() ?? 'Unknown Album'),
       durationSeconds: int.tryParse(json['duration']?.toString() ?? '0') ?? 0,
-      audioUrl: (json['audio']?.toString() ?? '') as String,
-      downloadUrl: (json['audiodownload']?.toString() ?? '') as String,
-      imageUrl: (json['image']?.toString() ?? json['album_image']?.toString() ?? '') as String,
+      audioUrl: (json['audio']?.toString() ?? ''),
+      downloadUrl: (json['audiodownload']?.toString() ?? ''),
+      imageUrl: (json['image']?.toString() ?? json['album_image']?.toString() ?? ''),
     );
   }
 }

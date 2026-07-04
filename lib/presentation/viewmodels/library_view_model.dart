@@ -156,8 +156,8 @@ class LibraryViewModel extends ChangeNotifier {
     _connectionManager?.addListener(_onConnectionStateChanged);
 
     if (_indexerService != null) {
-      _lastIndexerState = _indexerService!.state;
-      _indexerService!.addListener(_onIndexerChanged);
+      _lastIndexerState = _indexerService.state;
+      _indexerService.addListener(_onIndexerChanged);
     }
   }
 
@@ -165,7 +165,7 @@ class LibraryViewModel extends ChangeNotifier {
 
   void _onIndexerChanged() {
     if (_indexerService == null) return;
-    final currentState = _indexerService!.state;
+    final currentState = _indexerService.state;
     if (_lastIndexerState != null &&
         _lastIndexerState != IndexerState.idle &&
         currentState == IndexerState.idle) {

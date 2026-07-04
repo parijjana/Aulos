@@ -169,7 +169,7 @@ class RadioStrategy extends NowPlayingStrategy {
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: tags!.split(',').map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).take(8).map((tag) {
+              children: tags.split(',').map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).take(8).map((tag) {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(

@@ -34,7 +34,7 @@ class ArtworkService {
         userAgent: 'AulosAudio/1.2.0 ( overengineeredhobbies@gmail.com )',
         cache: _cache,
         universalDispatcher: _rateLimitDispatcher != null 
-          ? <T>(call) => _rateLimitDispatcher!.dispatch<T>(apiId: 'musicbrainz', call: call)
+          ? <T>(call) => _rateLimitDispatcher.dispatch<T>(apiId: 'musicbrainz', call: call)
           : null,
         onLog: (msg) => log(msg),
       );
@@ -43,7 +43,7 @@ class ArtworkService {
       _fetcher = MediaFetcher(
         userAgent: 'AulosAudio/1.2.0 ( overengineeredhobbies@gmail.com )',
         universalDispatcher: _rateLimitDispatcher != null 
-          ? <T>(call) => _rateLimitDispatcher!.dispatch<T>(apiId: 'musicbrainz', call: call)
+          ? <T>(call) => _rateLimitDispatcher.dispatch<T>(apiId: 'musicbrainz', call: call)
           : null,
         onLog: (msg) => log(msg),
       );

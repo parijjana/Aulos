@@ -219,7 +219,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: WinampVisualizer(pluginId: settingsVM.visualizerPluginId ?? 'bar_spectrum'),
+child: WinampVisualizer(pluginId: settingsVM.visualizerPluginId),
             ),
           ],
           const SizedBox(height: 24),
