@@ -132,6 +132,7 @@ void main(List<String> arguments) async {
 
   final totalPassed = analyzerPassed && sizePassed && structPassed && testsPassed;
   report['pass'] = totalPassed;
+  report['size']['baseline_count'] = baselineMap.length;
 
   // Output Report
   await File('gate_report.json').writeAsString(JsonEncoder.withIndent('  ').convert(report));

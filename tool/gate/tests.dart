@@ -35,9 +35,9 @@ Future<bool> runTests(Map<String, dynamic> report) async {
             total++;
           }
         } else if (type == 'error') {
-          final testId = event['testID'] as int;
+          final testId = event['testID'] as int?;
           final error = event['error'] as String;
-          final name = testNames[testId] ?? 'Unknown Test';
+          final name = testId != null ? (testNames[testId] ?? 'Unknown Test') : 'Suite Load Error';
           final firstLine = error.split('\n').firstWhere((l) => l.trim().isNotEmpty, orElse: () => 'Unknown Error');
           failures.add({'name': name, 'error': firstLine});
         } else if (type == 'testDone') {
@@ -54,12 +54,16 @@ Future<bool> runTests(Map<String, dynamic> report) async {
 
     report['tests'] = {
       'total': total,
-      'failed': failed,
+      'failed': failed + failures.where((f) => !testNames.values.contains(f['name']) && f['name'] != 'Unknown Test').length,
       'failures': failures,
     };
 
-    if (exitCode != 0 || failed > 0) {
-      print('  G4 Fail: $failed tests failed out of $total.');
+    if (exitCode != 0 || failed > 0 || total == 0 || failures.isNotEmpty) {
+      if (total == 0) {
+        print('  G4 Fail: No tests were run.');
+      } else {
+        print('  G4 Fail: ${failures.length} failures/errors out of $total.');
+      }
       return false;
     }
 
