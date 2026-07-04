@@ -135,11 +135,11 @@ Future<bool> _runAnalyzer(Map<String, dynamic> report) async {
     }
 
     report['analyzer'] = {'errors': errors, 'warnings': warnings, 'infos': infos};
-    if (errors > 0) {
-      print('  G1 Fail: $errors analyzer errors found. ($warnings warnings, $infos infos)');
+    if (errors > 0 || warnings > 0) {
+      print('  G1 Fail: $errors errors, $warnings warnings found. ($infos infos)');
       return false;
     }
-    print('  G1 Pass: 0 errors, $warnings warnings, $infos infos.');
+    print('  G1 Pass: 0 errors, 0 warnings, $infos infos.');
     return true;
   } catch (e) {
     print('  G1 Error running analyzer: $e');

@@ -1,0 +1,73 @@
+# Aulos Gate Configuration
+flutter_version: "stable"
+
+# Files allowed to exceed 300 lines (frozen at today's counts).
+# File counts can only shrink, never grow.
+baseline:
+  lib/data/library/library_indexer_service.dart: 549
+  lib/data/library/persistent_library_importer.dart: 322
+  lib/data/library/persistent_library_service.dart: 423
+  lib/features/audiobooks/widgets/audiobook_detail_view.dart: 319
+  lib/features/library/widgets/jamendo_discover_view.dart: 587
+  lib/features/library/widgets/library_header.dart: 319
+  lib/features/library/widgets/podcast_library_view.dart: 318
+  lib/features/library/widgets/radio_library_view.dart: 534
+  lib/features/main/widgets/indexer_progress_overlay.dart: 439
+  lib/features/noise/screens/noise_root_screen.dart: 430
+  lib/features/radio/screens/radio_browser_screen.dart: 362
+  lib/features/settings/widgets/services_storage_section.dart: 500
+  lib/main.dart: 434
+  lib/presentation/viewmodels/library_view_model.dart: 510
+  lib/presentation/viewmodels/player_view_model.dart: 618
+  lib/presentation/viewmodels/podcast_view_model.dart: 648
+  lib/presentation/viewmodels/queue_view_model.dart: 399
+  lib/presentation/viewmodels/radio_view_model.dart: 536
+  lib/presentation/viewmodels/settings_view_model.dart: 362
+
+# Files allowed to have widget build helpers.
+widget_helper_baseline:
+  - lib/features/audiobooks/screens/audiobook_root_screen.dart
+  - lib/features/audiobooks/widgets/audiobook_detail_view.dart
+  - lib/features/audiobooks/widgets/audiobook_library_view.dart
+  - lib/features/audiobooks/widgets/librivox_book_metadata.dart
+  - lib/features/audiobooks/widgets/librivox_storefront_body.dart
+  - lib/features/library/screens/insights_screen.dart
+  - lib/features/library/screens/library_screen.dart
+  - lib/features/library/screens/music_root_screen.dart
+  - lib/features/library/widgets/jamendo_discover_view.dart
+  - lib/features/library/widgets/library_header.dart
+  - lib/features/library/widgets/library_sub_list.dart
+  - lib/features/library/widgets/music_library_view.dart
+  - lib/features/library/widgets/podcast_library_view.dart
+  - lib/features/library/widgets/radio_library_view.dart
+  - lib/features/library/widgets/smart_playlist_builder_dialog.dart
+  - lib/features/main/screens/high_context_tabbed_screen.dart
+  - lib/features/main/widgets/main_tab_header.dart
+  - lib/features/main/widgets/persistent_player_bar.dart
+  - lib/features/noise/screens/noise_root_screen.dart
+  - lib/features/podcasts/screens/podcast_browser_screen.dart
+  - lib/features/podcasts/screens/podcast_detail_screen.dart
+  - lib/features/podcasts/screens/podcast_root_screen.dart
+  - lib/features/podcasts/widgets/discovery_result_list.dart
+  - lib/features/podcasts/widgets/discovery_sub_bar.dart
+  - lib/features/podcasts/widgets/podcast_detail_view.dart
+  - lib/features/podcasts/widgets/podcast_episode_list.dart
+  - lib/features/podcasts/widgets/podcast_notes_pane.dart
+  - lib/features/radio/screens/radio_browser_screen.dart
+  - lib/features/radio/screens/radio_root_screen.dart
+  - lib/features/radio/widgets/radio_station_grid_tile.dart
+  - lib/features/radio/widgets/radio_station_info_drawer.dart
+  - lib/features/radio/widgets/radio_station_list_tile.dart
+  - lib/features/settings/screens/settings_screen.dart
+  - lib/features/settings/widgets/appearance_section.dart
+  - lib/features/settings/widgets/connectivity_section.dart
+  - lib/features/settings/widgets/network_section.dart
+  - lib/features/settings/widgets/podcast_retention_section.dart
+  - lib/features/settings/widgets/services_dashboard_section.dart
+  - lib/features/settings/widgets/services_storage_section.dart
+  - lib/features/settings/widgets/storage_section.dart
+  - lib/features/settings/widgets/ui_section.dart
+  - lib/presentation/screens/collapsed_player_screen.dart
+  - lib/presentation/screens/mood_dashboard_screen.dart
+  - lib/presentation/screens/now_playing_screen.dart
+  - lib/presentation/screens/widgets/now_playing/strategies/radio_strategy.dart
