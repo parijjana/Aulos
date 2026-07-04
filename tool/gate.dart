@@ -27,6 +27,7 @@ void main(List<String> arguments) async {
   }
   final baselineMap = Map<String, int>.from(configYaml['baseline'] as Map? ?? {});
   final helperBaseline = List<String>.from(configYaml['widget_helper_baseline'] as List? ?? []);
+  final forbiddenImportsConfig = List<dynamic>.from(configYaml['forbidden_imports'] as List? ?? []);
 
   final report = <String, dynamic>{
     'schema': 1,
@@ -60,6 +61,7 @@ void main(List<String> arguments) async {
     helperBaseline,
     shrinkBaseline,
     updatedHelperBaseline,
+    forbiddenImportsConfig,
     () => helperBaselineUpdated = true,
   );
 

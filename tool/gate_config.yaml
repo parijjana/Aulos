@@ -1,6 +1,22 @@
 # Aulos Gate Configuration
 # File counts can only shrink, never grow.
 
+forbidden_imports:
+  - path_prefix: "lib/presentation/viewmodels"
+    patterns:
+      - "package:archive/"
+      - "package:path_provider/"
+  - path_prefix: "lib/features"
+    patterns:
+      - "package:drift/"
+      - "package:archive/"
+      - "package:path_provider/"
+  - path_prefix: "lib/presentation/screens"
+    patterns:
+      - "package:drift/"
+      - "package:archive/"
+      - "package:path_provider/"
+
 baseline:
   lib/data/library/library_indexer_service.dart: 549
   lib/data/library/persistent_library_importer.dart: 322

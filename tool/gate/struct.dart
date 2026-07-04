@@ -6,6 +6,7 @@ bool runStructuralChecks(
   List<String> helperBaseline,
   bool shrink,
   List<String> updatedHelperBaseline,
+  List<dynamic> forbiddenImportsConfig,
   void Function() onUpdated,
 ) {
   final libDir = Directory('lib');
@@ -57,21 +58,24 @@ bool runStructuralChecks(
     }
 
     // 3. Forbidden imports check
-    final isViewModel = relativePath.startsWith('lib/presentation/viewmodels');
-    final isUi = (relativePath.startsWith('lib/features') || relativePath.startsWith('lib/presentation/screens')) &&
-        !relativePath.contains('/services/') &&
-        !relativePath.contains('/data/');
+    for (final rule in forbiddenImportsConfig) {
+      final prefix = rule['path_prefix'] as String;
+      final patterns = List<String>.from(rule['patterns'] as List? ?? []);
 
-    for (final line in lines) {
-      if (line.trim().startsWith('import ')) {
-        if (isViewModel) {
-          if (line.contains('package:archive/') || line.contains('package:path_provider/')) {
-            forbiddenImports.add('$relativePath: ${line.trim()}');
-          }
+      if (relativePath.startsWith(prefix)) {
+        // Exclude /services/ and /data/ subdirectories for features/screens UI components
+        if ((prefix.startsWith('lib/features') || prefix.startsWith('lib/presentation/screens')) &&
+            (relativePath.contains('/services/') || relativePath.contains('/data/'))) {
+          continue;
         }
-        if (isUi) {
-          if (line.contains('package:drift/') || line.contains('package:archive/') || line.contains('package:path_provider/')) {
-            forbiddenImports.add('$relativePath: ${line.trim()}');
+
+        for (final line in lines) {
+          if (line.trim().startsWith('import ')) {
+            for (final pattern in patterns) {
+              if (line.contains(pattern)) {
+                forbiddenImports.add('$relativePath: ${line.trim()}');
+              }
+            }
           }
         }
       }
