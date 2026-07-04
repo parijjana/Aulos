@@ -62,13 +62,17 @@ bool runStructuralChecks(
     for (final rule in forbiddenImportsConfig) {
       final prefix = rule['path_prefix'] as String;
       final patterns = List<String>.from(rule['patterns'] as List? ?? []);
+      final exemptFragments = List<String>.from(rule['exempt_path_fragments'] as List? ?? []);
 
       if (relativePath.startsWith(prefix)) {
-        // Exclude /services/ and /data/ subdirectories for features/screens UI components
-        if ((prefix.startsWith('lib/features') || prefix.startsWith('lib/presentation/screens')) &&
-            (relativePath.contains('/services/') || relativePath.contains('/data/'))) {
-          continue;
+        bool isExempt = false;
+        for (final frag in exemptFragments) {
+          if (relativePath.contains(frag)) {
+            isExempt = true;
+            break;
+          }
         }
+        if (isExempt) continue;
 
         for (final line in lines) {
           if (line.trim().startsWith('import ')) {

@@ -11,11 +11,17 @@ forbidden_imports:
       - "package:drift/"
       - "package:archive/"
       - "package:path_provider/"
+    exempt_path_fragments:
+      - "/services/"
+      - "/data/"
   - path_prefix: "lib/presentation/screens"
     patterns:
       - "package:drift/"
       - "package:archive/"
       - "package:path_provider/"
+    exempt_path_fragments:
+      - "/services/"
+      - "/data/"
 
 baseline:
   lib/data/library/library_indexer_service.dart: 549
