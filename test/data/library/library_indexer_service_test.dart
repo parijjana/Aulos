@@ -209,7 +209,7 @@ void main() {
       when(() => mockSettings.monitoredFolders).thenReturn([musicPath]);
       when(() => mockSettings.audiobookFolders).thenReturn([audioPath]);
 
-      final indexer = LibraryIndexerService(
+      LibraryIndexerService(
         db: db,
         prefs: mockPrefs,
         artworkService: mockArtworkService,

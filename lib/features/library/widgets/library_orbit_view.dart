@@ -19,7 +19,6 @@ class LibraryOrbitView extends StatelessWidget with LibraryUtilsMixin {
   Widget build(BuildContext context) {
     final playerVM = context.read<PlayerViewModel>();
     final queueVM = context.read<QueueViewModel>();
-    final theme = Theme.of(context);
 
     final combined = viewModel.isAtRoot
         ? getAllCategoryItems(viewModel)

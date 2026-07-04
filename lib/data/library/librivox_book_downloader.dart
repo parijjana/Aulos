@@ -27,7 +27,7 @@ class LibriVoxBookDownloader {
 
   Future<void> streamBook(LibriVoxBook book) async {
     // 1. Ensure Folder for Streaming
-    final folderId = await _db.ensureFolder('LibriVox Streaming');
+    await _db.ensureFolder('LibriVox Streaming');
 
     // 2. Ensure Artist
     final artistName = book.authorNames;
@@ -178,7 +178,7 @@ class LibriVoxBookDownloader {
     extractedFiles.sort();
 
     // 4. Ensure Album and Artist in database
-    final folderId = await _db.ensureFolder(bookDir.path);
+    await _db.ensureFolder(bookDir.path);
     final artistId = await _db.ensureArtist(book.authorNames);
 
     final existingAlbum = await (_db.select(_db.audiobooks)

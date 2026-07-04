@@ -49,7 +49,6 @@ class _SmartPlaylistBuilderDialogState extends State<SmartPlaylistBuilderDialog>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
 
     return Dialog(
       backgroundColor: Colors.transparent,

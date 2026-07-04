@@ -30,7 +30,7 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
 
       for (final f in files) {
         final fileDir = p.dirname(f.path);
-        final trackFolderId = await ensureFolderHierarchy(
+        await ensureFolderHierarchy(
           fileDir,
           rootId,
           path,

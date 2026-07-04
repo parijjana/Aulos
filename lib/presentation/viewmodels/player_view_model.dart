@@ -32,7 +32,6 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
   final RadioDatabase _radioDb;
   final PlaybackDatabase _playbackDb;
   final AudiobookDatabase _audiobookDb;
-  final PodcastDatabase _podcastDb;
   final SettingsViewModel _settingsVM;
   final LogService _logService;
   NoiseViewModel? _noiseVM;
@@ -132,7 +131,6 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
        _radioDb = radioDb,
        _playbackDb = playbackDb,
        _audiobookDb = audiobookDb,
-       _podcastDb = podcastDb,
        _settingsVM = settingsVM,
        _logService = logService ?? NoOpLogService() {
     _init();
@@ -523,7 +521,6 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
   }
 
   void startSleepTimer(Duration duration) => PlayerViewModelSleep(this).startSleepTimer(duration);
-  void _startSleepFadeOut() => PlayerViewModelSleep(this).startSleepFadeOut();
   void cancelSleepTimer() => PlayerViewModelSleep(this).cancelSleepTimer();
 
   void skipForward() => seek(_position + const Duration(seconds: 15));

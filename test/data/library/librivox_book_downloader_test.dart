@@ -111,19 +111,6 @@ void main() {
 
       when(() => mockClient.send(any())).thenAnswer((_) async => mockResponse);
 
-      // Mock the RSS call which downloadBook uses to align track titles/durations
-      final rssXml = '''
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
-  <channel>
-    <item>
-      <title>Chapter 1: Homeric Beginnings</title>
-      <enclosure url="https://example.com/stream/01.mp3" length="1000" type="audio/mpeg"/>
-      <itunes:duration 600/>
-    </item>
-  </channel>
-</rss>
-''';
       // Wait, let's fix the XML to have correct standard tag format for itunes:duration
       // The original XML:
       // <itunes:duration>600</itunes:duration>

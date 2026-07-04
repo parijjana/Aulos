@@ -328,35 +328,5 @@ class _RadioBrowserScreenState extends State<RadioBrowserScreen> with AutomaticK
     );
   }
 
-  void _showManualStationDialog(RadioViewModel vm, ThemeData theme) {
-    final nameController = TextEditingController();
-    final urlController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.colorScheme.surface,
-        title: const Text('Add Manual Station'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(hintText: 'Station Name')),
-            const SizedBox(height: 8),
-            TextField(controller: urlController, decoration: const InputDecoration(hintText: 'Stream URL (http://...)')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty && urlController.text.isNotEmpty) {
-                vm.addManualStation(nameController.text, urlController.text);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('ADD'),
-          ),
-        ],
-      ),
-    );
-  }
+
 }

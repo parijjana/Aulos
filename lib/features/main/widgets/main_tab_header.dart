@@ -22,7 +22,6 @@ class MainTabHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final displayVM = context.read<DisplayViewModel>();
     final bool isDesktop = !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
     final bool isMac = !kIsWeb && Platform.isMacOS;
 

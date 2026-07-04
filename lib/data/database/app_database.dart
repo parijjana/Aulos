@@ -41,20 +41,7 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 25;
 
-  Future<void> _safeAddColumn(Migrator m, TableInfo table, GeneratedColumn column) async {
-    try {
-      await m.addColumn(table, column);
-    } catch (e) {
-      final err = e.toString().toLowerCase();
-      if (err.contains('duplicate column name') || 
-          err.contains('already exists') || 
-          err.contains('sqlite_error')) {
-        // Ignored duplicate column
-        return;
-      }
-      rethrow;
-    }
-  }
+
 
   Future<void> _safeDeleteTable(Migrator m, String tableName) async {
     try {

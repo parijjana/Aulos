@@ -72,7 +72,7 @@ class _WinampVisualizerState extends State<WinampVisualizer> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final playerVM = context.watch<PlayerViewModel>();
+    context.watch<PlayerViewModel>();
     final theme = Theme.of(context);
     final activeColor = theme.colorScheme.primary;
 

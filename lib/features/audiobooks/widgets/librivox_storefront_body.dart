@@ -28,7 +28,6 @@ class LibriVoxStorefrontBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
     final settingsVM = context.watch<settings.SettingsViewModel>();
 
     if (vm.isLoading && selectedCategory == null && !isSearching && vm.searchResults.isEmpty) {

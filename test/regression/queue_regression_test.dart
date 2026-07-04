@@ -280,11 +280,6 @@ void main() {
       await tester.pumpWidget(buildTestableWidget());
 
       // Finding by icons - note the icons might have changed or might be in specific containers
-      // The floating bar now contains these controls centered.
-      
-      final shuffleFinder = find.byIcon(Icons.shuffle_rounded);
-      final repeatFinder = find.byIcon(Icons.repeat_rounded);
-
       // Verify they are visible
       // expect(shuffleFinder, findsOneWidget, reason: 'Shuffle button missing from FAB');
       // expect(repeatFinder, findsOneWidget, reason: 'Repeat button missing from FAB');
