@@ -9,6 +9,7 @@ import 'gate/tests.dart';
 import 'gate/coverage.dart';
 import 'gate/report.dart';
 
+// Canonical invocation: dart tool/gate.dart
 void main(List<String> arguments) async {
   final shrinkBaseline = arguments.contains('--shrink-baseline');
   final verbose = arguments.contains('--verbose');
