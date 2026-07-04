@@ -91,7 +91,7 @@ void main(List<String> arguments) async {
   final wallSecs = DateTime.now().difference(startTime).inSeconds;
   report['wall_secs'] = wallSecs;
 
-  // Rewrite config file if anything shrunk/bootstrapped under --shrink-baseline
+  // Rewrite config file if anything shrunk under --shrink-baseline
   if (shrinkBaseline && (baselineUpdated || helperBaselineUpdated || updatedHelperBaseline.length != helperBaseline.length)) {
     configMap['baseline'] = baselineMap;
     configMap['widget_helper_baseline'] = updatedHelperBaseline;

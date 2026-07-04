@@ -44,12 +44,6 @@ baseline:
   lib/presentation/viewmodels/radio_view_model.dart: 536
   lib/presentation/viewmodels/settings_view_model.dart: 362
 
-custom_ci_secret: "super-secret-value"
-
-custom_list:
-  - a
-  - b
-
 flutter_version: stable
 
 widget_helper_baseline:
