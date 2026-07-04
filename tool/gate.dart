@@ -11,8 +11,12 @@ import 'gate/report.dart';
 
 void main(List<String> arguments) async {
   final shrinkBaseline = arguments.contains('--shrink-baseline');
+  final verbose = arguments.contains('--verbose');
+  final isCi = arguments.contains('--ci');
 
-  print('Aulos Gate: Checking rules and verification...\n');
+  if (verbose) {
+    print('Aulos Gate: Checking rules and verification...\n');
+  }
 
   final configFile = File('tool/gate_config.yaml');
   if (!configFile.existsSync()) {
@@ -44,16 +48,22 @@ void main(List<String> arguments) async {
   final startTime = DateTime.now();
 
   // Run G1: Analyzer
-  print('Running G1: Dart Analyzer...');
-  final analyzerPassed = await runAnalyzer(report);
+  if (verbose) {
+    print('Running G1: Dart Analyzer...');
+  }
+  final analyzerPassed = await runAnalyzer(report, verbose);
 
   // Run G2: File Size Ratchet
-  print('Running G2: File Size Ratchet...');
+  if (verbose) {
+    print('Running G2: File Size Ratchet...');
+  }
   var baselineUpdated = false;
-  final sizePassed = runSizeRatchet(report, baselineMap, shrinkBaseline, () => baselineUpdated = true);
+  final sizePassed = runSizeRatchet(report, baselineMap, shrinkBaseline, verbose, () => baselineUpdated = true);
 
   // Run G3: Structural Rules
-  print('Running G3: Structural Rules...');
+  if (verbose) {
+    print('Running G3: Structural Rules...');
+  }
   var helperBaselineUpdated = false;
   final updatedHelperBaseline = <String>[];
   final structPassed = runStructuralChecks(
@@ -62,16 +72,21 @@ void main(List<String> arguments) async {
     shrinkBaseline,
     updatedHelperBaseline,
     forbiddenImportsConfig,
+    verbose,
     () => helperBaselineUpdated = true,
   );
 
   // Run G4: Tests
-  print('Running G4: Flutter Tests...');
-  final testsPassed = await runTests(report);
+  if (verbose) {
+    print('Running G4: Flutter Tests...');
+  }
+  final testsPassed = await runTests(report, verbose);
 
   // Run G5: Coverage (if lcov.info exists)
-  print('Running G5: Coverage Check...');
-  runCoverage(report);
+  if (verbose) {
+    print('Running G5: Coverage Check...');
+  }
+  runCoverage(report, verbose);
 
   final wallSecs = DateTime.now().difference(startTime).inSeconds;
   report['wall_secs'] = wallSecs;
@@ -127,7 +142,9 @@ void main(List<String> arguments) async {
       buffer.writeln('');
     }
     configFile.writeAsStringSync(buffer.toString().trim() + '\n');
-    print('  Baseline configuration shrunk and saved in tool/gate_config.yaml.');
+    if (verbose) {
+      print('  Baseline configuration shrunk and saved in tool/gate_config.yaml.');
+    }
   }
 
   final totalPassed = analyzerPassed && sizePassed && structPassed && testsPassed;
@@ -137,8 +154,10 @@ void main(List<String> arguments) async {
   // Output Report
   await File('gate_report.json').writeAsString(JsonEncoder.withIndent('  ').convert(report));
 
-  // Write gate_summary.md for CI step summary
-  await writeSummaryMarkdown(report, totalPassed);
+  // Write gate_summary.md for CI step summary (only if --ci passed)
+  if (isCi) {
+    await writeSummaryMarkdown(report, totalPassed);
+  }
 
   printDigest(report, totalPassed);
 

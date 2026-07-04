@@ -5,6 +5,7 @@ bool runSizeRatchet(
   Map<String, dynamic> report,
   Map<String, int> baselineMap,
   bool shrink,
+  bool verbose,
   void Function() onUpdated,
 ) {
   final libDir = Directory('lib');
@@ -85,13 +86,17 @@ bool runSizeRatchet(
   report['size']['p90'] = p90;
 
   if (violations.isNotEmpty) {
-    print('  G2 Fail: ${violations.length} files violated size constraints.');
-    for (final v in violations) {
-      print('    ${v['path']}: ${v['lines']} lines (limit: ${v['limit']})');
+    if (verbose) {
+      print('  G2 Fail: ${violations.length} files violated size constraints.');
+      for (final v in violations) {
+        print('    ${v['path']}: ${v['lines']} lines (limit: ${v['limit']})');
+      }
     }
     return false;
   }
 
-  print('  G2 Pass: Largest file is $largest lines. p90 is $p90 lines.');
+  if (verbose) {
+    print('  G2 Pass: Largest file is $largest lines. p90 is $p90 lines.');
+  }
   return true;
 }

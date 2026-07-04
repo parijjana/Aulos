@@ -1,10 +1,12 @@
 import 'dart:io';
 
-void runCoverage(Map<String, dynamic> report) {
+void runCoverage(Map<String, dynamic> report, bool verbose) {
   final coverageFile = File('coverage/lcov.info');
   if (!coverageFile.existsSync()) {
     report['coverage_pct'] = null;
-    print('  G5: coverage unavailable');
+    if (verbose) {
+      print('  G5: coverage unavailable');
+    }
     return;
   }
 
@@ -40,9 +42,13 @@ void runCoverage(Map<String, dynamic> report) {
 
     final pct = instrumentedLines == 0 ? 0.0 : (coveredLines / instrumentedLines) * 100.0;
     report['coverage_pct'] = double.parse(pct.toStringAsFixed(1));
-    print('  G5 Pass: Coverage is ${report['coverage_pct']}% ($coveredLines/$instrumentedLines lines).');
+    if (verbose) {
+      print('  G5 Pass: Coverage is ${report['coverage_pct']}% ($coveredLines/$instrumentedLines lines).');
+    }
   } catch (e) {
-    print('  G5 Error reading coverage: $e');
+    if (verbose) {
+      print('  G5 Error reading coverage: $e');
+    }
     report['coverage_pct'] = null;
   }
 }

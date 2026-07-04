@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
-Future<bool> runAnalyzer(Map<String, dynamic> report) async {
+Future<bool> runAnalyzer(Map<String, dynamic> report, bool verbose) async {
   try {
     final res = await Process.run('dart', ['analyze', '--format=machine']);
     final lines = res.stdout.toString().split('\n');
@@ -39,13 +39,19 @@ Future<bool> runAnalyzer(Map<String, dynamic> report) async {
     };
 
     if (errors > 0 || warnings > 0) {
-      print('  G1 Fail: $errors errors, $warnings warnings found. ($infos infos)');
+      if (verbose) {
+        print('  G1 Fail: $errors errors, $warnings warnings found. ($infos infos)');
+      }
       return false;
     }
-    print('  G1 Pass: 0 errors, 0 warnings, $infos infos.');
+    if (verbose) {
+      print('  G1 Pass: 0 errors, 0 warnings, $infos infos.');
+    }
     return true;
   } catch (e) {
-    print('  G1 Error running analyzer: $e');
+    if (verbose) {
+      print('  G1 Error running analyzer: $e');
+    }
     return false;
   }
 }

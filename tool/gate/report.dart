@@ -60,8 +60,14 @@ Future<void> writeSummaryMarkdown(Map<String, dynamic> report, bool pass) async 
 }
 
 void printDigest(Map<String, dynamic> report, bool pass) {
+  final struct = report['struct'] as Map<String, dynamic>;
+  final helpersCount = (struct['widget_helpers'] as List? ?? []).length;
+  final barrelsCount = (struct['barrel_files'] as List? ?? []).length;
+  final forbiddenCount = (struct['forbidden_imports'] as List? ?? []).length;
+  final structCount = helpersCount + barrelsCount + forbiddenCount;
+
   if (pass) {
-    print('\nGATE PASS  sha=${report['sha']}  tests=${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']}  analyzer=${report['analyzer']['errors']}E/${report['analyzer']['warnings']}W  size=${report['size']['violations'].length}  cov=${report['coverage_pct'] != null ? "${report['coverage_pct']}%" : "n/a"}');
+    print('\nGATE PASS  sha=${report['sha']}  tests=${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']}  analyzer=${report['analyzer']['errors']}E/${report['analyzer']['warnings']}W  size=${report['size']['violations'].length}  struct=$structCount  cov=${report['coverage_pct'] != null ? "${report['coverage_pct']}%" : "n/a"}');
   } else {
     print('\nGATE FAIL  sha=${report['sha']}');
     

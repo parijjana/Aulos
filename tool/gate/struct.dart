@@ -7,6 +7,7 @@ bool runStructuralChecks(
   bool shrink,
   List<String> updatedHelperBaseline,
   List<dynamic> forbiddenImportsConfig,
+  bool verbose,
   void Function() onUpdated,
 ) {
   final libDir = Directory('lib');
@@ -90,29 +91,37 @@ bool runStructuralChecks(
 
   bool passed = true;
   if (widgetHelpers.isNotEmpty) {
-    print('  G3 Fail: ${widgetHelpers.length} widget build helpers found:');
-    for (final f in widgetHelpers) {
-      print('    $f');
+    if (verbose) {
+      print('  G3 Fail: ${widgetHelpers.length} widget build helpers found:');
+      for (final f in widgetHelpers) {
+        print('    $f');
+      }
     }
     passed = false;
   }
   if (barrelFiles.isNotEmpty) {
-    print('  G3 Fail: ${barrelFiles.length} export barrel files found:');
-    for (final f in barrelFiles) {
-      print('    $f');
+    if (verbose) {
+      print('  G3 Fail: ${barrelFiles.length} export barrel files found:');
+      for (final f in barrelFiles) {
+        print('    $f');
+      }
     }
     passed = false;
   }
   if (forbiddenImports.isNotEmpty) {
-    print('  G3 Fail: ${forbiddenImports.length} forbidden imports found:');
-    for (final f in forbiddenImports) {
-      print('    $f');
+    if (verbose) {
+      print('  G3 Fail: ${forbiddenImports.length} forbidden imports found:');
+      for (final f in forbiddenImports) {
+        print('    $f');
+      }
     }
     passed = false;
   }
 
   if (passed) {
-    print('  G3 Pass: Structural rules followed perfectly.');
+    if (verbose) {
+      print('  G3 Pass: Structural rules followed perfectly.');
+    }
   }
   return passed;
 }

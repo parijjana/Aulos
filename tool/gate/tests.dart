@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 
-Future<bool> runTests(Map<String, dynamic> report) async {
+Future<bool> runTests(Map<String, dynamic> report, bool verbose) async {
   final coverageFile = File('coverage/lcov.info');
   if (coverageFile.existsSync()) {
     try {
@@ -59,18 +59,24 @@ Future<bool> runTests(Map<String, dynamic> report) async {
     };
 
     if (exitCode != 0 || failed > 0 || total == 0 || failures.isNotEmpty) {
-      if (total == 0) {
-        print('  G4 Fail: No tests were run.');
-      } else {
-        print('  G4 Fail: ${failures.length} failures/errors out of $total.');
+      if (verbose) {
+        if (total == 0) {
+          print('  G4 Fail: No tests were run.');
+        } else {
+          print('  G4 Fail: ${failures.length} failures/errors out of $total.');
+        }
       }
       return false;
     }
 
-    print('  G4 Pass: All $total tests passed successfully.');
+    if (verbose) {
+      print('  G4 Pass: All $total tests passed successfully.');
+    }
     return true;
   } catch (e) {
-    print('  G4 Error running tests: $e');
+    if (verbose) {
+      print('  G4 Error running tests: $e');
+    }
     return false;
   }
 }
