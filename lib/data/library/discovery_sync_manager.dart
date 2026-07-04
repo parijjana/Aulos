@@ -16,7 +16,6 @@ class DiscoverySyncManager extends ChangeNotifier {
   final LogService _logService;
   
   bool _isSyncing = false;
-  bool _isActiveSyncEnabled = false;
   final Set<String> _syncedPodcasts = {};
   
   final _syncCooldown = const Duration(days: 30);
@@ -239,6 +238,6 @@ class DiscoverySyncManager extends ChangeNotifier {
     }
   }
 
-  void enableActiveSync() => _isActiveSyncEnabled = true;
-  void disableActiveSync() => _isActiveSyncEnabled = false;
+  void enableActiveSync() {}
+  void disableActiveSync() {}
 }
