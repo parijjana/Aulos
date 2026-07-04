@@ -106,7 +106,12 @@ void printDigest(Map<String, dynamic> report, bool pass) {
 
     final failures = report['tests']['failures'] as List;
     for (final f in failures.take(5)) {
-      print('[G4 test] ${f['name']} failed with ${f['error']}');
+      final isLoad = f['isLoadFailure'] as bool? ?? false;
+      if (isLoad) {
+        print('[G4 load] ${f['name']}');
+      } else {
+        print('[G4 test] ${f['name']} failed with ${f['error']}');
+      }
     }
     if (failures.length > 5) print('  (+${failures.length - 5} more test failures)');
   }

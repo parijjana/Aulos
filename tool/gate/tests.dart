@@ -12,10 +12,12 @@ Future<bool> runTests(Map<String, dynamic> report, bool verbose) async {
   try {
     final process = await Process.start('flutter', ['test', '--coverage', '--reporter=json'], runInShell: true);
     final stderrDone = process.stderr.drain<void>();
-    final failures = <Map<String, String>>[];
+    final failures = <Map<String, dynamic>>[];
     final testNames = <int, String>{};
+    final loadIds = <int>{};
     int total = 0;
     int failed = 0;
+    int suiteLoadErrors = 0;
 
     final lineStream = process.stdout
         .transform(utf8.decoder)
@@ -31,19 +33,36 @@ Future<bool> runTests(Map<String, dynamic> report, bool verbose) async {
           final id = test['id'] as int;
           final name = test['name'] as String;
           testNames[id] = name;
-          if (name.isNotEmpty && !name.startsWith('loading ')) {
+          if (name.startsWith('loading ')) {
+            loadIds.add(id);
+          } else if (name.isNotEmpty) {
             total++;
           }
         } else if (type == 'error') {
           final testId = event['testID'] as int?;
           final error = event['error'] as String;
+          final isLoadFailure = testId != null && loadIds.contains(testId);
           final name = testId != null ? (testNames[testId] ?? 'Unknown Test') : 'Suite Load Error';
           final firstLine = error.split('\n').firstWhere((l) => l.trim().isNotEmpty, orElse: () => 'Unknown Error');
-          failures.add({'name': name, 'error': firstLine});
+          
+          String finalName = name;
+          if (isLoadFailure && name.startsWith('loading ')) {
+            finalName = name.replaceFirst('loading ', '');
+          }
+          failures.add({
+            'name': finalName,
+            'error': firstLine,
+            'isLoadFailure': isLoadFailure,
+          });
         } else if (type == 'testDone') {
           final result = event['result'] as String;
+          final testId = event['testID'] as int?;
           if (result == 'failure' || result == 'error') {
-            failed++;
+            if (testId != null && loadIds.contains(testId)) {
+              suiteLoadErrors++;
+            } else {
+              failed++;
+            }
           }
         }
       } catch (_) {}
@@ -54,16 +73,17 @@ Future<bool> runTests(Map<String, dynamic> report, bool verbose) async {
 
     report['tests'] = {
       'total': total,
-      'failed': failed + failures.where((f) => !testNames.values.contains(f['name']) && f['name'] != 'Unknown Test').length,
+      'failed': failed,
+      'suite_load_errors': suiteLoadErrors,
       'failures': failures,
     };
 
-    if (exitCode != 0 || failed > 0 || total == 0 || failures.isNotEmpty) {
+    if (exitCode != 0 || failed > 0 || suiteLoadErrors > 0 || total == 0) {
       if (verbose) {
         if (total == 0) {
           print('  G4 Fail: No tests were run.');
         } else {
-          print('  G4 Fail: ${failures.length} failures/errors out of $total.');
+          print('  G4 Fail: $failed failures/errors, $suiteLoadErrors suite load errors out of $total.');
         }
       }
       return false;
