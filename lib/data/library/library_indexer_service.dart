@@ -36,7 +36,7 @@ class LibraryIndexerService extends ChangeNotifier {
   SettingsViewModel? _settingsVM;
   PersistentLibraryService? _libService;
   Timer? _watchDebounceTimer;
-  final List<StreamSubscription> _watchSubscriptions = [];
+  final List<StreamSubscription<dynamic>> _watchSubscriptions = [];
   bool? _lastWatcherEnabled;
   List<String>? _lastMonitoredFolders;
   List<String>? _lastAudiobookFolders;
@@ -127,11 +127,11 @@ class LibraryIndexerService extends ChangeNotifier {
 
     log('INDEXER: Starting filesystem watcher on: $path');
     try {
-      late StreamSubscription sub;
+      late StreamSubscription<FileSystemEvent> sub;
       sub = dir.watch(recursive: true).listen((event) {
         log('INDEXER: Detected FS change in $path: ${event.type} on ${event.path}');
         _triggerDebouncedScan();
-      }, onError: (e) {
+      }, onError: (Object e) {
         log('INDEXER: FS Watcher error on $path: $e');
         sub.cancel();
         _watchSubscriptions.remove(sub);

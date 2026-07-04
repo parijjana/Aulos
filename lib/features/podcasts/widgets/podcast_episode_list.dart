@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 class PodcastEpisodeList extends StatelessWidget {
   final List<Episode> episodes;
   final Episode? selectedEpisode;
-  final Function(Episode) onEpisodeSelected;
+  final void Function(Episode) onEpisodeSelected;
 
   const PodcastEpisodeList({
     super.key,

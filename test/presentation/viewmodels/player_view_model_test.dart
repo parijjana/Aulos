@@ -137,11 +137,11 @@ void main() {
       );
 
       stateController.add(engine_domain.PlaybackState.playing);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
       expect(viewModel.isPlaying, isTrue);
 
       stateController.add(engine_domain.PlaybackState.paused);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
       expect(viewModel.isPlaying, isFalse);
     });
 

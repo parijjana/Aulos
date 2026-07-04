@@ -5,7 +5,7 @@ import 'package:flutter/gestures.dart';
 class AulosOrbit extends StatefulWidget {
   final List<dynamic> items;
   final Widget Function(dynamic item) itemBuilder;
-  final Function(dynamic item) onTap;
+  final void Function(dynamic item) onTap;
 
   const AulosOrbit({
     super.key,

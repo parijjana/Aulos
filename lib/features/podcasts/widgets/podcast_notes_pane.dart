@@ -8,8 +8,8 @@ import 'package:intl/intl.dart';
 
 class PodcastNotesPane extends StatelessWidget {
   final Episode? selectedEpisode;
-  final Function(Episode) onTogglePin;
-  final Function(Episode) onPlay;
+  final void Function(Episode) onTogglePin;
+  final void Function(Episode) onPlay;
 
   const PodcastNotesPane({
     super.key,

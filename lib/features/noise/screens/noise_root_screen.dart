@@ -399,7 +399,7 @@ class _SavedMixesTab extends StatelessWidget {
         .join(' & ');
     controller.text = activeNames;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Save Ambient Mix'),

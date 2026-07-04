@@ -3,7 +3,7 @@ import 'package:aulos/data/database/podcast_database.dart';
 
 class PodcastGrid extends StatelessWidget {
   final List<Podcast> podcasts;
-  final Function(Podcast) onPodcastSelected;
+  final void Function(Podcast) onPodcastSelected;
 
   const PodcastGrid({
     super.key,

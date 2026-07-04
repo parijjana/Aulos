@@ -97,7 +97,7 @@ class DiscoverySyncManager extends ChangeNotifier {
         final results = await _api.getPodcastsByCategory(catId, limit: 200);
         await _db.upsertPodcasts(_mapToCompanions(results), catId);
         totalFetched += results.length;
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(const Duration(milliseconds: 300));
       }
 
       await _db.logRun(DateTime.now(), totalFetched, 'success');

@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 class HtmlText extends StatelessWidget {
   final String html;
   final TextStyle? style;
-  final Function(Duration)? onTimestampTap;
+  final void Function(Duration)? onTimestampTap;
 
   const HtmlText(this.html, {super.key, this.style, this.onTimestampTap});
 

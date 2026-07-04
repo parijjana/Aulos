@@ -150,7 +150,7 @@ void main() {
 
       // Push a new page with a TextField to gain focus
       final NavigatorState navigator = tester.state(find.byType(Navigator));
-      navigator.push(MaterialPageRoute(
+      navigator.push(MaterialPageRoute<void>(
         builder: (context) => const Scaffold(
           body: TextField(
             autofocus: true,

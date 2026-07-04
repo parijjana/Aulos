@@ -99,7 +99,7 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
       final errStr = e.toString();
       if (!isRetry && (errStr.contains('Loading interrupted') || errStr.contains('busy'))) {
         log('HANDLER_RECOVERY: Transient error ($errStr). Retrying in 2s...');
-        await Future.delayed(const Duration(seconds: 2));
+        await Future<void>.delayed(const Duration(seconds: 2));
         return setSource(uri, isRetry: true);
       }
       log('HANDLER_ERROR: Critical failure: $e');

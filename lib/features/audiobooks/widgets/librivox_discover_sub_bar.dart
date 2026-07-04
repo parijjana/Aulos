@@ -11,10 +11,10 @@ class LibriVoxDiscoverSubBar extends StatelessWidget {
   final FocusNode searchFocus;
   final bool isSearching;
   final bool searchExpanded;
-  final Function(Map<String, dynamic>) onCategorySelected;
-  final Function(String) onSearchSubmitted;
+  final void Function(Map<String, dynamic>) onCategorySelected;
+  final void Function(String) onSearchSubmitted;
   final VoidCallback onClear;
-  final Function(bool) onSearchExpandedChanged;
+  final void Function(bool) onSearchExpandedChanged;
   final ValueChanged<String>? onChanged;
 
   const LibriVoxDiscoverSubBar({

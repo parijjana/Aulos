@@ -47,7 +47,7 @@ class RadioDatabase extends _$RadioDatabase {
   @override
   int get schemaVersion => 4;
 
-  Future<void> _safeAddColumn(Migrator m, TableInfo table, GeneratedColumn column) async {
+  Future<void> _safeAddColumn(Migrator m, TableInfo<Table, dynamic> table, GeneratedColumn column) async {
     try {
       await m.addColumn(table, column);
     } catch (e) {

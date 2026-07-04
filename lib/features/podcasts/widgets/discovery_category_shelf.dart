@@ -5,7 +5,7 @@ import 'package:aulos/features/podcasts/widgets/discovery_grid_item.dart';
 class DiscoveryCategoryShelf extends StatelessWidget {
   final Map<String, dynamic> cat;
   final PodcastViewModel vm;
-  final Function(Map<String, dynamic>) onSeeAll;
+  final void Function(Map<String, dynamic>) onSeeAll;
 
   const DiscoveryCategoryShelf({
     super.key,

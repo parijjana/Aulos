@@ -306,7 +306,7 @@ class ServicesStorageSection extends StatelessWidget {
   }
 
   void _showConfirmClear(BuildContext context, RadioViewModel vm) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear Radio Cache?'),
@@ -477,7 +477,7 @@ class ServicesStorageSection extends StatelessWidget {
   }
 
   void _showRestartDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Restart Required'),

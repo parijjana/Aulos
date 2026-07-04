@@ -110,7 +110,7 @@ class LibriVoxBookDownloader {
     log('LIBRIVOX_DOWNLOADER: Integrated streaming for "${book.title}" successfully.');
   }
 
-  Future<void> downloadBook(LibriVoxBook book, {required Function(double) onProgress}) async {
+  Future<void> downloadBook(LibriVoxBook book, {required void Function(double) onProgress}) async {
     // 1. Determine local Audiobook download directory
     String baseAudiobooksDir;
     final existingFolders = await _db.getRootFolders();

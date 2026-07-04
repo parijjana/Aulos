@@ -13,7 +13,7 @@ class LibriVoxStorefrontBody extends StatelessWidget {
   final Map<String, dynamic>? selectedCategory;
   final bool isSearching;
   final List<Map<String, dynamic>> categories;
-  final Function(Map<String, dynamic>)? onCategorySelected;
+  final void Function(Map<String, dynamic>)? onCategorySelected;
 
   const LibriVoxStorefrontBody({
     super.key,

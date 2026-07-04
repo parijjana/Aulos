@@ -147,14 +147,14 @@ void main() {
       await viewModel.loadTrack(podcastTrack);
       trackController.add(podcastTrack.toDomain());
       stateController.add(engine_domain.PlaybackState.playing);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       expect(viewModel.currentMediaType, MediaType.podcast);
       expect(viewModel.isPlaying, isTrue);
 
       // Mock stop to take 1100ms to simulate network buffering/delayed stop during transition
       when(() => mockEngine.stop()).thenAnswer((_) async {
-        await Future.delayed(const Duration(milliseconds: 1100));
+        await Future<void>.delayed(const Duration(milliseconds: 1100));
       });
 
       // 2. User plays a radio station
@@ -175,11 +175,11 @@ void main() {
       final futureLoad = viewModel.loadTrack(radioTrack, description: 'station-uuid|description');
       
       // Delay so that the debounce window (1 second) expires
-      await Future.delayed(const Duration(milliseconds: 1050));
+      await Future<void>.delayed(const Duration(milliseconds: 1050));
 
       // Engine finishes stopping/completes
       stateController.add(engine_domain.PlaybackState.completed);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       await futureLoad;
 
@@ -204,7 +204,7 @@ void main() {
       await viewModel.loadTrack(musicTrack);
       trackController.add(musicTrack.toDomain());
       stateController.add(engine_domain.PlaybackState.playing);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       expect(viewModel.currentMediaType, MediaType.music);
       expect(viewModel.isPlaying, isTrue);

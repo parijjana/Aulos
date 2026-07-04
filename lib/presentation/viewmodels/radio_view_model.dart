@@ -25,10 +25,10 @@ class RadioViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _allCountries = [];
   List<Map<String, dynamic>> _allLanguages = [];
 
-  StreamSubscription? _browseSub;
-  StreamSubscription? _searchSub;
-  StreamSubscription? _favSub;
-  StreamSubscription? _catSub;
+  StreamSubscription<dynamic>? _browseSub;
+  StreamSubscription<dynamic>? _searchSub;
+  StreamSubscription<dynamic>? _favSub;
+  StreamSubscription<dynamic>? _catSub;
 
   bool _isLoading = false;
   String? _error;
@@ -246,7 +246,7 @@ class RadioViewModel extends ChangeNotifier {
       }));
       
       notifyListeners(); // Refresh UI for this batch
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
     }
   }
 

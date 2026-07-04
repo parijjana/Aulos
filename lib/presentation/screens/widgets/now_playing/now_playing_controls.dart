@@ -117,7 +117,7 @@ void showRichBookmarkDialog(BuildContext context, PlayerViewModel vm, ThemeData 
   final tagsController = TextEditingController();
   final notesController = TextEditingController();
 
-  showDialog(
+  showDialog<void>(
     context: context,
     barrierDismissible: false, 
     builder: (context) => AlertDialog(

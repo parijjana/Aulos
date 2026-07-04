@@ -181,7 +181,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
                     ),
                     tooltip: 'Sleep Timer',
                     onPressed: () {
-                      showDialog(
+                      showDialog<void>(
                         context: context,
                         builder: (context) => const SleepTimerDialog(),
                       );

@@ -10,8 +10,8 @@ class DiscoverySubBar extends StatelessWidget {
   final FocusNode searchFocus;
   final bool isSearching;
   final bool searchExpanded;
-  final Function(Map<String, dynamic>) onCategorySelected;
-  final Function({required bool isSearching, required bool searchExpanded}) onSearchStateChanged;
+  final void Function(Map<String, dynamic>) onCategorySelected;
+  final void Function({required bool isSearching, required bool searchExpanded}) onSearchStateChanged;
 
   const DiscoverySubBar({
     super.key,

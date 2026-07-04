@@ -31,7 +31,7 @@ class PodcastViewModel extends ChangeNotifier {
   List<PodcastSearchResult> _trendingResults = [];
   Map<String, List<PodcastSearchResult>> _categoryResults = {};
   
-  final Map<String, StreamSubscription> _categorySubs = {};
+  final Map<String, StreamSubscription<dynamic>> _categorySubs = {};
   final Map<String, int> _categoryLimits = {};
   
   bool _isLoading = false;
@@ -49,8 +49,8 @@ class PodcastViewModel extends ChangeNotifier {
     }
   }
 
-  StreamSubscription? _downloadSub;
-  StreamSubscription? _searchSub;
+  StreamSubscription<dynamic>? _downloadSub;
+  StreamSubscription<dynamic>? _searchSub;
   String _lastSearchQuery = '';
   bool _disposed = false;
   
