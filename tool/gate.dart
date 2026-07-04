@@ -16,6 +16,10 @@ void main(List<String> arguments) async {
   }
 
   final configYaml = loadYaml(configFile.readAsStringSync()) as YamlMap;
+  final configMap = <String, dynamic>{};
+  for (final entry in configYaml.entries) {
+    configMap[entry.key.toString()] = entry.value;
+  }
   final baselineMap = Map<String, int>.from(configYaml['baseline'] as Map? ?? {});
   final helperBaseline = List<String>.from(configYaml['widget_helper_baseline'] as List? ?? []);
 
@@ -67,25 +71,55 @@ void main(List<String> arguments) async {
 
   // Rewrite config file if anything shrunk/bootstrapped under --shrink-baseline
   if (shrinkBaseline && (baselineUpdated || helperBaselineUpdated || updatedHelperBaseline.length != helperBaseline.length)) {
+    configMap['baseline'] = baselineMap;
+    configMap['widget_helper_baseline'] = updatedHelperBaseline;
+
     final buffer = StringBuffer();
     buffer.writeln('# Aulos Gate Configuration');
-    buffer.writeln('flutter_version: "stable"');
-    buffer.writeln('');
-    buffer.writeln('# Files allowed to exceed 300 lines (frozen at today\'s counts).');
     buffer.writeln('# File counts can only shrink, never grow.');
-    buffer.writeln('baseline:');
-    final sortedKeys = baselineMap.keys.toList()..sort();
-    for (final key in sortedKeys) {
-      buffer.writeln('  $key: ${baselineMap[key]}');
-    }
     buffer.writeln('');
-    buffer.writeln('# Files allowed to have widget build helpers.');
-    buffer.writeln('widget_helper_baseline:');
-    final sortedHelpers = updatedHelperBaseline..sort();
-    for (final file in sortedHelpers) {
-      buffer.writeln('  - $file');
+
+    final sortedKeys = configMap.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final value = configMap[key];
+      if (key == 'baseline') {
+        buffer.writeln('baseline:');
+        final sortedBaselineKeys = baselineMap.keys.toList()..sort();
+        for (final bKey in sortedBaselineKeys) {
+          buffer.writeln('  $bKey: ${baselineMap[bKey]}');
+        }
+      } else if (key == 'widget_helper_baseline') {
+        buffer.writeln('widget_helper_baseline:');
+        final sortedHelpers = updatedHelperBaseline..sort();
+        for (final file in sortedHelpers) {
+          buffer.writeln('  - $file');
+        }
+      } else if (value is Map) {
+        buffer.writeln('$key:');
+        final sortedSubKeys = value.keys.map((k) => k.toString()).toList()..sort();
+        for (final subKey in sortedSubKeys) {
+          final subVal = value[subKey];
+          if (subVal is List) {
+            buffer.writeln('  $subKey:');
+            for (final item in subVal) {
+              buffer.writeln('    - ${item.toString()}');
+            }
+          } else {
+            buffer.writeln('  $subKey: ${_formatYamlValue(subVal)}');
+          }
+        }
+      } else if (value is List) {
+        buffer.writeln('$key:');
+        final listValues = value.map((v) => v.toString()).toList()..sort();
+        for (final val in listValues) {
+          buffer.writeln('  - $val');
+        }
+      } else {
+        buffer.writeln('$key: ${_formatYamlValue(value)}');
+      }
+      buffer.writeln('');
     }
-    configFile.writeAsStringSync(buffer.toString());
+    configFile.writeAsStringSync(buffer.toString().trim() + '\n');
     print('  Baseline configuration shrunk and saved in tool/gate_config.yaml.');
   }
 
@@ -549,4 +583,14 @@ void _printDigest(Map<String, dynamic> report, bool pass) {
     }
     if (failures.length > 5) print('  (+${failures.length - 5} more test failures)');
   }
+}
+
+String _formatYamlValue(dynamic value) {
+  if (value is String) {
+    if (value.contains(' ') || value.contains(':') || value.contains('#') || value.contains('-') || value.contains('[') || value.contains(']')) {
+      return '"$value"';
+    }
+    return value;
+  }
+  return value.toString();
 }

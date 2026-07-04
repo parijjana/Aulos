@@ -1,8 +1,6 @@
 # Aulos Gate Configuration
-flutter_version: "stable"
-
-# Files allowed to exceed 300 lines (frozen at today's counts).
 # File counts can only shrink, never grow.
+
 baseline:
   lib/data/library/library_indexer_service.dart: 549
   lib/data/library/persistent_library_importer.dart: 322
@@ -24,7 +22,14 @@ baseline:
   lib/presentation/viewmodels/radio_view_model.dart: 536
   lib/presentation/viewmodels/settings_view_model.dart: 362
 
-# Files allowed to have widget build helpers.
+custom_ci_secret: "super-secret-value"
+
+custom_list:
+  - a
+  - b
+
+flutter_version: stable
+
 widget_helper_baseline:
   - lib/features/audiobooks/screens/audiobook_root_screen.dart
   - lib/features/audiobooks/widgets/audiobook_detail_view.dart
