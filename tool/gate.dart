@@ -28,7 +28,7 @@ void main(List<String> arguments) async {
     'analyzer': {'errors': 0, 'warnings': 0, 'infos': 0},
     'size': {'violations': [], 'baseline_count': baselineMap.length, 'largest': 0, 'p90': 0},
     'struct': {'widget_helpers': [], 'barrel_files': [], 'forbidden_imports': []},
-    'coverage_pct': 0.0,
+    'coverage_pct': null,
   };
 
   final startTime = DateTime.now();
@@ -337,8 +337,15 @@ bool _runStructuralChecks(
 }
 
 Future<bool> _runTests(Map<String, dynamic> report) async {
+  final coverageFile = File('coverage/lcov.info');
+  if (coverageFile.existsSync()) {
+    try {
+      coverageFile.deleteSync();
+    } catch (_) {}
+  }
+
   try {
-    final process = await Process.start('flutter', ['test', '--reporter=json'], runInShell: true);
+    final process = await Process.start('flutter', ['test', '--coverage', '--reporter=json'], runInShell: true);
     final failures = <Map<String, String>>[];
     final testNames = <int, String>{};
     int total = 0;
@@ -400,8 +407,8 @@ Future<bool> _runTests(Map<String, dynamic> report) async {
 void _runCoverage(Map<String, dynamic> report) {
   final coverageFile = File('coverage/lcov.info');
   if (!coverageFile.existsSync()) {
-    report['coverage_pct'] = 0.0;
-    print('  G5 Skip: coverage/lcov.info not found. Coverage remains 0%.');
+    report['coverage_pct'] = null;
+    print('  G5: coverage unavailable');
     return;
   }
 
@@ -410,11 +417,28 @@ void _runCoverage(Map<String, dynamic> report) {
     int instrumentedLines = 0;
     int coveredLines = 0;
 
+    String? currentSf;
+    int currentLf = 0;
+    int currentLh = 0;
+
     for (final line in lines) {
-      if (line.startsWith('LF:')) {
-        instrumentedLines += int.parse(line.substring(3).trim());
-      } else if (line.startsWith('LH:')) {
-        coveredLines += int.parse(line.substring(3).trim());
+      final trimmed = line.trim();
+      if (trimmed.startsWith('SF:')) {
+        currentSf = trimmed.substring(3).trim().replaceAll('\\', '/');
+        currentLf = 0;
+        currentLh = 0;
+      } else if (trimmed.startsWith('LF:')) {
+        currentLf = int.parse(trimmed.substring(3).trim());
+      } else if (trimmed.startsWith('LH:')) {
+        currentLh = int.parse(trimmed.substring(3).trim());
+      } else if (trimmed == 'end_of_record') {
+        if (currentSf != null && !currentSf.endsWith('.g.dart')) {
+          instrumentedLines += currentLf;
+          coveredLines += currentLh;
+        }
+        currentSf = null;
+        currentLf = 0;
+        currentLh = 0;
       }
     }
 
@@ -423,6 +447,7 @@ void _runCoverage(Map<String, dynamic> report) {
     print('  G5 Pass: Coverage is ${report['coverage_pct']}% ($coveredLines/$instrumentedLines lines).');
   } catch (e) {
     print('  G5 Error reading coverage: $e');
+    report['coverage_pct'] = null;
   }
 }
 
@@ -438,7 +463,7 @@ Future<void> _writeSummaryMarkdown(Map<String, dynamic> report, bool pass) async
   buffer.writeln('- **Tests:** ${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']} passed');
   buffer.writeln('- **Analyzer:** ${report['analyzer']['errors']} Errors, ${report['analyzer']['warnings']} Warnings, ${report['analyzer']['infos']} Infos');
   buffer.writeln('- **Size violations:** ${report['size']['violations'].length}');
-  buffer.writeln('- **Coverage:** ${report['coverage_pct']}%');
+  buffer.writeln('- **Coverage:** ${report['coverage_pct'] != null ? "${report['coverage_pct']}%" : "n/a"}');
   buffer.writeln('');
 
   if (!pass) {
@@ -487,7 +512,7 @@ Future<void> _writeSummaryMarkdown(Map<String, dynamic> report, bool pass) async
 
 void _printDigest(Map<String, dynamic> report, bool pass) {
   if (pass) {
-    print('\nGATE PASS  sha=${report['sha']}  tests=${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']}  analyzer=${report['analyzer']['errors']}E/${report['analyzer']['warnings']}W  size=${report['size']['violations'].length}  cov=${report['coverage_pct']}%');
+    print('\nGATE PASS  sha=${report['sha']}  tests=${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']}  analyzer=${report['analyzer']['errors']}E/${report['analyzer']['warnings']}W  size=${report['size']['violations'].length}  cov=${report['coverage_pct'] != null ? "${report['coverage_pct']}%" : "n/a"}');
   } else {
     print('\nGATE FAIL  sha=${report['sha']}');
     final sizeViolations = report['size']['violations'] as List;
