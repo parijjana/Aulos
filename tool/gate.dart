@@ -157,18 +157,36 @@ Future<bool> _runAnalyzer(Map<String, dynamic> report) async {
     int errors = 0;
     int warnings = 0;
     int infos = 0;
+    final failures = <Map<String, String>>[];
 
     for (final line in lines) {
       if (line.trim().isEmpty) continue;
       final parts = line.split('|');
-      if (parts.length < 4) continue;
+      if (parts.length < 8) continue;
       final severity = parts[0];
-      if (severity == 'ERROR') errors++;
-      else if (severity == 'WARNING') warnings++;
-      else if (severity == 'INFO') infos++;
+      if (severity == 'ERROR' || severity == 'WARNING') {
+        if (severity == 'ERROR') errors++;
+        else if (severity == 'WARNING') warnings++;
+        final relativePath = p.relative(parts[3], from: Directory.current.path).replaceAll('\\', '/');
+        failures.add({
+          'severity': severity,
+          'file': relativePath,
+          'line': parts[4],
+          'column': parts[5],
+          'message': parts[7],
+        });
+      } else if (severity == 'INFO') {
+        infos++;
+      }
     }
 
-    report['analyzer'] = {'errors': errors, 'warnings': warnings, 'infos': infos};
+    report['analyzer'] = {
+      'errors': errors,
+      'warnings': warnings,
+      'infos': infos,
+      'failures': failures,
+    };
+
     if (errors > 0 || warnings > 0) {
       print('  G1 Fail: $errors errors, $warnings warnings found. ($infos infos)');
       return false;
@@ -551,6 +569,13 @@ void _printDigest(Map<String, dynamic> report, bool pass) {
     print('\nGATE PASS  sha=${report['sha']}  tests=${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']}  analyzer=${report['analyzer']['errors']}E/${report['analyzer']['warnings']}W  size=${report['size']['violations'].length}  cov=${report['coverage_pct'] != null ? "${report['coverage_pct']}%" : "n/a"}');
   } else {
     print('\nGATE FAIL  sha=${report['sha']}');
+    
+    final analyzerFailures = report['analyzer']['failures'] as List? ?? [];
+    for (final f in analyzerFailures.take(5)) {
+      print('[G1 analyzer] ${f['file']}:${f['line']}:${f['column']} ${f['message']}');
+    }
+    if (analyzerFailures.length > 5) print('  (+${analyzerFailures.length - 5} more analyzer warnings/errors)');
+
     final sizeViolations = report['size']['violations'] as List;
     for (final v in sizeViolations.take(5)) {
       print('[G2 size] ${v['path']} ${v['lines']} > limit ${v['limit']}');
@@ -572,14 +597,15 @@ void _printDigest(Map<String, dynamic> report, bool pass) {
 
     final forbidden = struct['forbidden_imports'] as List;
     for (final f in forbidden.take(5)) {
-      print('[G3 import] $f');
+      final parts = f.toString().split(': ');
+      final path = parts.first;
+      print('[G3 import] $path contains forbidden import');
     }
     if (forbidden.length > 5) print('  (+${forbidden.length - 5} more import violations)');
 
     final failures = report['tests']['failures'] as List;
     for (final f in failures.take(5)) {
-      print('[G4 test] ${f['name']}');
-      print('           ${f['error']}');
+      print('[G4 test] ${f['name']} failed with ${f['error']}');
     }
     if (failures.length > 5) print('  (+${failures.length - 5} more test failures)');
   }
