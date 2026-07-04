@@ -54,7 +54,6 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> stop() => _player.stop();
 
-  @override
   Future<void> setVolume(double volume) => _player.setVolume(volume);
 
   @override
@@ -91,6 +90,7 @@ class AulosAudioHandler extends BaseAudioHandler with SeekHandler {
         const Duration(seconds: 20),
         onTimeout: () {
           log('HANDLER_TIMEOUT: Stream source taking long to init.');
+          return null;
         },
       );
       

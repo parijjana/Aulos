@@ -188,6 +188,7 @@ class PodcastDiscoveryService {
               return feedUrl;
             } else {
               log('API: Lookup failed. No results for ID: $podcastId');
+              return null;
             }
           } else {
             log('API: Lookup failed with status ${response.statusCode}');
