@@ -51,3 +51,14 @@ agents.md
 # gate artifacts
 gate_report.json
 gate_summary.md
+
+# Internal working docs (local-only, not for public repo)
+/fable/
+/plans/
+/progress_logs/
+/lessons_learned/process/
+
+# Tool session dirs and scratch
+/.antigravitycli/
+/scratch/
+/screenshots/*.png
