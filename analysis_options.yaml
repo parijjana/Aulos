@@ -1,6 +1,11 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  exclude:
+    - "scratch/**"
+    - "scripts/**"
+    - "tool/**"
+    - "**.g.dart"
   language:
     strict-casts: true
     strict-inference: true

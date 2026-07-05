@@ -13,3 +13,10 @@ ios/Flutter/.last_build_id
 *.lock
 .idea/
 *.iml
+*.g.dart
+*.freezed.dart
+*.db
+*.sqlite
+/logs/
+/build/
+/coverage/

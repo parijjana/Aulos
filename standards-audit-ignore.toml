@@ -1,0 +1,33 @@
+[ignore]
+dirs = [
+  ".cache",
+  ".dart_tool",
+  ".git",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".tmp_tests",
+  ".tox",
+  ".uv-cache",
+  ".venv",
+  "__pycache__",
+  "bin",
+  "build",
+  "cache",
+  "coverage",
+  "dist",
+  "ephemeral",
+  "logs",
+  "node_modules",
+  "obj",
+  "out",
+  "reports",
+  "target",
+  "tmp-tests",
+  "uv-cache",
+  "venv",
+]
+
+paths = [
+  "ios/Flutter/ephemeral/",
+]
