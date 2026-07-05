@@ -10,7 +10,7 @@ part 'audiobook_database.g.dart';
 
 @DriftDatabase(tables: [AudiobookFolders, AudiobookArtists, Audiobooks, AudiobookTracks, AudiobookChapters])
 class AudiobookDatabase extends _$AudiobookDatabase {
-  AudiobookDatabase() : super(_openConnection());
+  AudiobookDatabase([String? basePath]) : super(_openConnection(basePath));
   AudiobookDatabase.testing(QueryExecutor e) : super(e);
 
   @override
@@ -106,6 +106,12 @@ class AudiobookDatabase extends _$AudiobookDatabase {
   Future<List<AudiobookArtist>> getAllArtists() => select(audiobookArtists).get();
   Future<List<Audiobook>> getAudiobooks() => select(audiobooks).get();
 
+  Future<Audiobook?> getAudiobookById(String id) =>
+      (select(audiobooks)..where((a) => a.id.equals(id))).getSingleOrNull();
+
+  Future<AudiobookTrack?> getTrackById(String id) =>
+      (select(audiobookTracks)..where((t) => t.id.equals(id))).getSingleOrNull();
+
   Future<List<AudiobookTrack>> getTracksForArtist(String artistId) =>
       (select(audiobookTracks)..where((t) => t.artistId.equals(artistId))).get();
 
@@ -152,10 +158,10 @@ class AudiobookDatabase extends _$AudiobookDatabase {
       (select(audiobookChapters)..where((c) => c.audiobookTrackId.equals(trackId))).get();
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationSupportDirectory();
-    final file = File(p.join(dbFolder.path, 'audiobook_database.sqlite'));
+    final path = basePath ?? (await getApplicationSupportDirectory()).path;
+    final file = File(p.join(path, 'audiobook_database.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }

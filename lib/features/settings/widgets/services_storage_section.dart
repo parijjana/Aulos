@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:aulos/presentation/screens/widgets/glass_card.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
@@ -6,6 +7,8 @@ import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
 import 'package:aulos/data/library/library_indexer_service.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/features/settings/widgets/settings_shared.dart';
+import 'package:aulos/core/storage/storage_directory_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -186,6 +189,116 @@ class ServicesStorageSection extends StatelessWidget {
               'Removes cached discovery results. Your favorites are preserved.',
               style: TextStyle(fontSize: 8, color: onSurface.withValues(alpha: 0.24)),
             ),
+
+            const Divider(height: 32, color: Colors.white10),
+
+            // --- Database Path Area ---
+            const SettingsLabel('DATABASE STORAGE MODE'),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: vm.isPortableMode
+                  ? 'portable'
+                  : (vm.customDatabaseDirectory != null ? 'custom' : 'default'),
+              style: TextStyle(color: onSurface, fontSize: 13),
+              dropdownColor: theme.colorScheme.surface,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'default', child: Text('AppData (Default)')),
+                DropdownMenuItem(value: 'portable', child: Text('Portable (App Folder)')),
+                DropdownMenuItem(value: 'custom', child: Text('Custom Directory...')),
+              ],
+              onChanged: (String? value) async {
+                if (value == null) return;
+
+                final prefs = await SharedPreferences.getInstance();
+                final manager = StorageDirectoryManager(prefs);
+
+                if (value == 'default') {
+                  try {
+                    final defaultPath = await manager.getDefaultSupportDirectoryPath();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Restoring databases to default, please wait...')),
+                    );
+                    await manager.migrateDatabases(defaultPath);
+                    await manager.setPortableMode(false);
+                    await vm.setCustomDatabaseDirectory(null);
+                    vm.setPortableMode(false);
+                    _showRestartDialog(context);
+                  } catch (e) {
+                    _showError(context, e);
+                  }
+                } else if (value == 'portable') {
+                  try {
+                    final canWrite = await manager.canEnablePortableMode();
+                    if (!canWrite) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Permission denied to write next to application executable.')),
+                      );
+                      return;
+                    }
+                    final exeDir = File(Platform.resolvedExecutable).parent;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Configuring portable mode, please wait...')),
+                    );
+                    await manager.migrateDatabases(exeDir.path);
+                    await manager.setPortableMode(true);
+                    await vm.setCustomDatabaseDirectory(null);
+                    vm.setPortableMode(true);
+                    _showRestartDialog(context);
+                  } catch (e) {
+                    _showError(context, e);
+                  }
+                } else if (value == 'custom') {
+                  final String? newPath = await FilePicker.getDirectoryPath();
+                  if (newPath != null) {
+                    try {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Moving databases, please wait...')),
+                      );
+                      await manager.migrateDatabases(newPath);
+                      await manager.setPortableMode(false);
+                      await vm.setCustomDatabaseDirectory(newPath);
+                      vm.setPortableMode(false);
+                      _showRestartDialog(context);
+                    } catch (e) {
+                      _showError(context, e);
+                    }
+                  }
+                }
+              },
+            ),
+            if (vm.customDatabaseDirectory != null) ...[
+              const SizedBox(height: 12),
+              PathSelectorTile(
+                label: 'Custom Folder',
+                path: vm.customDatabaseDirectory,
+                onTap: () async {
+                  final String? newPath = await FilePicker.getDirectoryPath();
+                  if (newPath != null) {
+                    try {
+                      final prefs = await SharedPreferences.getInstance();
+                      final manager = StorageDirectoryManager(prefs);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Moving databases, please wait...')),
+                      );
+                      await manager.migrateDatabases(newPath);
+                      await vm.setCustomDatabaseDirectory(newPath);
+                      _showRestartDialog(context);
+                    } catch (e) {
+                      _showError(context, e);
+                    }
+                  }
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -360,6 +473,28 @@ class ServicesStorageSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showRestartDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restart Required'),
+        content: const Text('Database files have been successfully migrated. Please restart Aulos to apply.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(BuildContext context, Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error migrating database: $error')),
     );
   }
 }

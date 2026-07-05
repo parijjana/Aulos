@@ -52,9 +52,14 @@ class SettingsViewModel extends ChangeNotifier {
   // Last Played Session State
   String? _lastRadioStationUuid;
   String? _lastPodcastEpisodeId;
+  String? _lastMusicTrackId;
+  String? _lastAudiobookTrackId;
+  String? _lastNoiseTrackId;
 
   // Podcast Settings
   String? _podcastStorageLocation;
+  String? _customDatabaseDirectory;
+  bool _isPortableMode = false;
   bool _autoDownloadNewEpisodes = false;
   int _podcastKeepCount = 5; 
   int _podcastKeepDays = 30; 
@@ -76,7 +81,12 @@ class SettingsViewModel extends ChangeNotifier {
   bool get showRemoteAnimation => _showRemoteAnimation;
   String? get lastRadioStationUuid => _lastRadioStationUuid;
   String? get lastPodcastEpisodeId => _lastPodcastEpisodeId;
+  String? get lastMusicTrackId => _lastMusicTrackId;
+  String? get lastAudiobookTrackId => _lastAudiobookTrackId;
+  String? get lastNoiseTrackId => _lastNoiseTrackId;
   String? get podcastStorageLocation => _podcastStorageLocation;
+  String? get customDatabaseDirectory => _customDatabaseDirectory;
+  bool get isPortableMode => _isPortableMode;
   bool get autoDownloadNewEpisodes => _autoDownloadNewEpisodes;
   int get podcastKeepCount => _podcastKeepCount;
   int get podcastKeepDays => _podcastKeepDays;
@@ -121,6 +131,9 @@ class SettingsViewModel extends ChangeNotifier {
     } catch (_) {
       _lastPodcastEpisodeId = _prefs.get('last_podcast_episode_id')?.toString();
     }
+    _lastMusicTrackId = _prefs.getString('last_music_track_id');
+    _lastAudiobookTrackId = _prefs.getString('last_audiobook_track_id');
+    _lastNoiseTrackId = _prefs.getString('last_noise_track_id');
     _podcastStorageLocation = _prefs.getString('podcast_storage_location');
     _autoDownloadNewEpisodes = _prefs.getBool('auto_download_podcasts') ?? false;
     _podcastKeepCount = _prefs.getInt('podcast_keep_count') ?? 5;
@@ -130,6 +143,14 @@ class SettingsViewModel extends ChangeNotifier {
     _visualizerPluginId = _prefs.getString('visualizer_plugin_id') ?? 'bar_spectrum';
     final refreshStr = _prefs.getString('last_podcast_refresh_time');
     _lastPodcastRefreshTime = refreshStr != null ? DateTime.tryParse(refreshStr) : null;
+    _customDatabaseDirectory = _prefs.getString('custom_database_directory');
+    try {
+      final exeDir = File(Platform.resolvedExecutable).parent;
+      final portableIndicator = File(p.join(exeDir.path, 'aulos_portable.txt'));
+      _isPortableMode = portableIndicator.existsSync();
+    } catch (_) {
+      _isPortableMode = false;
+    }
 
     final themeName = _prefs.getString('theme_name');
     if (themeName != null) {
@@ -157,6 +178,36 @@ class SettingsViewModel extends ChangeNotifier {
       await _prefs.remove('last_podcast_episode_id');
     } else {
       await _prefs.setString('last_podcast_episode_id', id);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLastMusicTrack(String? id) async {
+    _lastMusicTrackId = id;
+    if (id == null) {
+      await _prefs.remove('last_music_track_id');
+    } else {
+      await _prefs.setString('last_music_track_id', id);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLastAudiobookTrack(String? id) async {
+    _lastAudiobookTrackId = id;
+    if (id == null) {
+      await _prefs.remove('last_audiobook_track_id');
+    } else {
+      await _prefs.setString('last_audiobook_track_id', id);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLastNoiseTrack(String? id) async {
+    _lastNoiseTrackId = id;
+    if (id == null) {
+      await _prefs.remove('last_noise_track_id');
+    } else {
+      await _prefs.setString('last_noise_track_id', id);
     }
     notifyListeners();
   }
@@ -291,6 +342,21 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> setVisualizerPluginId(String id) async {
     _visualizerPluginId = id;
     await _prefs.setString('visualizer_plugin_id', id);
+    notifyListeners();
+  }
+
+  Future<void> setCustomDatabaseDirectory(String? path) async {
+    _customDatabaseDirectory = path;
+    if (path == null || path.isEmpty) {
+      await _prefs.remove('custom_database_directory');
+    } else {
+      await _prefs.setString('custom_database_directory', path);
+    }
+    notifyListeners();
+  }
+
+  void setPortableMode(bool val) {
+    _isPortableMode = val;
     notifyListeners();
   }
 }

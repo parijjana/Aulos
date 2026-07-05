@@ -9,7 +9,7 @@ part 'playback_database.g.dart';
 
 @DriftDatabase(tables: [Bookmarks, PlaybackPositions])
 class PlaybackDatabase extends _$PlaybackDatabase {
-  PlaybackDatabase() : super(_openConnection());
+  PlaybackDatabase([String? basePath]) : super(_openConnection(basePath));
   PlaybackDatabase.testing(QueryExecutor e) : super(e);
 
   @override
@@ -91,10 +91,10 @@ class PlaybackDatabase extends _$PlaybackDatabase {
   }
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationSupportDirectory();
-    final file = File(p.join(dbFolder.path, 'playback_database.sqlite'));
+    final path = basePath ?? (await getApplicationSupportDirectory()).path;
+    final file = File(p.join(path, 'playback_database.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }

@@ -9,7 +9,7 @@ part 'noise_database.g.dart';
 
 @DriftDatabase(tables: [SavedMixes])
 class NoiseDatabase extends _$NoiseDatabase {
-  NoiseDatabase() : super(_openConnection());
+  NoiseDatabase([String? basePath]) : super(_openConnection(basePath));
   NoiseDatabase.testing(QueryExecutor e) : super(e);
 
   @override
@@ -38,10 +38,10 @@ class NoiseDatabase extends _$NoiseDatabase {
   Future<void> deleteMix(String id) => (delete(savedMixes)..where((t) => t.id.equals(id))).go();
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationSupportDirectory();
-    final file = File(p.join(dbFolder.path, 'noise_database.sqlite'));
+    final path = basePath ?? (await getApplicationSupportDirectory()).path;
+    final file = File(p.join(path, 'noise_database.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }

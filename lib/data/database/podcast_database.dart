@@ -4,7 +4,6 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'tables.dart';
-import '../../../core/utils/id_generator.dart';
 
 part 'podcast_database.g.dart';
 
@@ -44,7 +43,7 @@ class DiscoveryLogs extends Table {
 
 @DriftDatabase(tables: [Podcasts, Episodes, DiscoveredPodcasts, DiscoveredEpisodes, DiscoveryCategoryRelations, DiscoveryLogs])
 class PodcastDatabase extends _$PodcastDatabase {
-  PodcastDatabase() : super(_openConnection());
+  PodcastDatabase([String? basePath]) : super(_openConnection(basePath));
   PodcastDatabase.testing(QueryExecutor e) : super(e);
 
   @override
@@ -253,10 +252,10 @@ class PodcastDatabase extends _$PodcastDatabase {
   }
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationSupportDirectory();
-    final file = File(p.join(dbFolder.path, 'podcast_database.sqlite'));
+    final path = basePath ?? (await getApplicationSupportDirectory()).path;
+    final file = File(p.join(path, 'podcast_database.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }

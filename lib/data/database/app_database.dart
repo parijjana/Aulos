@@ -35,7 +35,7 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase([String? basePath]) : super(_openConnection(basePath));
   AppDatabase.testing(super.executor);
 
   @override
@@ -108,6 +108,8 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Artist>> getAllArtists() => libraryDao.getAllArtists();
   Future<List<Album>> getAllAlbums() => libraryDao.getAllAlbums();
   Future<List<Genre>> getAllGenres() => libraryDao.getAllGenres();
+  Future<Track?> getTrackById(String id) => libraryDao.getTrackById(id);
+  Future<Album?> getAlbumById(String id) => libraryDao.getAlbumById(id);
   Future<List<int>> getAllYears() => libraryDao.getAllYears();
   Future<List<Track>> getTracksForArtist(String artistId) => libraryDao.getTracksForArtist(artistId);
   Future<List<Track>> getTracksForAlbum(String albumId) => libraryDao.getTracksForAlbum(albumId);
@@ -128,6 +130,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Playlist>> getAllPlaylists() => playlistDao.getAllPlaylists();
   Future<void> deletePlaylist(String id) => playlistDao.deletePlaylist(id);
   Future<void> savePlaylistWithTracks(String name, List<String> trackIds, {bool isSmart = false}) => playlistDao.savePlaylistWithTracks(name, trackIds, isSmart: isSmart);
+  Future<void> saveSmartPlaylist(String name, String rulesJson) => playlistDao.saveSmartPlaylist(name, rulesJson);
   Future<List<Track>> getTracksForPlaylist(String playlistId) => playlistDao.getTracksForPlaylist(playlistId);
   Future<void> clearQueue() => playlistDao.clearQueue();
   Future<void> saveQueue(List<String> trackIds) => playlistDao.saveQueue(trackIds);
@@ -146,10 +149,10 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<Track>> watchMostPlayedTracks({int limit = 20}) => analyticsDao.watchMostPlayedTracks(limit: limit);
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'localaudio.sqlite'));
+    final path = basePath ?? (await getApplicationDocumentsDirectory()).path;
+    final file = File(p.join(path, 'localaudio.sqlite'));
     return NativeDatabase(file);
   });
 }

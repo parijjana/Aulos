@@ -41,7 +41,7 @@ class RadioListeningStats extends Table {
 
 @DriftDatabase(tables: [RadioStations, RadioCategories, RadioListeningStats])
 class RadioDatabase extends _$RadioDatabase {
-  RadioDatabase() : super(_openConnection());
+  RadioDatabase([String? basePath]) : super(_openConnection(basePath));
   RadioDatabase.testing(QueryExecutor e) : super(e);
 
   @override
@@ -257,10 +257,10 @@ class RadioDatabase extends _$RadioDatabase {
   }
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'radio.sqlite'));
+    final path = basePath ?? (await getApplicationDocumentsDirectory()).path;
+    final file = File(p.join(path, 'radio.sqlite'));
     return NativeDatabase(file);
   });
 }
