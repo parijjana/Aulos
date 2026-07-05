@@ -17,9 +17,10 @@ import 'mixins/player_bookmark_mixin.dart';
 import 'mixins/player_analytics_mixin.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:drift/drift.dart';
-import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:typed_data';
+import 'player_view_model_sleep.dart';
+import 'player_view_model_color.dart';
 
 enum MediaType { music, podcast, radio, audiobook, noise }
 
@@ -35,6 +36,33 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
   final SettingsViewModel _settingsVM;
   final LogService _logService;
   NoiseViewModel? _noiseVM;
+
+  // Getters and Setters for extensions
+  Timer? get sleepTimer => _sleepTimer;
+  set sleepTimer(Timer? val) => _sleepTimer = val;
+
+  Timer? get sleepFadeTimer => _sleepFadeTimer;
+  set sleepFadeTimer(Timer? val) => _sleepFadeTimer = val;
+
+  Timer? get countdownTicker => _countdownTicker;
+  set countdownTicker(Timer? val) => _countdownTicker = val;
+
+  DateTime? get sleepTimerEndTime => _sleepTimerEndTime;
+  set sleepTimerEndTime(DateTime? val) => _sleepTimerEndTime = val;
+
+  Duration? get sleepDurationTotal => _sleepDurationTotal;
+  set sleepDurationTotal(Duration? val) => _sleepDurationTotal = val;
+
+  set isSleepTimerActive(bool val) => _isSleepTimerActive = val;
+
+  set volume(double val) => _volume = val;
+  set extractedColor(Color? val) => _extractedColor = val;
+
+  PaletteGenerator? get currentPalette => _currentPalette;
+  set currentPalette(PaletteGenerator? val) => _currentPalette = val;
+
+  engine_domain.PlaybackEngine get engine => _engine;
+  void triggerNotify() => notifyListeners();
 
   @override
   LogService get logService => _logService;
@@ -109,7 +137,7 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
        _logService = logService ?? NoOpLogService() {
     _init();
     initBookmarkMixin(playbackDb, podcastDb);
-    initAnalyticsMixin(db, radioDb);
+    initAnalyticsMixin(db: db, radioDb: radioDb, audiobookDb: audiobookDb, podcastDb: podcastDb);
     _remoteSub = _connectionManager.remoteCommands.listen(_handleRemoteCommand);
     
     _resumeSaveTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
@@ -494,64 +522,9 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
     await _playbackDb.deleteBookmark(id);
   }
 
-  void startSleepTimer(Duration duration) {
-    cancelSleepTimer();
-    _sleepDurationTotal = duration;
-    _sleepTimerEndTime = DateTime.now().add(duration);
-    _isSleepTimerActive = true;
-    
-    _countdownTicker = Timer.periodic(const Duration(seconds: 1), (timer) {
-      notifyListeners();
-    });
-    
-    _sleepTimer = Timer(duration, () {
-      _startSleepFadeOut();
-    });
-    notifyListeners();
-  }
-
-  void _startSleepFadeOut() {
-    _countdownTicker?.cancel();
-    _countdownTicker = null;
-    
-    final double startVolume = _volume;
-    const fadeSteps = 30;
-    const fadeStepDuration = Duration(milliseconds: 1000); // 30 seconds total fade out
-    int currentStep = 0;
-    
-    _sleepFadeTimer = Timer.periodic(fadeStepDuration, (timer) {
-      currentStep++;
-      final double nextVolume = startVolume * (1.0 - (currentStep / fadeSteps));
-      if (nextVolume <= 0.0 || currentStep >= fadeSteps) {
-        timer.cancel();
-        pause();
-        setVolume(startVolume); // Restore original volume for when they resume playing later
-        _isSleepTimerActive = false;
-        _sleepTimerEndTime = null;
-        _sleepDurationTotal = null;
-      } else {
-        _engine.setVolume(nextVolume);
-      }
-      notifyListeners();
-    });
-  }
-
-  void cancelSleepTimer() {
-    _sleepTimer?.cancel();
-    _sleepTimer = null;
-    _sleepFadeTimer?.cancel();
-    _sleepFadeTimer = null;
-    _countdownTicker?.cancel();
-    _countdownTicker = null;
-    
-    if (_isSleepTimerActive) {
-      _isSleepTimerActive = false;
-      _engine.setVolume(_volume); // Restore volume
-      _sleepTimerEndTime = null;
-      _sleepDurationTotal = null;
-    }
-    notifyListeners();
-  }
+  void startSleepTimer(Duration duration) => PlayerViewModelSleep(this).startSleepTimer(duration);
+  void _startSleepFadeOut() => PlayerViewModelSleep(this).startSleepFadeOut();
+  void cancelSleepTimer() => PlayerViewModelSleep(this).cancelSleepTimer();
 
   void skipForward() => seek(_position + const Duration(seconds: 15));
   void skipBackward() => seek(_position - const Duration(seconds: 10));
@@ -626,19 +599,8 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
     }
   }
 
-  Future<void> _extractColorFromMemory(Uint8List art) async {
-    final provider = MemoryImage(art);
-    _currentPalette = await PaletteGenerator.fromImageProvider(provider, maximumColorCount: 10);
-    _extractedColor = _currentPalette?.vibrantColor?.color ?? _currentPalette?.dominantColor?.color;
-    notifyListeners();
-  }
-
-  Future<void> _extractColorFromUrl(String url) async {
-    final provider = NetworkImage(url);
-    _currentPalette = await PaletteGenerator.fromImageProvider(provider, maximumColorCount: 10);
-    _extractedColor = _currentPalette?.vibrantColor?.color ?? _currentPalette?.dominantColor?.color;
-    notifyListeners();
-  }
+  Future<void> _extractColorFromMemory(Uint8List art) => PlayerViewModelColor(this).extractColorFromMemory(art);
+  Future<void> _extractColorFromUrl(String url) => PlayerViewModelColor(this).extractColorFromUrl(url);
 
   @override
   void dispose() {

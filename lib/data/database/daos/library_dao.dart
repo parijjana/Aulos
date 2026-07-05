@@ -158,6 +158,12 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   Future<List<Track>> getTracksForFolder(String folderId) =>
       (select(tracks)..where((t) => t.folderId.equals(folderId))).get();
 
+  Future<Track?> getTrackById(String id) =>
+      (select(tracks)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<Album?> getAlbumById(String id) =>
+      (select(albums)..where((a) => a.id.equals(id))).getSingleOrNull();
+
   Future<List<Track>> getAllTracks() => select(tracks).get();
 
   Future<void> updateTrackRating(String trackId, int rating) {

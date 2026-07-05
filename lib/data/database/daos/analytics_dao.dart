@@ -25,7 +25,8 @@ class AnalyticsDao extends DatabaseAccessor<AppDatabase> with _$AnalyticsDaoMixi
 
   // Analytics Recording
   Future<void> recordTrackPlay(String id) async {
-    final track = await (select(tracks)..where((t) => t.id.equals(id))).getSingle();
+    final track = await (select(tracks)..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (track == null) return;
     await (update(tracks)..where((t) => t.id.equals(id))).write(
       TracksCompanion(
         playCount: Value(track.playCount + 1),
@@ -35,7 +36,8 @@ class AnalyticsDao extends DatabaseAccessor<AppDatabase> with _$AnalyticsDaoMixi
   }
 
   Future<void> recordArtistPlay(String id) async {
-    final artist = await (select(artists)..where((t) => t.id.equals(id))).getSingle();
+    final artist = await (select(artists)..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (artist == null) return;
     await (update(artists)..where((t) => t.id.equals(id))).write(
       ArtistsCompanion(
         playCount: Value(artist.playCount + 1),
@@ -45,7 +47,8 @@ class AnalyticsDao extends DatabaseAccessor<AppDatabase> with _$AnalyticsDaoMixi
   }
 
   Future<void> recordAlbumPlay(String id) async {
-    final album = await (select(albums)..where((t) => t.id.equals(id))).getSingle();
+    final album = await (select(albums)..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (album == null) return;
     await (update(albums)..where((t) => t.id.equals(id))).write(
       AlbumsCompanion(
         playCount: Value(album.playCount + 1),

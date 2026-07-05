@@ -57,6 +57,9 @@ void main() {
     podcastDb = PodcastDatabase.testing(NativeDatabase.memory());
     mockSettingsVM = MockSettingsViewModel();
     when(() => mockSettingsVM.isFolderWatcherEnabled).thenReturn(true);
+    when(() => mockSettingsVM.setLastMusicTrack(any())).thenAnswer((_) async {});
+    when(() => mockSettingsVM.setLastAudiobookTrack(any())).thenAnswer((_) async {});
+    when(() => mockSettingsVM.setLastNoiseTrack(any())).thenAnswer((_) async {});
 
     when(() => mockEngine.playbackStateStream).thenAnswer((_) => const Stream.empty());
     when(() => mockEngine.positionStream).thenAnswer((_) => const Stream.empty());
