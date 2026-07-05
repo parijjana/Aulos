@@ -1,7 +1,11 @@
 import 'package:drift/drift.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../app_database.dart';
 import '../tables.dart';
 import '../../../core/utils/id_generator.dart';
+import '../../../domain/library/smart_playlist_rule.dart';
+import '../../../domain/library/smart_playlist_engine.dart';
 
 part 'playlist_dao.g.dart';
 
@@ -83,6 +87,31 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase> with _$PlaylistDaoMixin 
   Future<List<Track>> getTracksForPlaylist(String playlistId) async {
     final playlist = await (select(playlists)..where((t) => t.id.equals(playlistId))).getSingleOrNull();
     if (playlist != null && playlist.isSmart) {
+      if (playlist.rulesJson != null && playlist.rulesJson!.isNotEmpty) {
+        try {
+          final config = SmartPlaylistConfig.fromJson(jsonDecode(playlist.rulesJson!) as Map<String, dynamic>);
+          final allTracks = await select(tracks).get();
+          
+          final artistsList = await select(artists).get();
+          final albumsList = await select(albums).get();
+          final genresList = await select(genres).get();
+          
+          final artistNames = {for (var a in artistsList) a.id: a.name};
+          final albumNames = {for (var a in albumsList) a.id: a.name};
+          final genreNames = {for (var g in genresList) g.id: g.name};
+          
+          return SmartPlaylistEngine.generateQueue(
+            allTracks,
+            config,
+            artistNames: artistNames,
+            albumNames: albumNames,
+            genreNames: genreNames,
+          );
+        } catch (e) {
+          debugPrint('PlaylistDao: Error parsing smart playlist rules: $e');
+        }
+      }
+
       if (playlist.name == 'Likes') {
         return (select(tracks)..where((t) => t.isFavorite.equals(true))).get();
       } else if (playlist.name == 'Dislikes') {
@@ -142,5 +171,30 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase> with _$PlaylistDaoMixin 
 
     final result = await query.get();
     return result.map((row) => row.readTable(tracks)).toList();
+  }
+
+  Future<void> saveSmartPlaylist(String name, String rulesJson) async {
+    await transaction(() async {
+      final existing = await (select(playlists)..where((p) => p.name.equals(name))).getSingleOrNull();
+      if (existing != null) {
+        await (update(playlists)..where((p) => p.id.equals(existing.id))).write(
+          PlaylistsCompanion(
+            isSmart: const Value(true),
+            rulesJson: Value(rulesJson),
+          ),
+        );
+      } else {
+        final id = generateContentId("$name|${DateTime.now().millisecondsSinceEpoch}");
+        await into(playlists).insert(
+          PlaylistsCompanion.insert(
+            id: id,
+            name: name,
+            isSmart: const Value(true),
+            rulesJson: Value(rulesJson),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    });
   }
 }

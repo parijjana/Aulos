@@ -91,6 +91,7 @@ class Playlists extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().unique()();
   BoolColumn get isSmart => boolean().withDefault(const Constant(false))();
+  TextColumn get rulesJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -105,7 +106,7 @@ class PlaylistTracks extends Table {
 
 class QueueTracks extends Table {
   TextColumn get id => text()();
-  TextColumn get trackId => text().references(Tracks, #id)();
+  TextColumn get trackId => text()();
   IntColumn get position => integer()();
 }
 

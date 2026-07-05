@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
+import 'smart_playlist_builder_dialog.dart';
 
 class LibraryHeader extends StatefulWidget {
   final LibraryViewModel viewModel;
@@ -61,6 +62,18 @@ class _LibraryHeaderState extends State<LibraryHeader> {
           const Spacer(),
           
           if (settingsVM != null) _ViewModeSelector(settingsVM: settingsVM),
+          
+          if (widget.viewModel.mode == LibraryMode.playlists && widget.viewModel.isAtRoot)
+            IconButton(
+              icon: Icon(Icons.playlist_add_circle_outlined, color: theme.colorScheme.primary, size: 20),
+              onPressed: () {
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => const SmartPlaylistBuilderDialog(),
+                );
+              },
+              tooltip: 'Create Smart Playlist',
+            ),
           
           IconButton(
             icon: Icon(Icons.refresh_rounded, color: theme.colorScheme.primary, size: 20),

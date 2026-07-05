@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/data/library/playlist_service.dart';
+import 'package:aulos/domain/library/smart_playlist_rule.dart';
 
 class PlaylistViewModel extends ChangeNotifier {
   final PersistentLibraryService _libraryService;
@@ -31,6 +33,12 @@ class PlaylistViewModel extends ChangeNotifier {
 
   Future<void> saveQueueAsPlaylist(String name, List<Track> tracks) async {
     await _libraryService.savePlaylist(name, tracks.map((t) => t.id).toList());
+    await _loadPlaylists();
+  }
+
+  Future<void> saveSmartPlaylist(String name, SmartPlaylistConfig config) async {
+    final rulesJson = jsonEncode(config.toJson());
+    await _libraryService.saveSmartPlaylist(name, rulesJson);
     await _loadPlaylists();
   }
 
