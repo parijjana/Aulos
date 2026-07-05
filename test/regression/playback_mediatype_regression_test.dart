@@ -59,6 +59,10 @@ void main() {
     audiobookDb = AudiobookDatabase.testing(NativeDatabase.memory());
     podcastDb = PodcastDatabase.testing(NativeDatabase.memory());
     mockSettingsVM = MockSettingsViewModel();
+    when(() => mockSettingsVM.isFolderWatcherEnabled).thenReturn(true);
+    when(() => mockSettingsVM.setLastMusicTrack(any())).thenAnswer((_) async {});
+    when(() => mockSettingsVM.setLastAudiobookTrack(any())).thenAnswer((_) async {});
+    when(() => mockSettingsVM.setLastNoiseTrack(any())).thenAnswer((_) async {});
 
     stateController = StreamController<engine_domain.PlaybackState>.broadcast();
     trackController = StreamController<PlaybackTrack?>.broadcast();

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:aulos/data/library/podcast_discovery_service.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 
 class DiscoverySearchResults extends StatelessWidget {

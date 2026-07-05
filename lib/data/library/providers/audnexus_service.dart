@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:aulos/core/network/json_types.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/core/config/api_config.dart';
@@ -19,9 +19,9 @@ class AudnexusService {
 
   void log(String message) => _logService.log(message);
 
-  Future<Map<String, dynamic>?> searchBook(String query) async {
+  Future<JsonMap?> searchBook(String query) async {
     log('AUDNEXUS: Searching for "$query"');
-    return _rateLimiter.dispatch<Map<String, dynamic>?>(
+    return _rateLimiter.dispatch<JsonMap?>(
       apiId: 'audnexus',
       call: () async {
         try {
@@ -34,7 +34,7 @@ class AudnexusService {
             final data = json.decode(response.body) as List;
             if (data.isNotEmpty) {
               log('AUDNEXUS: Found ${data.length} potential matches. Using first.');
-              return data.first as Map<String, dynamic>;
+              return data.first as JsonMap;
             } else {
               log('AUDNEXUS: No matches found for "$query"');
             }
@@ -47,9 +47,9 @@ class AudnexusService {
     );
   }
 
-  Future<Map<String, dynamic>?> getBookMetadata(String asin) async {
+  Future<JsonMap?> getBookMetadata(String asin) async {
     log('AUDNEXUS: Fetching metadata for ASIN: $asin');
-    return _rateLimiter.dispatch<Map<String, dynamic>?>(
+    return _rateLimiter.dispatch<JsonMap?>(
       apiId: 'audnexus',
       call: () async {
         try {
@@ -59,7 +59,7 @@ class AudnexusService {
           
           log('AUDNEXUS: Metadata status: ${response.statusCode}');
           if (response.statusCode == 200) {
-            return json.decode(response.body) as Map<String, dynamic>;
+            return json.decode(response.body) as JsonMap;
           }
         } catch (e) {
           log('AUDNEXUS_ERROR: Metadata fetch failed: $e');
@@ -81,7 +81,7 @@ class AudnexusService {
           
           log('AUDNEXUS: Chapters status: ${response.statusCode}');
           if (response.statusCode == 200) {
-            final data = json.decode(response.body) as Map<String, dynamic>;
+            final data = json.decode(response.body) as JsonMap;
             return data['chapters'] as List? ?? [];
           }
         } catch (e) {
@@ -92,9 +92,9 @@ class AudnexusService {
     );
   }
 
-  Future<Map<String, dynamic>?> getAuthorMetadata(String name) async {
+  Future<JsonMap?> getAuthorMetadata(String name) async {
     log('AUDNEXUS: Searching author "$name"');
-    return _rateLimiter.dispatch<Map<String, dynamic>?>(
+    return _rateLimiter.dispatch<JsonMap?>(
       apiId: 'audnexus',
       call: () async {
         try {
@@ -106,7 +106,7 @@ class AudnexusService {
           if (response.statusCode == 200) {
             final data = json.decode(response.body) as List;
             if (data.isNotEmpty) {
-               final first = data.first as Map<String, dynamic>;
+               final first = data.first as JsonMap;
                final id = first['id'];
                if (id != null) {
                  final detailResp = await _client.get(
@@ -115,7 +115,7 @@ class AudnexusService {
                  
                  log('AUDNEXUS: Author detail status: ${detailResp.statusCode}');
                  if (detailResp.statusCode == 200) {
-                   return json.decode(detailResp.body) as Map<String, dynamic>;
+                   return json.decode(detailResp.body) as JsonMap;
                  }
                }
             }

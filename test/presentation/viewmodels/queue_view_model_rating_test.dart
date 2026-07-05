@@ -5,7 +5,6 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/domain/network/connection_manager.dart';
 import 'package:aulos/domain/network/socket_service.dart';
-import 'package:drift/native.dart';
 
 class MockConnectionManager extends Mock implements ConnectionManager {}
 class MockPersistentLibraryService extends Mock implements PersistentLibraryService {}

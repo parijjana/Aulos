@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:aulos/core/network/json_types.dart';
 import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/data/database/radio_database.dart';
 import 'package:aulos/domain/network/log_service.dart';
@@ -48,7 +49,7 @@ class RadioStationResult {
     );
   }
 
-  factory RadioStationResult.fromJson(Map<String, dynamic> json) {
+  factory RadioStationResult.fromJson(JsonMap json) {
     return RadioStationResult(
       stationuuid: (json['stationuuid']?.toString() ?? '') as String,
       name: (json['name']?.toString() ?? 'Unknown Station') as String,
@@ -93,7 +94,7 @@ class RadioBrowserService {
       if (response.statusCode == 200) {
         final servers = json.decode(response.body) as List;
         if (servers.isNotEmpty) {
-          final best = (servers.first as Map<String, dynamic>)['name'];
+          final best = (servers.first as JsonMap)['name'];
           _baseUrl = 'https://$best/json';
           log('RADIO: Resolved API host to $best');
         }
@@ -132,36 +133,36 @@ class RadioBrowserService {
     return results.map((r) => r.toStation()).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getAllCountries() async {
+  Future<List<JsonMap>> getAllCountries() async {
     final url = '$_baseUrl/countries?order=stationcount&reverse=true';
     final response = await _client.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body) as List<dynamic>;
-      return data.map((e) => e as Map<String, dynamic>).toList();
+      return data.map((e) => e as JsonMap).toList();
     }
     return [];
   }
 
-  Future<List<Map<String, dynamic>>> getAllLanguages() async {
+  Future<List<JsonMap>> getAllLanguages() async {
     final url = '$_baseUrl/languages?order=stationcount&reverse=true';
     final response = await _client.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body) as List<dynamic>;
-      return data.map((e) => e as Map<String, dynamic>).toList();
+      return data.map((e) => e as JsonMap).toList();
     }
     return [];
   }
 
-  Future<List<Map<String, dynamic>>> getTopTags(int limit) async {
+  Future<List<JsonMap>> getTopTags(int limit) async {
     final url = '$_baseUrl/tags?limit=$limit&order=stationcount&reverse=true';
-    return _rateLimiter.dispatch<List<Map<String, dynamic>>>(
+    return _rateLimiter.dispatch<List<JsonMap>>(
       apiId: 'radio-browser',
       call: () async {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
             final data = json.decode(response.body) as List;
-            return data.map((e) => e as Map<String, dynamic>).toList();
+            return data.map((e) => e as JsonMap).toList();
           } else {
             throw Exception('Tag fetch failed with status ${response.statusCode}');
           }
@@ -181,7 +182,7 @@ class RadioBrowserService {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
             final data = json.decode(response.body) as List;
-            return data.map((j) => RadioStationResult.fromJson(j as Map<String, dynamic>)).toList();
+            return data.map((j) => RadioStationResult.fromJson(j as JsonMap)).toList();
           } else {
             throw Exception('Request failed with status ${response.statusCode}');
           }

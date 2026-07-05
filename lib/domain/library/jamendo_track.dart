@@ -1,3 +1,5 @@
+import 'package:aulos/core/network/json_types.dart';
+
 class JamendoTrack {
   final String id;
   final String title;
@@ -25,7 +27,7 @@ class JamendoTrack {
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
-  factory JamendoTrack.fromJson(Map<String, dynamic> json) {
+  factory JamendoTrack.fromJson(JsonMap json) {
     return JamendoTrack(
       id: (json['id']?.toString() ?? '') as String,
       title: (json['name']?.toString() ?? 'Unknown Track') as String,

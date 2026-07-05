@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:io' as io;
-import 'package:flutter/foundation.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:aulos/domain/playback/playback_engine.dart'
     as domain;
 import 'package:aulos/domain/playback/playback_track.dart';
-import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/playback/audio_service_handler.dart';
 import 'package:aulos/domain/network/log_service.dart';
 

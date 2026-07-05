@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:aulos/core/network/json_types.dart';
 
 abstract class SocketService {
   // As Host
@@ -43,17 +44,17 @@ enum CommandType {
 
 class MediaCommand {
   final CommandType type;
-  final Map<String, dynamic>? payload;
+  final JsonMap? payload;
 
   MediaCommand({required this.type, this.payload});
 
   String toJson() => jsonEncode({'type': type.name, 'payload': payload});
 
   factory MediaCommand.fromJson(String source) {
-    final data = jsonDecode(source) as Map<String, dynamic>;
+    final data = jsonDecode(source) as JsonMap;
     return MediaCommand(
       type: CommandType.values.byName(data['type']?.toString() ?? ''),
-      payload: data['payload'] as Map<String, dynamic>?,
+      payload: data['payload'] as JsonMap?,
     );
   }
 

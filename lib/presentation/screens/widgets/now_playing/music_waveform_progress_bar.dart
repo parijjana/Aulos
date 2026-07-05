@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';

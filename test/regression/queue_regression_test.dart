@@ -22,8 +22,8 @@ import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/presentation/viewmodels/mood_view_model.dart';
 import 'package:drift/native.dart';
-import 'package:themer_flutter/themer_flutter.dart';
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
 class MockQueueViewModel extends Mock implements QueueViewModel {}
@@ -38,6 +38,7 @@ class MockPersistentLibraryService extends Mock implements PersistentLibraryServ
 class MockDiscoverySyncManager extends Mock implements DiscoverySyncManager {}
 class MockLogService extends Mock implements LogService {}
 class MockNoiseViewModel extends Mock implements NoiseViewModel {}
+class MockMoodViewModel extends Mock implements MoodViewModel {}
 
 void main() {
   late MockPlayerViewModel mockPlayerVM;
@@ -57,6 +58,7 @@ void main() {
   late RadioDatabase radioDb;
   late InsightsViewModel insightsVM;
   late MockNoiseViewModel mockNoiseVM;
+  late MockMoodViewModel mockMoodVM;
 
   setUpAll(() {
     registerFallbackValue(domain.PlaybackState.idle);
@@ -81,6 +83,16 @@ void main() {
     radioDb = RadioDatabase.testing(NativeDatabase.memory());
     insightsVM = InsightsViewModel(db: db, podcastDb: podcastDb, radioDb: radioDb);
     mockNoiseVM = MockNoiseViewModel();
+    mockMoodVM = MockMoodViewModel();
+
+    when(() => mockMoodVM.isLoading).thenReturn(false);
+    when(() => mockMoodVM.lastMusic).thenReturn(null);
+    when(() => mockMoodVM.lastPodcast).thenReturn(null);
+    when(() => mockMoodVM.lastAudiobook).thenReturn(null);
+    when(() => mockMoodVM.lastNoise).thenReturn(null);
+    when(() => mockMoodVM.lastRadio).thenReturn(null);
+    when(() => mockMoodVM.addListener(any())).thenReturn(null);
+    when(() => mockMoodVM.removeListener(any())).thenReturn(null);
 
     when(() => mockPlayerVM.state).thenReturn(domain.PlaybackState.idle);
     when(() => mockPlayerVM.position).thenReturn(Duration.zero);
@@ -238,6 +250,7 @@ void main() {
         ListenableProvider<LogService>.value(value: mockLogService),
         ChangeNotifierProvider<InsightsViewModel>.value(value: insightsVM),
         ChangeNotifierProvider<NoiseViewModel>.value(value: mockNoiseVM),
+        ChangeNotifierProvider<MoodViewModel>.value(value: mockMoodVM),
       ],
       child: const MaterialApp(
         home: HighContextTabbedScreen(),

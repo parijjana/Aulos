@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:aulos/data/database/podcast_database.dart';
-import 'package:drift/drift.dart';
 import 'dart:async';
 import 'package:aulos/domain/network/log_service.dart';
 

@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
-import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:aulos/data/database/migration_worker.dart';

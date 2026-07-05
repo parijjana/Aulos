@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
-import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'package:provider/provider.dart';
 

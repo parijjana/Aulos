@@ -3,7 +3,6 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/queue_view_model.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:mocktail/mocktail.dart';
-import 'dart:async';
 
 class MockPersistentLibraryService extends Mock implements PersistentLibraryService {}
 

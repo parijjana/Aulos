@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/data/playback/just_audio_playback_engine.dart';
 import 'package:aulos/data/playback/audio_service_handler.dart';
-import 'package:aulos/presentation/screens/now_playing_screen.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/data/library/local_library_service.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
@@ -28,6 +27,9 @@ import 'package:aulos/domain/library/podcast_service.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/features/main/screens/high_context_tabbed_screen.dart';
 import 'package:aulos/presentation/screens/collapsed_player_screen.dart';
+import 'package:aulos/presentation/screens/main_pager_screen.dart';
+import 'package:aulos/presentation/viewmodels/mood_view_model.dart';
+import 'package:aulos/core/storage/storage_directory_manager.dart';
 import 'package:file/local.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 import 'package:provider/provider.dart';
@@ -55,11 +57,9 @@ import 'package:aulos/data/network/persistent_log_service.dart';
 import 'package:aulos/data/core/permission_service_impl.dart';
 import 'package:aulos/data/network/cryptographic_handshake_service.dart';
 import 'package:aulos/domain/network/connection_manager.dart';
-import 'package:aulos/domain/network/handshake_service.dart';
 import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:on_audio_query_pluse/on_audio_query.dart';
-import 'package:aulos/domain/core/permission_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:window_manager/window_manager.dart';
@@ -114,6 +114,7 @@ void main() async {
     );
   }
 
+  final prefs = await SharedPreferences.getInstance();
   final docsDir = await getApplicationDocumentsDirectory();
   final logFile = File(p.join(docsDir.path, 'aulos.log'));
   final logService = PersistentLogService(logFile: logFile);
@@ -121,14 +122,16 @@ void main() async {
   final audioHandler = await _initAudioService(logService);
   final playbackEngine = JustAudioPlaybackEngine(handler: audioHandler, logService: logService);
 
-  final database = app_db.AppDatabase();
-  final podcastDb = PodcastDatabase();
-  final audiobookDb = AudiobookDatabase();
-  final playbackDb = PlaybackDatabase();
-  final noiseDb = NoiseDatabase();
-  final radioDb = RadioDatabase();
+  final directoryManager = StorageDirectoryManager(prefs);
+  final dbDir = await directoryManager.getDatabaseDirectory();
+  final dbPath = dbDir.path;
 
-  final prefs = await SharedPreferences.getInstance();
+  final database = app_db.AppDatabase(dbPath);
+  final podcastDb = PodcastDatabase(dbPath);
+  final audiobookDb = AudiobookDatabase(dbPath);
+  final playbackDb = PlaybackDatabase(dbPath);
+  final noiseDb = NoiseDatabase(dbPath);
+  final radioDb = RadioDatabase(dbPath);
 
   final migrationCompleted = prefs.getBool('database_migration_completed') ?? false;
   if (!migrationCompleted) {
@@ -282,7 +285,17 @@ void main() async {
       client: http.Client(),
       logService: logService,
     ),
+
     logService: logService,
+  );
+
+  final moodViewModel = MoodViewModel(
+    settingsVM: settingsViewModel,
+    appDb: database,
+    podcastDb: podcastDb,
+    audiobookDb: audiobookDb,
+    noiseDb: noiseDb,
+    radioDb: radioDb,
   );
 
   runApp(
@@ -317,6 +330,7 @@ void main() async {
         ChangeNotifierProvider.value(value: insightsViewModel),
         ChangeNotifierProvider.value(value: librivoxViewModel),
         ChangeNotifierProvider.value(value: jamendoViewModel),
+        ChangeNotifierProvider.value(value: moodViewModel),
       ],
       child: const AulosApp(),
     ),
@@ -401,7 +415,7 @@ class _AulosAppState extends State<AulosApp> {
         home = const HighContextTabbedScreen();
         break;
       case UIContextMode.minimalist:
-        home = const NowPlayingScreen();
+        home = const MainPagerScreen();
         break;
     }
 

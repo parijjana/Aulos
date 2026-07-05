@@ -3,7 +3,6 @@ import 'package:aulos/features/podcasts/widgets/podcast_detail_view.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/data/database/podcast_database.dart' as podcast_db;
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
-import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 
 class PodcastLibraryView extends StatefulWidget {

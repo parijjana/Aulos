@@ -1,6 +1,7 @@
 import 'package:audiotags/audiotags.dart' as tags;
 import 'package:file/file.dart';
 import 'package:aulos/domain/library/library_service.dart';
+import 'package:aulos/core/network/json_types.dart';
 import 'package:path/path.dart' as p;
 import 'package:on_audio_query_pluse/on_audio_query.dart';
 import 'dart:developer' as developer;
@@ -94,8 +95,8 @@ class LocalLibraryService implements LibraryService {
     return files;
   }
 
-  Future<Map<String, dynamic>> _tryGetCueMetadata(File audioFile) async {
-    final Map<String, dynamic> metadata = {};
+  Future<JsonMap> _tryGetCueMetadata(File audioFile) async {
+    final JsonMap metadata = {};
     final List<AudioChapter> chapters = [];
     try {
       final dir = audioFile.parent;

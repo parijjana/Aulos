@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aulos/features/main/screens/high_context_tabbed_screen.dart';
 import 'package:aulos/features/settings/screens/settings_screen.dart';
 import 'package:aulos/features/library/widgets/music_library_view.dart';
 import 'package:aulos/presentation/screens/now_playing_screen.dart';
@@ -136,6 +135,8 @@ void main() {
     when(() => settingsVM.mainTabIndex).thenReturn(0);
     when(() => settingsVM.libraryHubTabIndex).thenReturn(0);
     when(() => settingsVM.isScanning).thenReturn(false);
+    when(() => settingsVM.isPortableMode).thenReturn(false);
+    when(() => settingsVM.customDatabaseDirectory).thenReturn(null);
     when(() => settingsVM.addListener(any())).thenReturn(null);
     when(() => settingsVM.removeListener(any())).thenReturn(null);
 

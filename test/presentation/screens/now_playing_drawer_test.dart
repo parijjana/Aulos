@@ -10,7 +10,6 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/data/database/radio_database.dart';
 import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
-import 'package:themer_flutter/themer_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as engine_domain;

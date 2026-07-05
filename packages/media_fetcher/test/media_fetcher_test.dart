@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_fetcher/media_fetcher.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:media_fetcher/src/musicbrainz_client.dart';
 
 void main() {

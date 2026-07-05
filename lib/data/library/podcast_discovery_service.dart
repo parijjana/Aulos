@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:aulos/core/network/json_types.dart';
 import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/domain/network/log_service.dart';
 
@@ -21,7 +22,7 @@ class PodcastSearchResult {
     this.description,
   });
 
-  factory PodcastSearchResult.fromJson(Map<String, dynamic> json) {
+  factory PodcastSearchResult.fromJson(JsonMap json) {
     return PodcastSearchResult(
       title: (json['collectionName']?.toString() ?? 'Unknown Podcast') as String,
       artist: (json['artistName']?.toString() ?? 'Unknown Artist') as String,
@@ -64,11 +65,11 @@ class PodcastDiscoveryService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as JsonMap;
             final results = data['results'] as List? ?? [];
             log('API: Search successful. Found ${results.length} results.');
             return results
-                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j as Map<String, dynamic>))
+                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j as JsonMap))
                 .where((r) => r.feedUrl.isNotEmpty)
                 .toList();
           } else {
@@ -97,11 +98,11 @@ class PodcastDiscoveryService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as JsonMap;
             final results = data['results'] as List? ?? [];
             log('API: Category fetch successful. Found ${results.length} items.');
             return results
-                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j as Map<String, dynamic>))
+                .map<PodcastSearchResult>((j) => PodcastSearchResult.fromJson(j as JsonMap))
                 .where((r) => r.feedUrl.isNotEmpty)
                 .toList();
           } else {
@@ -125,11 +126,11 @@ class PodcastDiscoveryService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
-            final results = data['feed']['results'] as List? ?? [];
+            final data = await compute(json.decode, response.body) as JsonMap;
+            final results = (data['feed'] as JsonMap)['results'] as List? ?? [];
             log('API: Trending fetch successful. Found ${results.length} items.');
             return results.map<PodcastSearchResult>((j) {
-              final item = j as Map<String, dynamic>;
+              final item = j as JsonMap;
               return PodcastSearchResult(
                 title: item['name'] as String? ?? 'Unknown',
                 artist: item['artistName'] as String? ?? 'Unknown',
@@ -178,10 +179,10 @@ class PodcastDiscoveryService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as JsonMap;
             final results = data['results'] as List;
             if (results.isNotEmpty) {
-              final item = results.first as Map<String, dynamic>;
+              final item = results.first as JsonMap;
               final feedUrl = item['feedUrl'] as String?;
               log('API: Lookup successful. Found URL: $feedUrl');
               return feedUrl;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:aulos/features/library/widgets/music_library_view.dart';
-import 'package:aulos/presentation/screens/now_playing_screen.dart';
+import 'package:aulos/presentation/screens/main_pager_screen.dart';
 import 'package:aulos/features/podcasts/screens/podcast_root_screen.dart';
 import 'package:aulos/features/audiobooks/screens/audiobook_root_screen.dart';
 import 'package:aulos/features/radio/screens/radio_root_screen.dart';
@@ -125,7 +125,7 @@ class _HighContextTabbedScreenState extends State<HighContextTabbedScreen>
                       controller: _tabController,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        const NowPlayingScreen(isTabbed: true),
+                        const MainPagerScreen(isTabbed: true),
                         const MusicLibraryView(),
                         const PodcastRootScreen(),
                         const AudiobookRootScreen(),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:aulos/core/network/json_types.dart';
 import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:aulos/domain/library/jamendo_track.dart';
@@ -47,12 +48,12 @@ class JamendoService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as JsonMap;
             final results = data['results'] as List? ?? [];
             final List<JamendoTrack> tracks = [];
 
             for (var item in results) {
-              if (item is Map<String, dynamic>) {
+              if (item is JsonMap) {
                 tracks.add(JamendoTrack.fromJson(item));
               }
             }

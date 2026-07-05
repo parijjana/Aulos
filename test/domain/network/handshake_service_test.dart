@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aulos/domain/network/handshake_service.dart';
 import 'package:aulos/data/network/cryptographic_handshake_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';

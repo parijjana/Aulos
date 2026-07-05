@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/features/noise/models/noise_item.dart';
 import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
-import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/display_view_model.dart';
-import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
-import 'package:aulos/data/database/app_database.dart';
 import 'package:provider/provider.dart';
 
 class NoiseRootScreen extends StatefulWidget {

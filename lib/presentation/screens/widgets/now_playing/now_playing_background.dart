@@ -21,9 +21,10 @@ class NowPlayingBackground extends StatelessWidget {
           Positioned.fill(
             child: ImageFiltered(
               imageFilter: ui.ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-              child: Opacity(
-                opacity: 0.22,
-                child: Image.memory(art, fit: BoxFit.cover),
+              child: Image.memory(
+                art,
+                fit: BoxFit.cover,
+                opacity: const AlwaysStoppedAnimation(0.22),
               ),
             ),
           ),

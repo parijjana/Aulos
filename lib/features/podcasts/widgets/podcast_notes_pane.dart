@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
-import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:aulos/presentation/screens/widgets/html_text.dart';
 import 'package:aulos/presentation/screens/widgets/bookmarks_view.dart';
 import 'package:provider/provider.dart';

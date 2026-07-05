@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'src/musicbrainz_client.dart';
 import 'src/media_cache.dart';
-import 'src/rate_limiter.dart';
 
 export 'src/rate_limiter.dart';
 export 'src/media_cache.dart';
