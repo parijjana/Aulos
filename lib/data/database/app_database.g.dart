@@ -3289,6 +3289,17 @@ class $PlaylistsTable extends Playlists
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _rulesJsonMeta = const VerificationMeta(
+    'rulesJson',
+  );
+  @override
+  late final GeneratedColumn<String> rulesJson = GeneratedColumn<String>(
+    'rules_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3302,7 +3313,13 @@ class $PlaylistsTable extends Playlists
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, isSmart, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    isSmart,
+    rulesJson,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3334,6 +3351,12 @@ class $PlaylistsTable extends Playlists
         isSmart.isAcceptableOrUnknown(data['is_smart']!, _isSmartMeta),
       );
     }
+    if (data.containsKey('rules_json')) {
+      context.handle(
+        _rulesJsonMeta,
+        rulesJson.isAcceptableOrUnknown(data['rules_json']!, _rulesJsonMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3361,6 +3384,10 @@ class $PlaylistsTable extends Playlists
         DriftSqlType.bool,
         data['${effectivePrefix}is_smart'],
       )!,
+      rulesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rules_json'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3378,11 +3405,13 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   final String id;
   final String name;
   final bool isSmart;
+  final String? rulesJson;
   final DateTime createdAt;
   const Playlist({
     required this.id,
     required this.name,
     required this.isSmart,
+    this.rulesJson,
     required this.createdAt,
   });
   @override
@@ -3391,6 +3420,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['is_smart'] = Variable<bool>(isSmart);
+    if (!nullToAbsent || rulesJson != null) {
+      map['rules_json'] = Variable<String>(rulesJson);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3400,6 +3432,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       id: Value(id),
       name: Value(name),
       isSmart: Value(isSmart),
+      rulesJson: rulesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rulesJson),
       createdAt: Value(createdAt),
     );
   }
@@ -3413,6 +3448,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       isSmart: serializer.fromJson<bool>(json['isSmart']),
+      rulesJson: serializer.fromJson<String?>(json['rulesJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3423,6 +3459,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'isSmart': serializer.toJson<bool>(isSmart),
+      'rulesJson': serializer.toJson<String?>(rulesJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3431,11 +3468,13 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     String? id,
     String? name,
     bool? isSmart,
+    Value<String?> rulesJson = const Value.absent(),
     DateTime? createdAt,
   }) => Playlist(
     id: id ?? this.id,
     name: name ?? this.name,
     isSmart: isSmart ?? this.isSmart,
+    rulesJson: rulesJson.present ? rulesJson.value : this.rulesJson,
     createdAt: createdAt ?? this.createdAt,
   );
   Playlist copyWithCompanion(PlaylistsCompanion data) {
@@ -3443,6 +3482,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       isSmart: data.isSmart.present ? data.isSmart.value : this.isSmart,
+      rulesJson: data.rulesJson.present ? data.rulesJson.value : this.rulesJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3453,13 +3493,14 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('isSmart: $isSmart, ')
+          ..write('rulesJson: $rulesJson, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, isSmart, createdAt);
+  int get hashCode => Object.hash(id, name, isSmart, rulesJson, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3467,6 +3508,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           other.id == this.id &&
           other.name == this.name &&
           other.isSmart == this.isSmart &&
+          other.rulesJson == this.rulesJson &&
           other.createdAt == this.createdAt);
 }
 
@@ -3474,12 +3516,14 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   final Value<String> id;
   final Value<String> name;
   final Value<bool> isSmart;
+  final Value<String?> rulesJson;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const PlaylistsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.isSmart = const Value.absent(),
+    this.rulesJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3487,6 +3531,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     required String id,
     required String name,
     this.isSmart = const Value.absent(),
+    this.rulesJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3495,6 +3540,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<bool>? isSmart,
+    Expression<String>? rulesJson,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -3502,6 +3548,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (isSmart != null) 'is_smart': isSmart,
+      if (rulesJson != null) 'rules_json': rulesJson,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3511,6 +3558,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Value<String>? id,
     Value<String>? name,
     Value<bool>? isSmart,
+    Value<String?>? rulesJson,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -3518,6 +3566,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       id: id ?? this.id,
       name: name ?? this.name,
       isSmart: isSmart ?? this.isSmart,
+      rulesJson: rulesJson ?? this.rulesJson,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3535,6 +3584,9 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     if (isSmart.present) {
       map['is_smart'] = Variable<bool>(isSmart.value);
     }
+    if (rulesJson.present) {
+      map['rules_json'] = Variable<String>(rulesJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3550,6 +3602,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('isSmart: $isSmart, ')
+          ..write('rulesJson: $rulesJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3859,9 +3912,6 @@ class $QueueTracksTable extends QueueTracks
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES tracks (id)',
-    ),
   );
   static const VerificationMeta _positionMeta = const VerificationMeta(
     'position',
@@ -6555,24 +6605,6 @@ final class $$TracksTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
-
-  static MultiTypedResultKey<$QueueTracksTable, List<QueueTrack>>
-  _queueTracksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.queueTracks,
-    aliasName: $_aliasNameGenerator(db.tracks.id, db.queueTracks.trackId),
-  );
-
-  $$QueueTracksTableProcessedTableManager get queueTracksRefs {
-    final manager = $$QueueTracksTableTableManager(
-      $_db,
-      $_db.queueTracks,
-    ).filter((f) => f.trackId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_queueTracksRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
 }
 
 class $$TracksTableFilterComposer
@@ -6762,31 +6794,6 @@ class $$TracksTableFilterComposer
           }) => $$PlaylistTracksTableFilterComposer(
             $db: $db,
             $table: $db.playlistTracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> queueTracksRefs(
-    Expression<bool> Function($$QueueTracksTableFilterComposer f) f,
-  ) {
-    final $$QueueTracksTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.queueTracks,
-      getReferencedColumn: (t) => t.trackId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$QueueTracksTableFilterComposer(
-            $db: $db,
-            $table: $db.queueTracks,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7146,31 +7153,6 @@ class $$TracksTableAnnotationComposer
     );
     return f(composer);
   }
-
-  Expression<T> queueTracksRefs<T extends Object>(
-    Expression<T> Function($$QueueTracksTableAnnotationComposer a) f,
-  ) {
-    final $$QueueTracksTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.queueTracks,
-      getReferencedColumn: (t) => t.trackId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$QueueTracksTableAnnotationComposer(
-            $db: $db,
-            $table: $db.queueTracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$TracksTableTableManager
@@ -7192,7 +7174,6 @@ class $$TracksTableTableManager
             bool genreId,
             bool folderId,
             bool playlistTracksRefs,
-            bool queueTracksRefs,
           })
         > {
   $$TracksTableTableManager(_$AppDatabase db, $TracksTable table)
@@ -7303,13 +7284,11 @@ class $$TracksTableTableManager
                 genreId = false,
                 folderId = false,
                 playlistTracksRefs = false,
-                queueTracksRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (playlistTracksRefs) db.playlistTracks,
-                    if (queueTracksRefs) db.queueTracks,
                   ],
                   addJoins:
                       <
@@ -7405,27 +7384,6 @@ class $$TracksTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (queueTracksRefs)
-                        await $_getPrefetchedData<
-                          Track,
-                          $TracksTable,
-                          QueueTrack
-                        >(
-                          currentTable: table,
-                          referencedTable: $$TracksTableReferences
-                              ._queueTracksRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$TracksTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).queueTracksRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.trackId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
                     ];
                   },
                 );
@@ -7452,7 +7410,6 @@ typedef $$TracksTableProcessedTableManager =
         bool genreId,
         bool folderId,
         bool playlistTracksRefs,
-        bool queueTracksRefs,
       })
     >;
 typedef $$PlaylistsTableCreateCompanionBuilder =
@@ -7460,6 +7417,7 @@ typedef $$PlaylistsTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<bool> isSmart,
+      Value<String?> rulesJson,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -7468,6 +7426,7 @@ typedef $$PlaylistsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<bool> isSmart,
+      Value<String?> rulesJson,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -7519,6 +7478,11 @@ class $$PlaylistsTableFilterComposer
 
   ColumnFilters<bool> get isSmart => $composableBuilder(
     column: $table.isSmart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rulesJson => $composableBuilder(
+    column: $table.rulesJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7577,6 +7541,11 @@ class $$PlaylistsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get rulesJson => $composableBuilder(
+    column: $table.rulesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7600,6 +7569,9 @@ class $$PlaylistsTableAnnotationComposer
 
   GeneratedColumn<bool> get isSmart =>
       $composableBuilder(column: $table.isSmart, builder: (column) => column);
+
+  GeneratedColumn<String> get rulesJson =>
+      $composableBuilder(column: $table.rulesJson, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -7661,12 +7633,14 @@ class $$PlaylistsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<bool> isSmart = const Value.absent(),
+                Value<String?> rulesJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistsCompanion(
                 id: id,
                 name: name,
                 isSmart: isSmart,
+                rulesJson: rulesJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -7675,12 +7649,14 @@ class $$PlaylistsTableTableManager
                 required String id,
                 required String name,
                 Value<bool> isSmart = const Value.absent(),
+                Value<String?> rulesJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistsCompanion.insert(
                 id: id,
                 name: name,
                 isSmart: isSmart,
+                rulesJson: rulesJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -8133,29 +8109,6 @@ typedef $$QueueTracksTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$QueueTracksTableReferences
-    extends BaseReferences<_$AppDatabase, $QueueTracksTable, QueueTrack> {
-  $$QueueTracksTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $TracksTable _trackIdTable(_$AppDatabase db) => db.tracks.createAlias(
-    $_aliasNameGenerator(db.queueTracks.trackId, db.tracks.id),
-  );
-
-  $$TracksTableProcessedTableManager get trackId {
-    final $_column = $_itemColumn<String>('track_id')!;
-
-    final manager = $$TracksTableTableManager(
-      $_db,
-      $_db.tracks,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_trackIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
 class $$QueueTracksTableFilterComposer
     extends Composer<_$AppDatabase, $QueueTracksTable> {
   $$QueueTracksTableFilterComposer({
@@ -8170,33 +8123,15 @@ class $$QueueTracksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get position => $composableBuilder(
     column: $table.position,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$TracksTableFilterComposer get trackId {
-    final $$TracksTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.trackId,
-      referencedTable: $db.tracks,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TracksTableFilterComposer(
-            $db: $db,
-            $table: $db.tracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$QueueTracksTableOrderingComposer
@@ -8213,33 +8148,15 @@ class $$QueueTracksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get position => $composableBuilder(
     column: $table.position,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$TracksTableOrderingComposer get trackId {
-    final $$TracksTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.trackId,
-      referencedTable: $db.tracks,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TracksTableOrderingComposer(
-            $db: $db,
-            $table: $db.tracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$QueueTracksTableAnnotationComposer
@@ -8254,31 +8171,11 @@ class $$QueueTracksTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get trackId =>
+      $composableBuilder(column: $table.trackId, builder: (column) => column);
+
   GeneratedColumn<int> get position =>
       $composableBuilder(column: $table.position, builder: (column) => column);
-
-  $$TracksTableAnnotationComposer get trackId {
-    final $$TracksTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.trackId,
-      referencedTable: $db.tracks,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TracksTableAnnotationComposer(
-            $db: $db,
-            $table: $db.tracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$QueueTracksTableTableManager
@@ -8292,9 +8189,12 @@ class $$QueueTracksTableTableManager
           $$QueueTracksTableAnnotationComposer,
           $$QueueTracksTableCreateCompanionBuilder,
           $$QueueTracksTableUpdateCompanionBuilder,
-          (QueueTrack, $$QueueTracksTableReferences),
+          (
+            QueueTrack,
+            BaseReferences<_$AppDatabase, $QueueTracksTable, QueueTrack>,
+          ),
           QueueTrack,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function()
         > {
   $$QueueTracksTableTableManager(_$AppDatabase db, $QueueTracksTable table)
     : super(
@@ -8332,54 +8232,9 @@ class $$QueueTracksTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$QueueTracksTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (trackId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.trackId,
-                                referencedTable: $$QueueTracksTableReferences
-                                    ._trackIdTable(db),
-                                referencedColumn: $$QueueTracksTableReferences
-                                    ._trackIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -8394,9 +8249,12 @@ typedef $$QueueTracksTableProcessedTableManager =
       $$QueueTracksTableAnnotationComposer,
       $$QueueTracksTableCreateCompanionBuilder,
       $$QueueTracksTableUpdateCompanionBuilder,
-      (QueueTrack, $$QueueTracksTableReferences),
+      (
+        QueueTrack,
+        BaseReferences<_$AppDatabase, $QueueTracksTable, QueueTrack>,
+      ),
       QueueTrack,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function()
     >;
 typedef $$ArtistAlbumRelationsTableCreateCompanionBuilder =
     ArtistAlbumRelationsCompanion Function({
