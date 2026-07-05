@@ -10,9 +10,9 @@ import 'package:aulos/presentation/viewmodels/display_view_model.dart';
 import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
+import 'package:aulos/presentation/viewmodels/mood_view_model.dart';
 import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
-import 'package:themer_flutter/themer_flutter.dart';
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
 class MockQueueViewModel extends Mock implements QueueViewModel {}
@@ -20,6 +20,7 @@ class MockDisplayViewModel extends Mock implements DisplayViewModel {}
 class MockConnectivityViewModel extends Mock implements ConnectivityViewModel {}
 class MockSettingsViewModel extends Mock implements SettingsViewModel {}
 class MockNoiseViewModel extends Mock implements NoiseViewModel {}
+class MockMoodViewModel extends Mock implements MoodViewModel {}
 
 void main() {
   late MockPlayerViewModel mockPlayerVM;
@@ -28,6 +29,7 @@ void main() {
   late MockConnectivityViewModel mockConnectivityVM;
   late MockSettingsViewModel mockSettingsVM;
   late MockNoiseViewModel mockNoiseVM;
+  late MockMoodViewModel mockMoodViewModel;
 
   setUpAll(() {
     registerFallbackValue(domain.PlaybackState.idle);
@@ -43,6 +45,17 @@ void main() {
     mockSettingsVM = MockSettingsViewModel();
     when(() => mockSettingsVM.isFolderWatcherEnabled).thenReturn(true);
     mockNoiseVM = MockNoiseViewModel();
+    mockMoodViewModel = MockMoodViewModel();
+
+    // MoodViewModel stubs
+    when(() => mockMoodViewModel.lastMusic).thenReturn(null);
+    when(() => mockMoodViewModel.lastPodcast).thenReturn(null);
+    when(() => mockMoodViewModel.lastAudiobook).thenReturn(null);
+    when(() => mockMoodViewModel.lastNoise).thenReturn(null);
+    when(() => mockMoodViewModel.isLoading).thenReturn(false);
+    when(() => mockMoodViewModel.loadLastPlayedItems()).thenAnswer((_) async {});
+    when(() => mockMoodViewModel.addListener(any())).thenReturn(null);
+    when(() => mockMoodViewModel.removeListener(any())).thenReturn(null);
 
     // Default mock setup
     when(() => mockPlayerVM.state).thenReturn(domain.PlaybackState.idle);
@@ -113,6 +126,7 @@ void main() {
         ChangeNotifierProvider<ConnectivityViewModel>.value(value: mockConnectivityVM),
         ChangeNotifierProvider<SettingsViewModel>.value(value: mockSettingsVM),
         ChangeNotifierProvider<NoiseViewModel>.value(value: mockNoiseVM),
+        ChangeNotifierProvider<MoodViewModel>.value(value: mockMoodViewModel),
       ],
       child: const AulosApp(),
     );

@@ -92,11 +92,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
               NowPlayingBackground(vm: playerVM),
               Scrollbar(
                 controller: _scrollController,
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    SliverFillRemaining(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is OverscrollNotification && notification.overscroll < 0) {
+                      ScrollToDashboardNotification().dispatch(context);
+                      return true;
+                    }
+                    return false;
+                  },
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
                       hasScrollBody: false,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -109,6 +117,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
                       sliver: NowPlayingContent(),
                     ),
                   ],
+                  ),
                 ),
               ),
               NowPlayingInsightsGrabBar(
@@ -137,7 +146,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const SizedBox(width: 48),
+              IconButton(
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 32),
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  Icons.grid_view_rounded,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  size: 20,
+                ),
+                tooltip: 'Mood Dashboard',
+                onPressed: () {
+                  ScrollToDashboardNotification().dispatch(context);
+                },
+              ),
               Text(
                 'NOW PLAYING',
                 style: TextStyle(
@@ -228,4 +249,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
       ),
     );
   }
+}
+
+class ScrollToDashboardNotification extends Notification {
+  ScrollToDashboardNotification();
 }
