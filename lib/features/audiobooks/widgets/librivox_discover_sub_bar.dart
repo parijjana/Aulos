@@ -55,6 +55,12 @@ class LibriVoxDiscoverSubBar extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
+                      if (selectedCategory != null || isSearching)
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios, size: 14),
+                          onPressed: onClear,
+                          tooltip: 'Back to Storefront',
+                        ),
                       ...categories.map((cat) {
                         final isActive = selectedCategory == cat && !isSearching;
                         return Padding(

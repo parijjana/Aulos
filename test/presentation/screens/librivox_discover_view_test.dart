@@ -6,6 +6,7 @@ import 'package:aulos/features/audiobooks/widgets/librivox_discover_view.dart';
 import 'package:aulos/presentation/viewmodels/librivox_view_model.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/domain/library/librivox_book.dart';
 import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
 import 'package:themer_flutter/themer_flutter.dart';
@@ -13,18 +14,25 @@ import 'package:themer_flutter/themer_flutter.dart';
 class MockLibriVoxViewModel extends Mock implements LibriVoxViewModel {}
 class MockLibraryViewModel extends Mock implements LibraryViewModel {}
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
+class MockSettingsViewModel extends Mock implements SettingsViewModel {}
 
 void main() {
   late MockLibriVoxViewModel mockLibriVoxVM;
   late MockLibraryViewModel mockLibraryVM;
   late MockPlayerViewModel mockPlayerVM;
+  late MockSettingsViewModel mockSettingsVM;
 
   setUp(() {
     mockLibriVoxVM = MockLibriVoxViewModel();
     mockLibraryVM = MockLibraryViewModel();
     mockPlayerVM = MockPlayerViewModel();
+    mockSettingsVM = MockSettingsViewModel();
 
     // Default stubbing
+    when(() => mockSettingsVM.libraryViewType).thenReturn(LibraryViewType.grid);
+    when(() => mockSettingsVM.addListener(any())).thenReturn(null);
+    when(() => mockSettingsVM.removeListener(any())).thenReturn(null);
+
     when(() => mockLibriVoxVM.searchResults).thenReturn([]);
     when(() => mockLibriVoxVM.filteredResults).thenReturn([]);
     when(() => mockLibriVoxVM.categoryResults).thenReturn(<String, List<LibriVoxBook>>{});
@@ -69,6 +77,7 @@ void main() {
                       ChangeNotifierProvider<LibriVoxViewModel>.value(value: mockLibriVoxVM),
                       ChangeNotifierProvider<LibraryViewModel>.value(value: mockLibraryVM),
                       ChangeNotifierProvider<PlayerViewModel>.value(value: mockPlayerVM),
+                      ChangeNotifierProvider<SettingsViewModel>.value(value: mockSettingsVM),
                     ],
                     child: const LibriVoxDiscoverView(),
                   ),
@@ -82,6 +91,7 @@ void main() {
                   ChangeNotifierProvider<LibriVoxViewModel>.value(value: mockLibriVoxVM),
                   ChangeNotifierProvider<LibraryViewModel>.value(value: mockLibraryVM),
                   ChangeNotifierProvider<PlayerViewModel>.value(value: mockPlayerVM),
+                  ChangeNotifierProvider<SettingsViewModel>.value(value: mockSettingsVM),
                 ],
                 child: const LibriVoxDiscoverView(),
               ),

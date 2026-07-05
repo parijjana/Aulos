@@ -8,11 +8,13 @@ import 'librivox_book_item.dart';
 class LibriVoxShelfView extends StatelessWidget {
   final List<LibriVoxBook> books;
   final String title;
+  final VoidCallback? onSeeAll;
 
   const LibriVoxShelfView({
     super.key,
     required this.title,
     required this.books,
+    this.onSeeAll,
   });
 
   @override
@@ -25,70 +27,48 @@ class LibriVoxShelfView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text(
-            title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-              color: theme.colorScheme.primary,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                ),
+              ),
+              if (onSeeAll != null && books.isNotEmpty)
+                TextButton(
+                  onPressed: onSeeAll,
+                  child: const Text('SEE ALL', style: TextStyle(fontSize: 10)),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
-        Stack(
-          children: [
-            // Shelf background glowing cyber-glass line
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 16,
-              child: Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.5),
-                      theme.colorScheme.primary.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+        SizedBox(
+          height: 230,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: books.length,
+            itemBuilder: (context, index) {
+              final book = books[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: LibriVoxBookItem(
+                  book: book,
+                  libraryVM: libraryVM,
+                  vm: vm,
                 ),
-              ),
-            ),
-            // Books container
-            SizedBox(
-              height: 230,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: books.length,
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: LibriVoxBookItem(
-                      book: book,
-                      libraryVM: libraryVM,
-                      vm: vm,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
+        const SizedBox(height: 24),
       ],
     );
   }

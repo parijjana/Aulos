@@ -3,10 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/audiobook_database.dart';
 import 'package:aulos/domain/library/library_service.dart';
-import 'package:path/path.dart' as p;
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
-import 'package:aulos/core/utils/id_generator.dart';
+import 'package:aulos/data/library/persistent_library_importer.dart';
 
 abstract class PersistentLibraryService {
   Future<List<Folder>> getFolders();
@@ -34,6 +31,7 @@ abstract class PersistentLibraryService {
   Future<void> saveQueue(List<String> trackIds);
   Future<List<Playlist>> getPlaylists();
   Future<void> savePlaylist(String name, List<String> trackIds);
+  Future<void> saveSmartPlaylist(String name, String rulesJson);
   Future<List<Track>> getTracksForPlaylist(String playlistId);
   Future<void> deletePlaylist(String playlistId);
 
@@ -57,6 +55,7 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
 
   AppDatabase get db => _db;
   AudiobookDatabase get audiobookDb => _audiobookDb;
+  LibraryService get scanner => _scanner;
 
   @override
   Future<List<Folder>> getFolders() => _db.getAllFolders();
@@ -177,318 +176,16 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   }
 
   @override
-  Future<void> pickAndAddFolder({int folderType = 0}) async {
-    final String? path = await FilePicker.getDirectoryPath();
-    if (path != null) {
-      await importFolder(path, folderType: folderType);
-    }
-  }
+  Future<void> pickAndAddFolder({int folderType = 0}) =>
+      PersistentLibraryImportExtension(this).pickAndAddFolder(folderType: folderType);
 
   @override
-  Future<void> importFolder(String path, {VoidCallback? onFileFound, int folderType = 0}) async {
-    final bool isAudiobook = folderType == 1;
-
-    if (isAudiobook) {
-      final rootId = await _audiobookDb.ensureFolder(path);
-      final existingPaths = (await _audiobookDb.select(_audiobookDb.audiobookTracks).get())
-          .map((t) => t.path)
-          .toSet();
-      final files = await _scanner.scanDirectory(path, existingPaths: existingPaths);
-
-      final Map<String, String> folderCache = {path: rootId};
-
-      for (final f in files) {
-        final fileDir = p.dirname(f.path);
-        final trackFolderId = await _ensureFolderHierarchy(
-          fileDir,
-          rootId,
-          path,
-          folderCache,
-          folderType: folderType,
-        );
-
-        final artistId = await _audiobookDb.ensureArtist(f.artist);
-        final albumArtistId = f.albumArtist != null
-            ? await _audiobookDb.ensureArtist(f.albumArtist!)
-            : artistId;
-        
-        String bookName = f.album ?? p.basename(fileDir);
-        
-        final albumId = await _audiobookDb.ensureAudiobook(
-          bookName, 
-          albumArtistId, 
-          coverArt: f.coverArt,
-        );
-
-        String effectiveTrackId;
-        final existing = await (_audiobookDb.select(_audiobookDb.audiobookTracks)..where((t) => t.path.equals(f.path))).getSingleOrNull();
-        
-        if (existing == null) {
-          onFileFound?.call();
-          int fileSize = 0;
-          try {
-            fileSize = File(f.path).lengthSync();
-          } catch (_) {}
-          
-          final title = f.title;
-          final artist = f.artist;
-          final albumName = f.album ?? '';
-          final durSec = f.duration?.inSeconds ?? 0;
-          final folderName = p.basename(p.dirname(f.path));
-          final fileName = p.basename(f.path);
-          
-          String fingerprint = (title.isNotEmpty && artist.isNotEmpty)
-              ? "$title|$artist|$albumName|$durSec|$fileSize"
-              : "$folderName|$fileName";
-              
-          String trackId = generateContentId(fingerprint);
-          String? duplicateOf;
-          
-          final existingWithId = await (_audiobookDb.select(_audiobookDb.audiobookTracks)..where((t) => t.id.equals(trackId))).getSingleOrNull();
-          if (existingWithId != null && existingWithId.path != f.path) {
-            duplicateOf = trackId;
-            fingerprint = "$fingerprint|${DateTime.now().millisecondsSinceEpoch}";
-            trackId = generateContentId(fingerprint);
-          }
-
-          await _audiobookDb.into(_audiobookDb.audiobookTracks).insert(
-            AudiobookTracksCompanion.insert(
-              id: trackId,
-              path: f.path,
-              title: f.title,
-              artistId: Value(artistId),
-              audiobookId: Value(albumId),
-              durationSeconds: Value(f.duration?.inSeconds),
-              coverArt: Value(f.coverArt),
-              isStream: const Value(false),
-              duplicateOf: Value(duplicateOf),
-            ),
-          );
-          effectiveTrackId = trackId;
-        } else {
-          effectiveTrackId = existing.id;
-          if (existing.audiobookId == null) {
-             await (_audiobookDb.update(_audiobookDb.audiobookTracks)..where((t) => t.id.equals(effectiveTrackId))).write(AudiobookTracksCompanion(audiobookId: Value(albumId)));
-          }
-        }
-
-        if (f.chapters.isNotEmpty) {
-          await (_audiobookDb.delete(_audiobookDb.audiobookChapters)..where((c) => c.audiobookTrackId.equals(effectiveTrackId))).go();
-
-          final List<AudiobookChaptersCompanion> companions = [];
-          for (int i = 0; i < f.chapters.length; i++) {
-            final chapter = f.chapters[i];
-            int? durationMs;
-            if (i < f.chapters.length - 1) {
-              durationMs = f.chapters[i + 1].startTime.inMilliseconds - chapter.startTime.inMilliseconds;
-            } else if (f.duration != null) {
-              durationMs = f.duration!.inMilliseconds - chapter.startTime.inMilliseconds;
-            }
-
-            // Generate deterministic ID for chapter
-            final chapterFingerprint = "$effectiveTrackId|${chapter.title}|${chapter.startTime.inMilliseconds}";
-            final chapterId = generateContentId(chapterFingerprint);
-
-            companions.add(AudiobookChaptersCompanion.insert(
-              id: chapterId,
-              audiobookTrackId: effectiveTrackId,
-              title: chapter.title,
-              startTimeMs: chapter.startTime.inMilliseconds,
-              durationMs: Value(durationMs),
-            ));
-          }
-          await _audiobookDb.addChapters(companions);
-        }
-      }
-      return;
-    }
-
-    final rootId = await _db.ensureFolder(path, folderType: folderType);
-    final existingPaths = (await _db.select(_db.tracks).get())
-        .map((t) => t.path)
-        .toSet();
-    final files = await _scanner.scanDirectory(path, existingPaths: existingPaths);
-
-    final Map<String, String> folderCache = {path: rootId};
-
-    for (final f in files) {
-      final fileDir = p.dirname(f.path);
-      final trackFolderId = await _ensureFolderHierarchy(
-        fileDir,
-        rootId,
-        path,
-        folderCache,
-        folderType: folderType,
-      );
-
-      final artistId = await _db.ensureArtist(f.artist);
-      final albumArtistId = f.albumArtist != null
-          ? await _db.ensureArtist(f.albumArtist!)
-          : artistId;
-      
-      String bookName = f.album ?? p.basename(fileDir);
-      
-      final albumId = await _db.ensureAlbum(
-        bookName, 
-        albumArtistId, 
-        coverArt: f.coverArt,
-        isAudiobook: isAudiobook,
-      );
-      
-      final genreId = f.genre != null ? await _db.ensureGenre(f.genre!) : null;
-
-      String effectiveTrackId;
-      final existing = await (_db.select(_db.tracks)..where((t) => t.path.equals(f.path))).getSingleOrNull();
-      
-      if (existing == null) {
-        onFileFound?.call();
-        int fileSize = 0;
-        try {
-          fileSize = File(f.path).lengthSync();
-        } catch (_) {}
-        
-        final title = f.title;
-        final artist = f.artist;
-        final albumName = f.album ?? '';
-        final durSec = f.duration?.inSeconds ?? 0;
-        final folderName = p.basename(p.dirname(f.path));
-        final fileName = p.basename(f.path);
-        
-        String fingerprint = (title.isNotEmpty && artist.isNotEmpty)
-            ? "$title|$artist|$albumName|$durSec|$fileSize"
-            : "$folderName|$fileName";
-            
-        String trackId = generateContentId(fingerprint);
-        String? duplicateOf;
-        
-        final existingWithId = await (_db.select(_db.tracks)..where((t) => t.id.equals(trackId))).getSingleOrNull();
-        if (existingWithId != null && existingWithId.path != f.path) {
-          duplicateOf = trackId;
-          fingerprint = "$fingerprint|${DateTime.now().millisecondsSinceEpoch}";
-          trackId = generateContentId(fingerprint);
-        }
-
-        await _db.into(_db.tracks).insert(
-          TracksCompanion.insert(
-            id: trackId,
-            path: f.path,
-            title: f.title,
-            folderId: trackFolderId,
-            artistId: Value(artistId),
-            albumId: Value(albumId),
-            genreId: Value(genreId),
-            year: Value(f.year),
-            durationSeconds: Value(f.duration?.inSeconds),
-            coverArt: Value(f.coverArt),
-            isAudiobook: Value(isAudiobook),
-            duplicateOf: Value(duplicateOf),
-          ),
-        );
-        effectiveTrackId = trackId;
-      } else {
-        effectiveTrackId = existing.id;
-        if (existing.albumId == null) {
-           await (_db.update(_db.tracks)..where((t) => t.id.equals(effectiveTrackId))).write(TracksCompanion(albumId: Value(albumId)));
-        }
-      }
-    }
-  }
-
-  Future<String> _ensureFolderHierarchy(
-    String currentPath,
-    String rootId,
-    String rootPath,
-    Map<String, String> cache, {
-    int folderType = 0,
-  }) async {
-    final normalizedCurrent = p.normalize(p.absolute(currentPath));
-    final normalizedRoot = p.normalize(p.absolute(rootPath));
-
-    if (cache.containsKey(normalizedCurrent)) return cache[normalizedCurrent]!;
-    if (normalizedCurrent == normalizedRoot) return rootId;
-
-    final parentPath = p.dirname(normalizedCurrent);
-    if (parentPath == normalizedCurrent) {
-      return rootId;
-    }
-
-    final parentId = await _ensureFolderHierarchy(
-      parentPath,
-      rootId,
-      normalizedRoot,
-      cache,
-      folderType: folderType,
-    );
-
-    final folderId = folderType == 1
-        ? await _audiobookDb.ensureFolder(normalizedCurrent, parentId: parentId)
-        : await _db.ensureFolder(normalizedCurrent, parentId: parentId, folderType: folderType);
-    cache[normalizedCurrent] = folderId;
-    return folderId;
-  }
+  Future<void> importFolder(String path, {VoidCallback? onFileFound, int folderType = 0}) =>
+      PersistentLibraryImportExtension(this).importFolder(path, onFileFound: onFileFound, folderType: folderType);
 
   @override
-  Future<void> autoDiscoverTracks() async {
-    if (!Platform.isAndroid && !Platform.isIOS) return;
-
-    final systemFolderId = generateContentId('system://mediastore');
-    await _db.addFolder(
-      FoldersCompanion.insert(
-        id: systemFolderId,
-        path: 'system://mediastore',
-        name: 'Android MediaStore',
-      ),
-    );
-
-    final files = await _scanner.discoverTracks();
-
-    for (final f in files) {
-      final artistId = await _db.ensureArtist(f.artist);
-      final albumId = f.album != null
-          ? await _db.ensureAlbum(f.album!, artistId, coverArt: f.coverArt)
-          : null;
-
-      int fileSize = 0;
-      try {
-        fileSize = File(f.path).lengthSync();
-      } catch (_) {}
-      
-      final title = f.title;
-      final artist = f.artist;
-      final albumName = f.album ?? '';
-      final durSec = f.duration?.inSeconds ?? 0;
-      final folderName = p.basename(p.dirname(f.path));
-      final fileName = p.basename(f.path);
-      
-      String fingerprint = (title.isNotEmpty && artist.isNotEmpty)
-          ? "$title|$artist|$albumName|$durSec|$fileSize"
-          : "$folderName|$fileName";
-          
-      String trackId = generateContentId(fingerprint);
-      String? duplicateOf;
-      
-      final existingWithId = await (_db.select(_db.tracks)..where((t) => t.id.equals(trackId))).getSingleOrNull();
-      if (existingWithId != null && existingWithId.path != f.path) {
-        duplicateOf = trackId;
-        fingerprint = "$fingerprint|${DateTime.now().millisecondsSinceEpoch}";
-        trackId = generateContentId(fingerprint);
-      }
-
-      await _db.addTracks([
-        TracksCompanion(
-          id: Value(trackId),
-          path: Value(f.path),
-          title: Value(f.title),
-          folderId: Value(systemFolderId),
-          artistId: Value(artistId),
-          albumId: Value(albumId),
-          durationSeconds: Value(f.duration?.inSeconds),
-          coverArt: Value(f.coverArt),
-          duplicateOf: Value(duplicateOf),
-        ),
-      ]);
-    }
-  }
+  Future<void> autoDiscoverTracks() =>
+      PersistentLibraryImportExtension(this).autoDiscoverTracks();
 
   @override
   Future<void> updateRating(String trackId, int rating) =>
@@ -503,7 +200,50 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
       _db.updateArtistPhoto(artistId, photo);
 
   @override
-  Future<List<Track>> getQueue() => _db.getQueue();
+  Future<List<Track>> getQueue() async {
+    final queueItems = await (_db.select(_db.queueTracks)..orderBy([(t) => OrderingTerm.asc(t.position)])).get();
+    if (queueItems.isEmpty) return [];
+
+    final trackIds = queueItems.map((qi) => qi.trackId).toList();
+
+    final musicTracksList = await (_db.select(_db.tracks)..where((t) => t.id.isIn(trackIds))).get();
+    final Map<String, Track> musicMap = {for (var t in musicTracksList) t.id: t};
+
+    final audiobookTracksList = await (_audiobookDb.select(_audiobookDb.audiobookTracks)..where((t) => t.id.isIn(trackIds))).get();
+    final Map<String, Track> audiobookMap = {
+      for (var t in audiobookTracksList)
+        t.id: Track(
+          id: t.id,
+          path: t.path,
+          title: t.title,
+          artistId: t.artistId,
+          albumId: t.audiobookId,
+          genreId: null,
+          year: null,
+          durationSeconds: t.durationSeconds,
+          folderId: 'audiobook_folder',
+          rating: t.rating,
+          coverArt: t.coverArt,
+          isFavorite: t.isFavorite,
+          playCount: t.playCount,
+          lastPlayed: t.lastPlayed,
+          isAudiobook: true,
+          isPlayed: t.isPlayed,
+          isStream: t.isStream,
+        )
+    };
+
+    final List<Track> result = [];
+    for (final item in queueItems) {
+      final id = item.trackId;
+      if (musicMap.containsKey(id)) {
+        result.add(musicMap[id]!);
+      } else if (audiobookMap.containsKey(id)) {
+        result.add(audiobookMap[id]!);
+      }
+    }
+    return result;
+  }
 
   @override
   Future<void> saveQueue(List<String> trackIds) => _db.saveQueue(trackIds);
@@ -516,8 +256,116 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
       _db.savePlaylistWithTracks(name, trackIds);
 
   @override
-  Future<List<Track>> getTracksForPlaylist(String playlistId) =>
-      _db.getTracksForPlaylist(playlistId);
+  Future<void> saveSmartPlaylist(String name, String rulesJson) =>
+      _db.saveSmartPlaylist(name, rulesJson);
+
+  @override
+  Future<List<Track>> getTracksForPlaylist(String playlistId) async {
+    final playlist = await (_db.select(_db.playlists)..where((t) => t.id.equals(playlistId))).getSingleOrNull();
+    if (playlist == null) return [];
+
+    if (playlist.isSmart) {
+      if (playlist.rulesJson != null && playlist.rulesJson!.isNotEmpty) {
+        return _db.getTracksForPlaylist(playlistId);
+      }
+      final List<Track> combinedTracks = [];
+
+      if (playlist.name == 'Likes') {
+        final musicLikes = await (_db.select(_db.tracks)..where((t) => t.isFavorite.equals(true))).get();
+        combinedTracks.addAll(musicLikes);
+
+        final audiobookLikes = await (_audiobookDb.select(_audiobookDb.audiobookTracks)..where((t) => t.isFavorite.equals(true))).get();
+        combinedTracks.addAll(audiobookLikes.map((t) => _mapAudiobookTrackToTrack(t)));
+
+        return combinedTracks;
+      } else if (playlist.name == 'Dislikes') {
+        final musicDislikes = await (_db.select(_db.tracks)..where((t) => t.rating.equals(-1))).get();
+        combinedTracks.addAll(musicDislikes);
+
+        final audiobookDislikes = await (_audiobookDb.select(_audiobookDb.audiobookTracks)..where((t) => t.rating.equals(-1))).get();
+        combinedTracks.addAll(audiobookDislikes.map((t) => _mapAudiobookTrackToTrack(t)));
+
+        return combinedTracks;
+      } else if (playlist.name == 'Recently Played') {
+        final musicRecently = await (_db.select(_db.tracks)
+          ..where((t) => t.lastPlayed.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.lastPlayed)])
+          ..limit(50)
+        ).get();
+        combinedTracks.addAll(musicRecently);
+
+        final audiobookRecently = await (_audiobookDb.select(_audiobookDb.audiobookTracks)
+          ..where((t) => t.lastPlayed.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.lastPlayed)])
+          ..limit(50)
+        ).get();
+        combinedTracks.addAll(audiobookRecently.map((t) => _mapAudiobookTrackToTrack(t)));
+
+        combinedTracks.sort((a, b) {
+          if (a.lastPlayed == null) return 1;
+          if (b.lastPlayed == null) return -1;
+          return b.lastPlayed!.compareTo(a.lastPlayed!);
+        });
+        return combinedTracks.take(50).toList();
+      } else if (playlist.name == 'Most Played') {
+        final musicMost = await (_db.select(_db.tracks)
+          ..where((t) => t.playCount.isBiggerThanValue(0))
+          ..orderBy([(t) => OrderingTerm.desc(t.playCount)])
+          ..limit(50)
+        ).get();
+        combinedTracks.addAll(musicMost);
+
+        final audiobookMost = await (_audiobookDb.select(_audiobookDb.audiobookTracks)
+          ..where((t) => t.playCount.isBiggerThanValue(0))
+          ..orderBy([(t) => OrderingTerm.desc(t.playCount)])
+          ..limit(50)
+        ).get();
+        combinedTracks.addAll(audiobookMost.map((t) => _mapAudiobookTrackToTrack(t)));
+
+        combinedTracks.sort((a, b) => b.playCount.compareTo(a.playCount));
+        return combinedTracks.take(50).toList();
+      } else if (playlist.name == 'Recently Added') {
+        final musicAdded = await (_db.select(_db.tracks)
+          ..orderBy([(t) => OrderingTerm.desc(t.id)])
+          ..limit(50)
+        ).get();
+        combinedTracks.addAll(musicAdded);
+
+        final audiobookAdded = await (_audiobookDb.select(_audiobookDb.audiobookTracks)
+          ..orderBy([(t) => OrderingTerm.desc(t.id)])
+          ..limit(50)
+        ).get();
+        combinedTracks.addAll(audiobookAdded.map((t) => _mapAudiobookTrackToTrack(t)));
+
+        combinedTracks.sort((a, b) => b.id.compareTo(a.id));
+        return combinedTracks.take(50).toList();
+      }
+    }
+
+    return _db.getTracksForPlaylist(playlistId);
+  }
+
+  Track _mapAudiobookTrackToTrack(AudiobookTrack t) {
+    return Track(
+      id: t.id,
+      path: t.path,
+      title: t.title,
+      artistId: t.artistId,
+      albumId: t.audiobookId,
+      genreId: null,
+      year: null,
+      durationSeconds: t.durationSeconds,
+      folderId: 'audiobook_folder',
+      rating: t.rating,
+      coverArt: t.coverArt,
+      isFavorite: t.isFavorite,
+      playCount: t.playCount,
+      lastPlayed: t.lastPlayed,
+      isAudiobook: true,
+      isPlayed: t.isPlayed,
+      isStream: t.isStream,
+    );
+  }
 
   @override
   Future<void> deletePlaylist(String playlistId) => _db.deletePlaylist(playlistId);

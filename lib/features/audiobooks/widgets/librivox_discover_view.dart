@@ -79,7 +79,7 @@ class _LibriVoxDiscoverViewState extends State<LibriVoxDiscoverView> with Automa
               _searchExpanded = false;
               _searchController.clear();
             });
-            vm.search(cat['query']);
+            vm.search(cat['query'] as String);
           },
           onSearchSubmitted: (val) {
             if (val.isNotEmpty) {
@@ -121,6 +121,15 @@ class _LibriVoxDiscoverViewState extends State<LibriVoxDiscoverView> with Automa
               selectedCategory: _selectedCategory,
               isSearching: _isSearching,
               categories: _librivoxCategories,
+              onCategorySelected: (cat) {
+                setState(() {
+                  _selectedCategory = cat;
+                  _isSearching = false;
+                  _searchExpanded = false;
+                  _searchController.clear();
+                });
+                vm.search(cat['query'] as String);
+              },
             ),
           ),
         ),

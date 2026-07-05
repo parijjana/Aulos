@@ -1,4 +1,5 @@
 import 'package:aulos/core/utils/text_sanitizer.dart';
+import 'package:aulos/core/network/json_types.dart';
 
 class LibriVoxAuthor {
   final String id;
@@ -17,7 +18,7 @@ class LibriVoxAuthor {
     return '$firstName $lastName';
   }
 
-  factory LibriVoxAuthor.fromJson(Map<String, dynamic> json) {
+  factory LibriVoxAuthor.fromJson(JsonMap json) {
     return LibriVoxAuthor(
       id: (json['id']?.toString() ?? '') as String,
       firstName: (json['first_name']?.toString() ?? '') as String,
@@ -25,7 +26,7 @@ class LibriVoxAuthor {
     );
   }
 
-  Map<String, dynamic> toJson() {
+  JsonMap toJson() {
     return {
       'id': id,
       'first_name': firstName,
@@ -62,19 +63,19 @@ class LibriVoxBook {
     return authors.map((a) => a.fullName).join(', ');
   }
 
-  factory LibriVoxBook.fromJson(Map<String, dynamic> json) {
+  factory LibriVoxBook.fromJson(JsonMap json) {
     final authorsList = json['authors'] as List? ?? [];
     final parsedAuthors = authorsList
-        .map((a) => LibriVoxAuthor.fromJson(a as Map<String, dynamic>))
+        .map((a) => LibriVoxAuthor.fromJson(a as JsonMap))
         .toList();
 
     final sectionsList = json['sections'] as List? ?? [];
     final Set<String> uniqueNarrators = {};
     for (var sec in sectionsList) {
-      if (sec is Map<String, dynamic>) {
+      if (sec is JsonMap) {
         final readersList = sec['readers'] as List? ?? [];
         for (var r in readersList) {
-          if (r is Map<String, dynamic>) {
+          if (r is JsonMap) {
             final name = r['display_name']?.toString()?.trim() ?? '';
             if (name.isNotEmpty) {
               uniqueNarrators.add(name);
@@ -98,7 +99,7 @@ class LibriVoxBook {
     );
   }
 
-  Map<String, dynamic> toJson() {
+  JsonMap toJson() {
     return {
       'id': id,
       'title': title,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:aulos/core/network/json_types.dart';
 import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:aulos/domain/library/librivox_book.dart';
@@ -40,19 +41,19 @@ class LibriVoxService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as JsonMap;
             final booksData = data['books'];
             final List<LibriVoxBook> books = [];
 
-            if (booksData is Map<String, dynamic>) {
+            if (booksData is JsonMap) {
               for (var entry in booksData.values) {
-                if (entry is Map<String, dynamic>) {
+                if (entry is JsonMap) {
                   books.add(LibriVoxBook.fromJson(entry));
                 }
               }
             } else if (booksData is List) {
               for (var item in booksData) {
-                if (item is Map<String, dynamic>) {
+                if (item is JsonMap) {
                   books.add(LibriVoxBook.fromJson(item));
                 }
               }
@@ -83,17 +84,17 @@ class LibriVoxService {
         try {
           final response = await _client.get(Uri.parse(url));
           if (response.statusCode == 200) {
-            final data = await compute(json.decode, response.body) as Map<String, dynamic>;
+            final data = await compute(json.decode, response.body) as JsonMap;
             final booksData = data['books'];
 
-            if (booksData is Map<String, dynamic> && booksData.isNotEmpty) {
+            if (booksData is JsonMap && booksData.isNotEmpty) {
               final firstBook = booksData.values.first;
-              if (firstBook is Map<String, dynamic>) {
+              if (firstBook is JsonMap) {
                 return LibriVoxBook.fromJson(firstBook);
               }
             } else if (booksData is List && booksData.isNotEmpty) {
               final firstBook = booksData.first;
-              if (firstBook is Map<String, dynamic>) {
+              if (firstBook is JsonMap) {
                 return LibriVoxBook.fromJson(firstBook);
               }
             }

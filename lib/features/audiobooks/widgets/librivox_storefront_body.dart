@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:aulos/domain/library/librivox_book.dart';
 import 'package:aulos/presentation/viewmodels/librivox_view_model.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
+import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
+import 'package:provider/provider.dart';
 import 'librivox_shelf_view.dart';
 import 'librivox_book_item.dart';
 
@@ -11,6 +13,7 @@ class LibriVoxStorefrontBody extends StatelessWidget {
   final Map<String, dynamic>? selectedCategory;
   final bool isSearching;
   final List<Map<String, dynamic>> categories;
+  final Function(Map<String, dynamic>)? onCategorySelected;
 
   const LibriVoxStorefrontBody({
     super.key,
@@ -19,11 +22,14 @@ class LibriVoxStorefrontBody extends StatelessWidget {
     required this.selectedCategory,
     required this.isSearching,
     required this.categories,
+    this.onCategorySelected,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final settingsVM = context.watch<settings.SettingsViewModel>();
 
     if (vm.isLoading && selectedCategory == null && !isSearching && vm.searchResults.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -55,7 +61,7 @@ class LibriVoxStorefrontBody extends StatelessWidget {
       if (vm.isLoading && results.isEmpty) {
         return const Center(child: CircularProgressIndicator());
       }
-      return _buildGrid(context, results, 'Search Results for "${vm.lastSearchQuery}"');
+      return _buildResults(context, results, 'Search Results for "${vm.lastSearchQuery}"', settingsVM);
     }
 
     if (selectedCategory != null) {
@@ -63,7 +69,7 @@ class LibriVoxStorefrontBody extends StatelessWidget {
       if (vm.isLoading && results.isEmpty) {
         return const Center(child: CircularProgressIndicator());
       }
-      return _buildGrid(context, results, 'Top ${selectedCategory!['name']} Books');
+      return _buildResults(context, results, 'Top ${selectedCategory!['name']} Books', settingsVM);
     }
 
     // Main storefront view with multiple shelves
@@ -74,6 +80,9 @@ class LibriVoxStorefrontBody extends StatelessWidget {
         LibriVoxShelfView(
           title: 'Featured Classics',
           books: vm.categoryResults[''] ?? vm.searchResults,
+          onSeeAll: onCategorySelected != null
+              ? () => onCategorySelected!(categories.first)
+              : null,
         ),
         
         // Other genres loaded asynchronously
@@ -99,10 +108,10 @@ class LibriVoxStorefrontBody extends StatelessWidget {
                       Text(
                         'Top ${cat['name']} Books'.toUpperCase(),
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
-                          color: theme.colorScheme.primary,
+                          color: theme.colorScheme.primary.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -114,6 +123,9 @@ class LibriVoxStorefrontBody extends StatelessWidget {
                 LibriVoxShelfView(
                   title: 'Top ${cat['name']} Books',
                   books: books,
+                  onSeeAll: onCategorySelected != null
+                      ? () => onCategorySelected!(cat)
+                      : null,
                 ),
             ],
           );
@@ -122,7 +134,7 @@ class LibriVoxStorefrontBody extends StatelessWidget {
     );
   }
 
-  Widget _buildGrid(BuildContext context, List<LibriVoxBook> books, String title) {
+  Widget _buildResults(BuildContext context, List<LibriVoxBook> books, String title, settings.SettingsViewModel settingsVM) {
     final theme = Theme.of(context);
     if (books.isEmpty) {
       return Center(
@@ -160,26 +172,110 @@ class LibriVoxStorefrontBody extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 180,
-              childAspectRatio: 0.55,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return LibriVoxBookItem(
-                book: book,
-                libraryVM: libraryVM,
-                vm: vm,
-              );
-            },
-          ),
+          child: settingsVM.libraryViewType == settings.LibraryViewType.list
+              ? _buildListView(context, books)
+              : _buildGridView(context, books),
         ),
       ],
+    );
+  }
+
+  Widget _buildListView(BuildContext context, List<LibriVoxBook> books) {
+    final theme = Theme.of(context);
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: books.length,
+      separatorBuilder: (_, __) => Divider(
+        height: 1,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+      ),
+      itemBuilder: (context, index) {
+        final book = books[index];
+        final bool isDownloaded = libraryVM.books.any((b) => b.librivoxId == book.id && b.isDownloadedViaAulos);
+        
+        return ListTile(
+          leading: _buildMiniCover(book),
+          title: Text(
+            book.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          subtitle: Text(
+            book.authorNames,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10),
+          ),
+          trailing: Icon(
+            isDownloaded ? Icons.download_done_rounded : Icons.download_outlined,
+            size: 18,
+            color: isDownloaded ? Colors.teal : null,
+          ),
+          onTap: () {
+            vm.selectBook(book);
+            final isWide = MediaQuery.of(context).size.width >= 720;
+            if (!isWide) {
+              DefaultTabController.maybeOf(context)?.animateTo(1);
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildGridView(BuildContext context, List<LibriVoxBook> books) {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
+        childAspectRatio: 0.5,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: books.length,
+      itemBuilder: (context, index) {
+        final book = books[index];
+        return LibriVoxBookItem(
+          book: book,
+          libraryVM: libraryVM,
+          vm: vm,
+        );
+      },
+    );
+  }
+
+  Widget _buildMiniCover(LibriVoxBook book) {
+    final hash = book.title.hashCode;
+    final double hue = (hash.abs() % 360).toDouble();
+    final startColor = HSLColor.fromAHSL(1.0, hue, 0.65, 0.22).toColor();
+    final endColor = HSLColor.fromAHSL(1.0, (hue + 40) % 360, 0.75, 0.12).toColor();
+    final String firstLetter = book.title.isNotEmpty ? book.title[0].toUpperCase() : '';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [startColor, endColor],
+          ),
+        ),
+        child: Center(
+          child: Text(
+            firstLetter,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'serif',
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
