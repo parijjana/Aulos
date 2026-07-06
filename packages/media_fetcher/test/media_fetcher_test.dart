@@ -145,6 +145,68 @@ void main() {
       await client.findReleaseMbid('AC/DC \\ back in black', 'Back in "Black"');
       expect(capturedQuery, r'release:"Back in \"Black\"" AND artist:"AC/DC \\ back in black"');
     });
+
+    test('getArtistBiography should fetch wikipedia summary directly if wikipedia relation exists', () async {
+      final mockHttpClient = MockHttpClient((request) async {
+        final path = request.url.toString();
+        if (path.contains('/artist/some-mbid')) {
+          return http.Response(
+            '{"relations": [{"type": "wikipedia", "url": {"resource": "https://en.wikipedia.org/wiki/Taylor_Swift"}}]}',
+            200,
+          );
+        } else if (path.contains('en.wikipedia.org/api/rest_v1/page/summary/Taylor_Swift')) {
+          return http.Response(
+            '{"extract": "Taylor Swift is an American singer-songwriter."}',
+            200,
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final client = MusicBrainzClient(
+        userAgent: 'test-agent',
+        client: mockHttpClient,
+      );
+
+      final bio = await client.getArtistBiography('some-mbid');
+      expect(bio, 'Taylor Swift is an American singer-songwriter.');
+    });
+
+    test('getArtistBiography should resolve wikidata id to wikipedia summary and fallback to wikidata description', () async {
+      final mockHttpClient = MockHttpClient((request) async {
+        final path = request.url.toString();
+        if (path.contains('/artist/some-mbid')) {
+          return http.Response(
+            '{"relations": [{"type": "wikidata", "url": {"resource": "https://www.wikidata.org/wiki/Q11649"}}]}',
+            200,
+          );
+        } else if (path.contains('wikidata.org/w/api.php') && path.contains('action=wbgetentities') && path.contains('props=sitelinks') && path.contains('Q11649')) {
+          // Resolve to Taylor_Swift
+          return http.Response(
+            '{"entities": {"Q11649": {"sitelinks": {"enwiki": {"title": "Taylor Swift"}}}}}',
+            200,
+          );
+        } else if (path.contains('en.wikipedia.org/api/rest_v1/page/summary/Taylor_Swift')) {
+          // Failed to fetch wikipedia summary
+          return http.Response('Not Found', 404);
+        } else if (path.contains('wikidata.org/w/api.php') && path.contains('action=wbgetentities') && path.contains('props=descriptions') && path.contains('Q11649')) {
+          // Fallback to wikidata description
+          return http.Response(
+            '{"entities": {"Q11649": {"descriptions": {"en": {"value": "American singer-songwriter"}}}}}',
+            200,
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final client = MusicBrainzClient(
+        userAgent: 'test-agent',
+        client: mockHttpClient,
+      );
+
+      final bio = await client.getArtistBiography('some-mbid');
+      expect(bio, 'American singer-songwriter.');
+    });
   });
 }
 

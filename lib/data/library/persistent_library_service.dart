@@ -27,6 +27,7 @@ abstract class PersistentLibraryService {
   Future<void> updateRating(String trackId, int rating);
   Future<void> updateAlbumArt(String albumId, Uint8List art);
   Future<void> updateArtistPhoto(String artistId, Uint8List photo);
+  Future<void> updateArtistBiography(String artistId, String biography);
   Future<List<Track>> getQueue();
   Future<void> saveQueue(List<String> trackIds);
   Future<List<Playlist>> getPlaylists();
@@ -198,6 +199,10 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   @override
   Future<void> updateArtistPhoto(String artistId, Uint8List photo) =>
       _db.updateArtistPhoto(artistId, photo);
+
+  @override
+  Future<void> updateArtistBiography(String artistId, String biography) =>
+      _db.updateArtistBiography(artistId, biography);
 
   @override
   Future<List<Track>> getQueue() async {

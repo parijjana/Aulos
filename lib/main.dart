@@ -170,7 +170,7 @@ void main() async {
   );
   
   final podcastService = RssPodcastService(db: podcastDb, playbackDb: playbackDb);
-  final discoveryService = PodcastDiscoveryService(logService: logService, rateLimiter: rateLimitDispatcher);
+  final discoveryService = PodcastDiscoveryService(logService: logService, rateLimiter: rateLimitDispatcher, prefs: prefs);
   final downloadService = PodcastDownloadService(db: podcastDb, logService: logService);
   final syncManager = DiscoverySyncManager(api: discoveryService, db: podcastDb, logService: logService);
   final storageManager = PodcastStorageManager(db: podcastDb, settingsVM: settingsViewModel);

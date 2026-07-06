@@ -260,7 +260,7 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
     });
   }
 
-  Future<void> loadTrack(Track track, {String? description, String? artistName, String? albumName, String? imageUrl, bool isAvailable = true}) async {
+  Future<void> loadTrack(Track track, {String? description, String? artistName, String? albumName, String? imageUrl, bool isAvailable = true, bool autoplay = true}) async {
     final intendedType = _getMediaTypeForTrack(track);
     _isLoadingNewTrack = true;
     _lastSkipTime = DateTime.now();
@@ -346,7 +346,12 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
       }
 
       await _engine.loadTrack(track.toDomain());
-      play();
+      if (autoplay) {
+        play();
+      } else {
+        await _engine.pause();
+        _playbackState = engine_domain.PlaybackState.paused;
+      }
 
       unawaited(() async {
         if (intendedType == MediaType.podcast || intendedType == MediaType.audiobook) {
@@ -527,27 +532,53 @@ class PlayerViewModel extends ChangeNotifier with PlayerBookmarkMixin, PlayerAna
   void skipBackward() => seek(_position - const Duration(seconds: 10));
 
   void skipNext() {
+    if (currentMediaType == MediaType.radio) {
+      log('PLAYER: Skipping disabled for Radio streams.');
+      return;
+    }
     final now = DateTime.now();
     if (_lastSkipTime != null && now.difference(_lastSkipTime!) < const Duration(milliseconds: 500)) {
       log('PLAYER: Ignoring rapid next skip (throttled)');
       return;
     }
     _lastSkipTime = now;
+    final current = _queueVM.currentTrack;
     _queueVM.skipNext();
     final next = _queueVM.currentTrack;
-    if (next != null) loadTrack(next);
+    if (next != null) {
+      final bool crossBoundary = current != null && _getMediaTypeForTrack(current) != _getMediaTypeForTrack(next);
+      if (crossBoundary) {
+        log('PLAYER: Media boundary detected. Stopping playback auto-play.');
+        unawaited(loadTrack(next, autoplay: false));
+      } else {
+        loadTrack(next);
+      }
+    }
   }
 
   void skipPrevious() {
+    if (currentMediaType == MediaType.radio) {
+      log('PLAYER: Skipping disabled for Radio streams.');
+      return;
+    }
     final now = DateTime.now();
     if (_lastSkipTime != null && now.difference(_lastSkipTime!) < const Duration(milliseconds: 500)) {
       log('PLAYER: Ignoring rapid previous skip (throttled)');
       return;
     }
     _lastSkipTime = now;
+    final current = _queueVM.currentTrack;
     _queueVM.skipPrevious();
     final prev = _queueVM.currentTrack;
-    if (prev != null) loadTrack(prev);
+    if (prev != null) {
+      final bool crossBoundary = current != null && _getMediaTypeForTrack(current) != _getMediaTypeForTrack(prev);
+      if (crossBoundary) {
+        log('PLAYER: Media boundary detected. Stopping playback auto-play.');
+        unawaited(loadTrack(prev, autoplay: false));
+      } else {
+        loadTrack(prev);
+      }
+    }
   }
 
   Future<void> setQueueAndPlay(List<Track> tracks, int index) async {

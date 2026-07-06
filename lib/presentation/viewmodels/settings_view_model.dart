@@ -64,6 +64,8 @@ class SettingsViewModel extends ChangeNotifier {
   int _podcastKeepCount = 5; 
   int _podcastKeepDays = 30; 
   DateTime? _lastPodcastRefreshTime;
+  String? _podcastIndexApiKey;
+  String? _podcastIndexApiSecret;
 
   // Getters
   String get appName => _appName;
@@ -94,6 +96,8 @@ class SettingsViewModel extends ChangeNotifier {
   bool get isFolderWatcherEnabled => _isFolderWatcherEnabled;
   bool get isVisualizerEnabled => _isVisualizerEnabled;
   String get visualizerPluginId => _visualizerPluginId;
+  String? get podcastIndexApiKey => _podcastIndexApiKey;
+  String? get podcastIndexApiSecret => _podcastIndexApiSecret;
 
   final List<ThemerModel> _availableThemes = [
     AulosAudioTheme.model,
@@ -144,6 +148,8 @@ class SettingsViewModel extends ChangeNotifier {
     final refreshStr = _prefs.getString('last_podcast_refresh_time');
     _lastPodcastRefreshTime = refreshStr != null ? DateTime.tryParse(refreshStr) : null;
     _customDatabaseDirectory = _prefs.getString('custom_database_directory');
+    _podcastIndexApiKey = _prefs.getString('podcast_index_api_key');
+    _podcastIndexApiSecret = _prefs.getString('podcast_index_api_secret');
     try {
       final exeDir = File(Platform.resolvedExecutable).parent;
       final portableIndicator = File(p.join(exeDir.path, 'aulos_portable.txt'));
@@ -357,6 +363,22 @@ class SettingsViewModel extends ChangeNotifier {
 
   void setPortableMode(bool val) {
     _isPortableMode = val;
+    notifyListeners();
+  }
+
+  Future<void> setPodcastIndexCredentials(String? key, String? secret) async {
+    _podcastIndexApiKey = key;
+    _podcastIndexApiSecret = secret;
+    if (key == null || key.isEmpty) {
+      await _prefs.remove('podcast_index_api_key');
+    } else {
+      await _prefs.setString('podcast_index_api_key', key);
+    }
+    if (secret == null || secret.isEmpty) {
+      await _prefs.remove('podcast_index_api_secret');
+    } else {
+      await _prefs.setString('podcast_index_api_secret', secret);
+    }
     notifyListeners();
   }
 }

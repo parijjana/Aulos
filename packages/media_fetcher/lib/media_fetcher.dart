@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'src/musicbrainz_client.dart';
 import 'src/media_cache.dart';
@@ -95,5 +96,29 @@ class MediaFetcher {
       // Log or handle error
     }
     return null;
+  }
+
+  Future<String?> getArtistBiography(String artist) async {
+    // 1. Check Cache
+    final cacheKey = 'bio_${artist}'.replaceAll(' ', '_').toLowerCase();
+    if (_cache != null) {
+      final cached = await _cache.get(cacheKey);
+      if (cached != null) return utf8.decode(cached);
+    }
+
+    // 2. Find Artist MBID
+    final mbid = await _client.findArtistMbid(artist);
+    if (mbid == null) return null;
+
+    // 3. Fetch Biography
+    final bio = await _client.getArtistBiography(mbid);
+    if (bio == null) return null;
+
+    // 4. Store in Cache
+    if (_cache != null) {
+      await _cache.put(cacheKey, Uint8List.fromList(utf8.encode(bio)));
+    }
+
+    return bio;
   }
 }

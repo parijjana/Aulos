@@ -255,4 +255,147 @@ class MusicBrainzClient {
     }
     return null;
   }
+
+  /// Attempts to fetch an artist biography.
+  Future<String?> getArtistBiography(String mbid) async {
+    _log('API: Fetching artist biography for MBID: $mbid');
+    final uri = Uri.parse('$baseUrl/artist/$mbid?inc=url-rels&fmt=json');
+    
+    final response = await _run(() => _client.get(
+      uri,
+      headers: {'User-Agent': userAgent, 'Accept': 'application/json'},
+    ));
+
+    if (response.statusCode != 200) return null;
+
+    final data = jsonDecode(response.body);
+    final relations = data['relations'] as List<dynamic>? ?? [];
+    
+    String? wikipediaTitle;
+    String? wikidataId;
+
+    // 1. Look for wikipedia relations
+    for (var rel in relations) {
+      if (rel['type'] == 'wikipedia') {
+        final resourceUrl = rel['url']?['resource'] as String?;
+        if (resourceUrl != null) {
+          final uri = Uri.tryParse(resourceUrl);
+          if (uri != null && uri.host.endsWith('wikipedia.org')) {
+            final segments = uri.pathSegments;
+            if (segments.length >= 2 && segments[segments.length - 2] == 'wiki') {
+              wikipediaTitle = segments.last;
+              _log('API: Found Wikipedia title directly: $wikipediaTitle');
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Look for wikidata relation if no direct Wikipedia title
+    if (wikipediaTitle == null) {
+      for (var rel in relations) {
+        if (rel['type'] == 'wikidata') {
+          final wikidataUrl = rel['url']?['resource'] as String?;
+          if (wikidataUrl != null) {
+            wikidataId = _extractWikidataId(wikidataUrl);
+            _log('API: Found Wikidata ID: $wikidataId');
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. Resolve Wikidata ID to Wikipedia Title if needed
+    if (wikipediaTitle == null && wikidataId != null) {
+      wikipediaTitle = await _resolveWikidataToWikipediaTitle(wikidataId);
+    }
+
+    // 4. Fetch Wikipedia Summary
+    if (wikipediaTitle != null) {
+      final summary = await _fetchWikipediaSummary(wikipediaTitle);
+      if (summary != null && summary.isNotEmpty) {
+        return summary;
+      }
+    }
+
+    // 5. Fallback: Get Wikidata English description if all else fails
+    if (wikidataId != null) {
+      final desc = await _fetchWikidataDescription(wikidataId);
+      if (desc != null && desc.isNotEmpty) {
+        return desc;
+      }
+    }
+
+    return null;
+  }
+
+  Future<String?> _resolveWikidataToWikipediaTitle(String wikidataId) async {
+    try {
+      _log('API: Resolving Wikidata $wikidataId to enwiki sitelink');
+      final uri = Uri.parse('https://www.wikidata.org/w/api.php?action=wbgetentities&ids=$wikidataId&props=sitelinks&sitefilter=enwiki&format=json');
+      final response = await _run(() => _client.get(
+        uri,
+        headers: {'User-Agent': userAgent},
+      ));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final enwiki = data['entities']?[wikidataId]?['sitelinks']?['enwiki']?['title'] as String?;
+        if (enwiki != null) {
+          _log('API: Wikidata resolved to Wikipedia title: $enwiki');
+          return enwiki.replaceAll(' ', '_');
+        }
+      }
+    } catch (e) {
+      _log('API_ERROR: Failed to resolve Wikidata ID to Wikipedia title: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _fetchWikipediaSummary(String title) async {
+    try {
+      _log('API: Fetching Wikipedia summary for: $title');
+      final uri = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/${Uri.encodeComponent(title)}');
+      final response = await _run(() => _client.get(
+        uri,
+        headers: {'User-Agent': userAgent},
+      ));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final extract = data['extract'] as String?;
+        if (extract != null && extract.isNotEmpty) {
+          _log('API: Successfully fetched Wikipedia summary.');
+          return extract;
+        }
+      }
+    } catch (e) {
+      _log('API_ERROR: Failed to fetch Wikipedia summary: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _fetchWikidataDescription(String wikidataId) async {
+    try {
+      _log('API: Fetching description from Wikidata for: $wikidataId');
+      final uri = Uri.parse('https://www.wikidata.org/w/api.php?action=wbgetentities&ids=$wikidataId&props=descriptions&languages=en&format=json');
+      final response = await _run(() => _client.get(
+        uri,
+        headers: {'User-Agent': userAgent},
+      ));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final desc = data['entities']?[wikidataId]?['descriptions']?['en']?['value'] as String?;
+        if (desc != null && desc.isNotEmpty) {
+          _log('API: Successfully fetched Wikidata description.');
+          return desc;
+        }
+      }
+    } catch (e) {
+      _log('API_ERROR: Failed to fetch Wikidata description: $e');
+    }
+    return null;
+  }
 }

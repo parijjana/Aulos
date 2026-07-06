@@ -29,8 +29,9 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
       builder: (context, constraints) {
         final bool isNarrow = constraints.maxWidth < 900;
 
+        final Widget mainContent;
         if (isArtist && isNarrow) {
-          return DefaultTabController(
+          mainContent = DefaultTabController(
             length: 2,
             child: Column(
               children: [
@@ -57,10 +58,21 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
               ],
             ),
           );
+        } else {
+          final combined = getCombinedItems(viewModel);
+          mainContent = _buildTrackList(combined, playerVM, onSurface);
         }
 
-        final combined = getCombinedItems(viewModel);
-        return _buildTrackList(combined, playerVM, onSurface);
+        if (isArtist) {
+          return Column(
+            children: [
+              _ArtistHeader(artist: item),
+              Expanded(child: mainContent),
+            ],
+          );
+        }
+
+        return mainContent;
       },
     );
   }
@@ -136,3 +148,120 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
     );
   }
 }
+
+class _ArtistHeader extends StatefulWidget {
+  final Artist artist;
+  const _ArtistHeader({required this.artist});
+
+  @override
+  State<_ArtistHeader> createState() => _ArtistHeaderState();
+}
+
+class _ArtistHeaderState extends State<_ArtistHeader> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final photo = widget.artist.photo;
+    final bio = widget.artist.bio;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+          ],
+        ),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Photo
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 80,
+              height: 80,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+              child: photo != null
+                  ? Image.memory(photo, fit: BoxFit.cover)
+                  : Icon(Icons.person_rounded, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // 2. Info / Biography
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.artist.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (bio != null && bio.isNotEmpty) ...[
+                  GestureDetector(
+                    onTap: () => setState(() => _expanded = !_expanded),
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      child: Text(
+                        bio,
+                        maxLines: _expanded ? null : 3,
+                        overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (bio.length > 120)
+                    GestureDetector(
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _expanded ? 'Read Less' : 'Read More',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                ] else ...[
+                  Text(
+                    'No biography available yet. Run "Auto-Discover" to download details.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

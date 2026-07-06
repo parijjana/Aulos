@@ -44,6 +44,8 @@ void main() {
     when(() => mockPrefs.getInt(any())).thenReturn(0);
     when(() => mockPrefs.setInt(any(), any())).thenAnswer((_) async => true);
     when(() => mockEnsembleService.isEnsemble(any())).thenReturn(false);
+    when(() => mockArtworkService.fetchArtistBiography(any())).thenAnswer((_) async => null);
+    when(() => mockLibraryService.updateArtistBiography(any(), any())).thenAnswer((_) async {});
 
     indexerService = LibraryIndexerService(
       db: db,
@@ -62,6 +64,7 @@ void main() {
     test('should report progress correctly for missing artwork and photos', () async {
       // Arrange
       final artistId = await db.ensureArtist('Artist 1');
+      await db.updateArtistBiography(artistId, 'Artist 1 Bio');
       final albumId = await db.ensureAlbum('Album 1', artistId);
       
       // Add a track to the album so it can resolve a local folder
@@ -152,6 +155,37 @@ void main() {
       // Verify no MusicBrainz lookup or download attempt was made for the audiobook or author
       verifyNever(() => mockArtworkService.fetchAlbumArt(any(), any(), localFolder: any(named: 'localFolder')));
       verifyNever(() => mockArtworkService.fetchArtistPhoto(any(), localFolder: any(named: 'localFolder')));
+    });
+
+    test('should fetch and update artist biography during fetchMissingMetadata', () async {
+      // Arrange
+      final artistId = await db.ensureArtist('Artist 1');
+      final albumId = await db.ensureAlbum('Album 1', artistId);
+
+      // Add a track to the album so it can resolve a local folder
+      await db.into(db.folders).insert(FoldersCompanion.insert(id: 'folder_album_1', path: '/music/Artist 1/Album 1', name: 'Album 1'));
+      await db.into(db.tracks).insert(TracksCompanion.insert(
+        id: 'song_track_1',
+        path: '/music/Artist 1/Album 1/song.mp3',
+        title: 'Song',
+        folderId: 'folder_album_1',
+        artistId: Value(artistId),
+        albumId: Value(albumId),
+      ));
+
+      final dummyBio = "Artist 1 is a talented musician.";
+
+      when(() => mockLibraryService.getAlbums()).thenAnswer((_) async => db.getAllAlbums());
+      when(() => mockArtworkService.fetchAlbumArt(any(), any(), localFolder: any(named: 'localFolder'))).thenAnswer((_) async => null);
+      when(() => mockArtworkService.fetchArtistPhoto(any(), localFolder: any(named: 'localFolder'))).thenAnswer((_) async => null);
+      when(() => mockArtworkService.fetchArtistBiography('Artist 1')).thenAnswer((_) async => dummyBio);
+
+      // Act
+      await indexerService.fetchMissingMetadata(mockLibraryService);
+
+      // Assert
+      verify(() => mockArtworkService.fetchArtistBiography('Artist 1')).called(1);
+      verify(() => mockLibraryService.updateArtistBiography(artistId, dummyBio)).called(1);
     });
 
     test('updateWatcherSubscriptions should safely exit when settingsVM is null', () {

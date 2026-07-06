@@ -158,8 +158,11 @@ class ServicesStorageSection extends StatelessWidget {
                 if (path != null) vm.setPodcastStorageLocation(path);
               },
             ),
-            const SizedBox(height: 12),
             _buildRetentionSettings(theme, onSurface),
+            const SizedBox(height: 16),
+            const SettingsLabel('PODCASTINDEX API CREDENTIALS'),
+            const SizedBox(height: 8),
+            _PodcastIndexCredentialsInputs(vm: vm, theme: theme, onSurface: onSurface),
 
             const Divider(height: 32, color: Colors.white10),
 
@@ -495,6 +498,91 @@ class ServicesStorageSection extends StatelessWidget {
   void _showError(BuildContext context, Object error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error migrating database: $error')),
+    );
+  }
+}
+
+class _PodcastIndexCredentialsInputs extends StatefulWidget {
+  final SettingsViewModel vm;
+  final ThemeData theme;
+  final Color onSurface;
+
+  const _PodcastIndexCredentialsInputs({
+    required this.vm,
+    required this.theme,
+    required this.onSurface,
+  });
+
+  @override
+  State<_PodcastIndexCredentialsInputs> createState() => _PodcastIndexCredentialsInputsState();
+}
+
+class _PodcastIndexCredentialsInputsState extends State<_PodcastIndexCredentialsInputs> {
+  late TextEditingController _keyController;
+  late TextEditingController _secretController;
+
+  @override
+  void initState() {
+    super.initState();
+    _keyController = TextEditingController(text: widget.vm.podcastIndexApiKey ?? '');
+    _secretController = TextEditingController(text: widget.vm.podcastIndexApiSecret ?? '');
+  }
+
+  @override
+  void dispose() {
+    _keyController.dispose();
+    _secretController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    widget.vm.setPodcastIndexCredentials(
+      _keyController.text.trim(),
+      _secretController.text.trim(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextField(
+          controller: _keyController,
+          style: const TextStyle(fontSize: 12),
+          decoration: InputDecoration(
+            labelText: 'API KEY',
+            labelStyle: TextStyle(color: widget.onSurface.withValues(alpha: 0.38), fontSize: 10),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            isDense: true,
+          ),
+          onChanged: (_) => _save(),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _secretController,
+          style: const TextStyle(fontSize: 12),
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'API SECRET',
+            labelStyle: TextStyle(color: widget.onSurface.withValues(alpha: 0.38), fontSize: 10),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            isDense: true,
+          ),
+          onChanged: (_) => _save(),
+        ),
+      ],
     );
   }
 }

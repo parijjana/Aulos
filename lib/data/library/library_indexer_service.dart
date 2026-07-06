@@ -219,8 +219,11 @@ class LibraryIndexerService extends ChangeNotifier {
       final missingPhotoArtists = allArtists
           .where((a) => a.photo == null && musicArtistIds.contains(a.id))
           .toList();
+      final missingBioArtists = allArtists
+          .where((a) => a.bio == null && musicArtistIds.contains(a.id))
+          .toList();
       
-      final int totalTasks = missingArtAlbums.length + missingPhotoArtists.length;
+      final int totalTasks = missingArtAlbums.length + missingPhotoArtists.length + missingBioArtists.length;
       if (totalTasks == 0) {
         log('INDEXER: No missing metadata found.');
         _statusMessage = 'All artwork and photos are already up to date.';
@@ -333,6 +336,28 @@ class LibraryIndexerService extends ChangeNotifier {
           log('INDEXER: Error fetching photo for "${artist.name}": $e');
         }
         
+        completedTasks++;
+        _progress = completedTasks / totalTasks;
+        notifyListeners();
+      }
+
+      for (final artist in missingBioArtists) {
+        if (_shouldPause) break;
+
+        log('INDEXER: Fetching biography for artist "${artist.name}"');
+        _statusMessage = 'Fetching Bio: ${artist.name}';
+        notifyListeners();
+
+        try {
+          final bio = await _artworkService.fetchArtistBiography(artist.name).timeout(const Duration(seconds: 30));
+          if (bio != null) {
+            await service.updateArtistBiography(artist.id, bio);
+            log('INDEXER: Saved biography for "${artist.name}"');
+          }
+        } catch (e) {
+          log('INDEXER: Error fetching biography for "${artist.name}": $e');
+        }
+
         completedTasks++;
         _progress = completedTasks / totalTasks;
         notifyListeners();

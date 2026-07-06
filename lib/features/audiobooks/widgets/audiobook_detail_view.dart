@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
+import 'package:aulos/data/database/audiobook_database.dart';
+import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
@@ -227,6 +229,34 @@ class _AudiobookInfoPane extends StatelessWidget {
             book.description ?? 'No description available for this book yet. Click "Enrich Metadata" to fetch details from Audnexus.',
             style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.5),
           ),
+          if (book.artistId != null && libraryVM.libraryService is PersistentLibraryServiceImpl)
+            FutureBuilder<AudiobookArtist?>(
+              future: () async {
+                final db = (libraryVM.libraryService as PersistentLibraryServiceImpl).audiobookDb;
+                return (db.select(db.audiobookArtists)..where((a) => a.id.equals(book.artistId!))).getSingleOrNull();
+              }(),
+              builder: (context, snapshot) {
+                final artist = snapshot.data;
+                if (artist == null || artist.bio == null || artist.bio!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    const Text(
+                      'ABOUT THE AUTHOR',
+                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white24),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      artist.bio!,
+                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.5),
+                    ),
+                  ],
+                );
+              },
+            ),
           if (book.publisher != null)
             Padding(
               padding: const EdgeInsets.only(top: 24),

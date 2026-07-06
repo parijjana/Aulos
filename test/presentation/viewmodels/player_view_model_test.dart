@@ -60,6 +60,8 @@ void main() {
     when(() => mockSettingsVM.setLastMusicTrack(any())).thenAnswer((_) async {});
     when(() => mockSettingsVM.setLastAudiobookTrack(any())).thenAnswer((_) async {});
     when(() => mockSettingsVM.setLastNoiseTrack(any())).thenAnswer((_) async {});
+    when(() => mockSettingsVM.setLastPodcastEpisode(any())).thenAnswer((_) async {});
+    when(() => mockSettingsVM.setLastRadioStation(any())).thenAnswer((_) async {});
 
     when(() => mockEngine.playbackStateStream).thenAnswer((_) => const Stream.empty());
     when(() => mockEngine.positionStream).thenAnswer((_) => const Stream.empty());
@@ -229,6 +231,80 @@ void main() {
       expect(capturedTrack!.coverArt, isNotNull);
       expect(capturedTrack!.coverArt, Uint8List.fromList([1, 2, 3]));
       expect(viewModel.currentAlbumName, 'Test Album');
+    });
+
+    test('skipNext and skipPrevious should do nothing if currentMediaType is radio', () async {
+      final radioTrack = Track(id: 'radio_1', path: 'radio.mp3', title: 'Radio Station', artistId: null, folderId: '1', rating: 0, isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false);
+      when(() => mockEngine.stop()).thenAnswer((_) async {});
+      when(() => mockEngine.loadTrack(any())).thenAnswer((_) async {});
+      when(() => mockEngine.play()).thenAnswer((_) async {});
+
+      await viewModel.loadTrack(radioTrack);
+
+      viewModel.skipNext();
+      verifyNever(() => mockQueueVM.skipNext());
+
+      viewModel.skipPrevious();
+      verifyNever(() => mockQueueVM.skipPrevious());
+    });
+
+    test('skipNext loads next track with autoplay false if media types differ', () async {
+      final currentTrack = Track(id: 'podcast_1', path: 'pod.mp3', title: 'Podcast Episode', artistId: null, folderId: '1', rating: 0, isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false);
+      final nextTrack = Track(id: 'music_1', path: 'song.mp3', title: 'Music Track', artistId: null, folderId: '1', rating: 0, isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false);
+
+      when(() => mockQueueVM.currentTrack).thenReturn(currentTrack);
+      when(() => mockEngine.stop()).thenAnswer((_) async {});
+      when(() => mockEngine.loadTrack(any())).thenAnswer((_) async {});
+      when(() => mockEngine.play()).thenAnswer((_) async {});
+      when(() => mockEngine.pause()).thenAnswer((_) async {});
+
+      // Load initial track
+      await viewModel.loadTrack(currentTrack);
+
+      // Now stub queue VM to return nextTrack as the current track after skipNext is called
+      when(() => mockQueueVM.skipNext()).thenAnswer((_) {
+        when(() => mockQueueVM.currentTrack).thenReturn(nextTrack);
+      });
+
+      // Wait for skip throttle to pass
+      await Future<void>.delayed(const Duration(milliseconds: 510));
+
+      // Call skipNext
+      viewModel.skipNext();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Verify skipNext called and loaded nextTrack unscheduled/paused
+      verify(() => mockQueueVM.skipNext()).called(1);
+      verify(() => mockEngine.pause()).called(1);
+    });
+
+    test('skipNext loads next track with autoplay true if media types are the same', () async {
+      final currentTrack = Track(id: 'music_1', path: 'song1.mp3', title: 'Music Track 1', artistId: null, folderId: '1', rating: 0, isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false);
+      final nextTrack = Track(id: 'music_2', path: 'song2.mp3', title: 'Music Track 2', artistId: null, folderId: '1', rating: 0, isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false);
+
+      when(() => mockQueueVM.currentTrack).thenReturn(currentTrack);
+      when(() => mockEngine.stop()).thenAnswer((_) async {});
+      when(() => mockEngine.loadTrack(any())).thenAnswer((_) async {});
+      when(() => mockEngine.play()).thenAnswer((_) async {});
+
+      // Load initial track
+      await viewModel.loadTrack(currentTrack);
+
+      // Now stub queue VM to return nextTrack as the current track after skipNext is called
+      when(() => mockQueueVM.skipNext()).thenAnswer((_) {
+        when(() => mockQueueVM.currentTrack).thenReturn(nextTrack);
+      });
+
+      // Wait for skip throttle to pass
+      await Future<void>.delayed(const Duration(milliseconds: 510));
+
+      // Call skipNext
+      viewModel.skipNext();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Verify skipNext called and loaded nextTrack with play() triggered
+      verify(() => mockQueueVM.skipNext()).called(1);
+      verify(() => mockEngine.play()).called(2); // 1 for initial load, 1 for next track
     });
   });
 }

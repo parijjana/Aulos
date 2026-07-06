@@ -136,6 +136,12 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
     );
   }
 
+  Future<void> updateArtistBiography(String artistId, String biography) {
+    return (update(artists)..where((a) => a.id.equals(artistId))).write(
+      ArtistsCompanion(bio: Value(biography)),
+    );
+  }
+
   Future<void> updateTrackArt(String trackId, Uint8List art) {
     return (update(tracks)..where((t) => t.id.equals(trackId))).write(
       TracksCompanion(coverArt: Value(art)),

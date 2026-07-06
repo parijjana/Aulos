@@ -104,6 +104,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Track>> getTracksForYear(int year) => libraryDao.getTracksForYear(year);
   Future<void> updateAlbumArt(String albumId, Uint8List art) => libraryDao.updateAlbumArt(albumId, art);
   Future<void> updateArtistPhoto(String artistId, Uint8List photo) => libraryDao.updateArtistPhoto(artistId, photo);
+  Future<void> updateArtistBiography(String artistId, String biography) => libraryDao.updateArtistBiography(artistId, biography);
   Future<void> updateTrackArt(String trackId, Uint8List art) => libraryDao.updateTrackArt(trackId, art);
   Future<List<Track>> getTracksForArtistInAlbum(String artistId, String albumId) => libraryDao.getTracksForArtistInAlbum(artistId, albumId);
   Future<void> cacheArtistAlbumRelations(List<ArtistAlbumRelation> relations) => libraryDao.cacheArtistAlbumRelations(relations);

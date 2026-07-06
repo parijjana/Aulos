@@ -112,6 +112,11 @@ class ArtworkService {
     return bytes;
   }
 
+  Future<String?> fetchArtistBiography(String artist) async {
+    await init();
+    return await _fetcher?.getArtistBiography(artist);
+  }
+
   Future<void> saveToLocalFolder(String parentPath, String filename, Uint8List bytes) async {
     try {
       final artworkDir = Directory(p.join(parentPath, '.artwork'));
