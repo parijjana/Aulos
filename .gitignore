@@ -66,6 +66,8 @@ gate_summary.md
 # Scratch output files (agent-generated, never commit)
 analyze_output*.txt
 test_output*.txt
+TECHNICAL_AUDIT.md
+technical_audit.json
 
 # UX tool database
 design_rules.db
