@@ -1,0 +1,54 @@
+name: gate
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - id: gate
+        run: dart tool/gate.dart --ci
+        continue-on-error: true
+
+      - name: publish step summary
+        if: always()
+        run: |
+          if [ -f gate_summary.md ]; then
+            cat gate_summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gate-report
+          path: gate_report.json
+          retention-days: 30
+
+      - name: append metrics
+        if: always()
+        run: bash tool/append_metrics.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+
+      - name: enforce
+        if: steps.gate.outcome == 'failure'
+        run: exit 1
