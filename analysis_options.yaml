@@ -4,7 +4,6 @@ analyzer:
   exclude:
     - "scratch/**"
     - "scripts/**"
-    - "tool/**"
     - "**.g.dart"
   language:
     strict-casts: true

@@ -70,7 +70,15 @@ void printDigest(Map<String, dynamic> report, bool pass) {
     print('\nGATE PASS  sha=${report['sha']}  tests=${report['tests']['total'] - report['tests']['failed']}/${report['tests']['total']}  analyzer=${report['analyzer']['errors']}E/${report['analyzer']['warnings']}W  size=${report['size']['violations'].length}  struct=$structCount  cov=${report['coverage_pct'] != null ? "${report['coverage_pct']}%" : "n/a"}');
   } else {
     print('\nGATE FAIL  sha=${report['sha']}');
-    
+
+    final integrity = report['integrity'] as Map<String, dynamic>?;
+    if (integrity != null) {
+      final integrityViolations = integrity['violations'] as List? ?? [];
+      for (final v in integrityViolations) {
+        print(v.toString());
+      }
+    }
+
     final analyzerFailures = report['analyzer']['failures'] as List? ?? [];
     for (final f in analyzerFailures.take(5)) {
       print('[G1 analyzer] ${f['file']}:${f['line']}:${f['column']} ${f['message']}');

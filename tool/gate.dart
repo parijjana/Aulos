@@ -8,6 +8,7 @@ import 'gate/struct.dart';
 import 'gate/tests.dart';
 import 'gate/coverage.dart';
 import 'gate/report.dart';
+import 'gate/integrity.dart';
 
 // Canonical invocation: dart tool/gate.dart
 void main(List<String> arguments) async {
@@ -39,14 +40,20 @@ void main(List<String> arguments) async {
     'sha': _getGitCommitSha(),
     'pass': true,
     'wall_secs': 0,
-    'tests': {'total': 0, 'failed': 0, 'failures': []},
+    'tests': {'total': 0, 'failed': 0, 'failures': <dynamic>[]},
     'analyzer': {'errors': 0, 'warnings': 0, 'infos': 0},
-    'size': {'violations': [], 'baseline_count': baselineMap.length, 'largest': 0, 'p90': 0},
-    'struct': {'widget_helpers': [], 'barrel_files': [], 'forbidden_imports': []},
+    'size': {'violations': <dynamic>[], 'baseline_count': baselineMap.length, 'largest': 0, 'p90': 0},
+    'struct': {'widget_helpers': <dynamic>[], 'barrel_files': <dynamic>[], 'forbidden_imports': <dynamic>[]},
     'coverage_pct': null,
   };
 
   final startTime = DateTime.now();
+
+  // Run G0: Tamper-evidence / integrity checks (must run first).
+  if (verbose) {
+    print('Running G0: Integrity Checks...');
+  }
+  final integrityPassed = await runIntegrityChecks(report, baselineMap, helperBaseline, verbose);
 
   // Run G1: Analyzer
   if (verbose) {
@@ -148,7 +155,7 @@ void main(List<String> arguments) async {
     }
   }
 
-  final totalPassed = analyzerPassed && sizePassed && structPassed && testsPassed;
+  final totalPassed = integrityPassed && analyzerPassed && sizePassed && structPassed && testsPassed;
   report['pass'] = totalPassed;
   report['size']['baseline_count'] = baselineMap.length;
 
