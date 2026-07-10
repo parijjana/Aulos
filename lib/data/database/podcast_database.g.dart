@@ -3070,7 +3070,7 @@ final class $$PodcastsTableReferences
     _$PodcastDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.episodes,
-    aliasName: $_aliasNameGenerator(db.podcasts.id, db.episodes.podcastId),
+    aliasName: 'podcasts__id__episodes__podcast_id',
   );
 
   $$EpisodesTableProcessedTableManager get episodesRefs {
@@ -3492,8 +3492,8 @@ final class $$EpisodesTableReferences
     extends BaseReferences<_$PodcastDatabase, $EpisodesTable, Episode> {
   $$EpisodesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $PodcastsTable _podcastIdTable(_$PodcastDatabase db) => db.podcasts
-      .createAlias($_aliasNameGenerator(db.episodes.podcastId, db.podcasts.id));
+  static $PodcastsTable _podcastIdTable(_$PodcastDatabase db) =>
+      db.podcasts.createAlias('episodes__podcast_id__podcasts__id');
 
   $$PodcastsTableProcessedTableManager get podcastId {
     final $_column = $_itemColumn<String>('podcast_id')!;
@@ -4027,10 +4027,8 @@ final class $$DiscoveredPodcastsTableReferences
   _discoveredEpisodesRefsTable(_$PodcastDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.discoveredEpisodes,
-        aliasName: $_aliasNameGenerator(
-          db.discoveredPodcasts.iTunesId,
-          db.discoveredEpisodes.iTunesId,
-        ),
+        aliasName:
+            'discovered_podcasts__i_tunes_id__discovered_episodes__i_tunes_id',
       );
 
   $$DiscoveredEpisodesTableProcessedTableManager get discoveredEpisodesRefs {
@@ -4056,14 +4054,13 @@ final class $$DiscoveredPodcastsTableReferences
     $DiscoveryCategoryRelationsTable,
     List<DiscoveryCategoryRelation>
   >
-  _discoveryCategoryRelationsRefsTable(_$PodcastDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.discoveryCategoryRelations,
-        aliasName: $_aliasNameGenerator(
-          db.discoveredPodcasts.iTunesId,
-          db.discoveryCategoryRelations.iTunesId,
-        ),
-      );
+  _discoveryCategoryRelationsRefsTable(
+    _$PodcastDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.discoveryCategoryRelations,
+    aliasName:
+        'discovered_podcasts__i_tunes_id__discovery_category_relations__i_tunes_id',
+  );
 
   $$DiscoveryCategoryRelationsTableProcessedTableManager
   get discoveryCategoryRelationsRefs {
@@ -4525,10 +4522,7 @@ final class $$DiscoveredEpisodesTableReferences
 
   static $DiscoveredPodcastsTable _iTunesIdTable(_$PodcastDatabase db) =>
       db.discoveredPodcasts.createAlias(
-        $_aliasNameGenerator(
-          db.discoveredEpisodes.iTunesId,
-          db.discoveredPodcasts.iTunesId,
-        ),
+        'discovered_episodes__i_tunes_id__discovered_podcasts__i_tunes_id',
       );
 
   $$DiscoveredPodcastsTableProcessedTableManager get iTunesId {
@@ -4852,13 +4846,11 @@ final class $$DiscoveryCategoryRelationsTableReferences
     super.$_typedResult,
   );
 
-  static $DiscoveredPodcastsTable _iTunesIdTable(_$PodcastDatabase db) =>
-      db.discoveredPodcasts.createAlias(
-        $_aliasNameGenerator(
-          db.discoveryCategoryRelations.iTunesId,
-          db.discoveredPodcasts.iTunesId,
-        ),
-      );
+  static $DiscoveredPodcastsTable _iTunesIdTable(
+    _$PodcastDatabase db,
+  ) => db.discoveredPodcasts.createAlias(
+    'discovery_category_relations__i_tunes_id__discovered_podcasts__i_tunes_id',
+  );
 
   $$DiscoveredPodcastsTableProcessedTableManager get iTunesId {
     final $_column = $_itemColumn<String>('i_tunes_id')!;

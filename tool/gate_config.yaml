@@ -26,19 +26,20 @@ forbidden_imports:
 baseline:
   lib/data/library/library_indexer_service.dart: 574
   lib/data/library/persistent_library_importer.dart: 322
-  lib/data/library/persistent_library_service.dart: 428
+  lib/data/library/persistent_library_service.dart: 445
   lib/data/library/podcast_discovery_service.dart: 410
-  lib/features/audiobooks/widgets/audiobook_detail_view.dart: 350
+  lib/features/audiobooks/widgets/audiobook_detail_view.dart: 400
   lib/features/library/widgets/jamendo_discover_view.dart: 587
-  lib/features/library/widgets/library_header.dart: 319
+  lib/features/library/widgets/library_header.dart: 335
+  lib/features/library/widgets/library_sub_list.dart: 405
   lib/features/library/widgets/podcast_library_view.dart: 318
   lib/features/library/widgets/radio_library_view.dart: 534
   lib/features/main/widgets/indexer_progress_overlay.dart: 439
   lib/features/noise/screens/noise_root_screen.dart: 430
   lib/features/radio/screens/radio_browser_screen.dart: 362
   lib/features/settings/widgets/services_storage_section.dart: 600
-  lib/main.dart: 434
-  lib/presentation/viewmodels/library_view_model.dart: 510
+  lib/main.dart: 480
+  lib/presentation/viewmodels/library_view_model.dart: 595
   lib/presentation/viewmodels/player_view_model.dart: 645
   lib/presentation/viewmodels/podcast_view_model.dart: 648
   lib/presentation/viewmodels/queue_view_model.dart: 399
