@@ -25,8 +25,8 @@ abstract class PersistentLibraryService {
   Future<void> autoDiscoverTracks();
   Future<void> pickAndAddFolder({int folderType = 0});
   Future<void> updateRating(String trackId, int rating);
-  Future<void> updateAlbumArt(String albumId, Uint8List art);
-  Future<void> updateArtistPhoto(String artistId, Uint8List photo);
+  Future<void> updateAlbumArt(String albumId, Uint8List? art, {String? localArtPath});
+  Future<void> updateArtistPhoto(String artistId, Uint8List? photo, {String? localArtPath});
   Future<void> updateArtistBiography(String artistId, String biography);
   Future<void> toggleArtistFavorite(String artistId);
   Future<void> toggleAlbumFavorite(String albumId);
@@ -205,12 +205,12 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
       _db.updateTrackRating(trackId, rating);
 
   @override
-  Future<void> updateAlbumArt(String albumId, Uint8List art) =>
-      _db.updateAlbumArt(albumId, art);
+  Future<void> updateAlbumArt(String albumId, Uint8List? art, {String? localArtPath}) =>
+      _db.updateAlbumArt(albumId, art, localArtPath: localArtPath);
 
   @override
-  Future<void> updateArtistPhoto(String artistId, Uint8List photo) =>
-      _db.updateArtistPhoto(artistId, photo);
+  Future<void> updateArtistPhoto(String artistId, Uint8List? photo, {String? localArtPath}) =>
+      _db.updateArtistPhoto(artistId, photo, localArtPath: localArtPath);
 
   @override
   Future<void> updateArtistBiography(String artistId, String biography) =>
