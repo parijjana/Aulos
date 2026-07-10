@@ -14,6 +14,8 @@ import 'package:aulos/data/library/library_indexer_service.dart';
 import 'package:aulos/core/utils/benchmark.dart';
 import 'library_view_model_sync.dart';
 import 'library_view_model_enrichment.dart';
+import 'library_view_model_favorites.dart';
+import 'library_view_model_pagination.dart';
 
 enum LibraryMode { folders, artists, albums, genres, years, playlists, books }
 enum AudiobookSort { name, author, series, played }
@@ -90,6 +92,9 @@ class LibraryViewModel extends ChangeNotifier {
 
   List<Playlist> get playlistsRaw => _playlists;
   set playlistsRaw(List<Playlist> val) => _playlists = val;
+
+  bool get showFavoritesOnlyRaw => _showFavoritesOnly;
+  set showFavoritesOnlyRaw(bool val) => _showFavoritesOnly = val;
 
   set isLoading(bool val) => _isLoading = val;
   void triggerNotify() => notifyListeners();
@@ -549,98 +554,18 @@ class LibraryViewModel extends ChangeNotifier {
 
   bool get showFavoritesOnly => _showFavoritesOnly;
 
-  void setShowFavoritesOnly(bool val) {
-    _showFavoritesOnly = val;
-    notifyListeners();
-  }
+  void setShowFavoritesOnly(bool val) =>
+      LibraryViewModelFavorites(this).setShowFavoritesOnly(val);
 
-  Future<void> toggleArtistFavorite(String artistId) async {
-    if (_connectionManager?.isClient ?? false) {
-      unawaited(_connectionManager?.sendCommand(MediaCommand(
-        type: CommandType.custom,
-        payload: {'action': 'toggleArtistFavorite', 'artistId': artistId},
-      )));
-      return;
-    }
-    await _libraryService.toggleArtistFavorite(artistId);
-    _artists = await _libraryService.getArtists();
-    
-    if (_currentState.selectedItem is Artist && (_currentState.selectedItem as Artist).id == artistId) {
-      final updated = _artists.firstWhere((a) => a.id == artistId);
-      _currentState.selectedItem = updated;
-      final idx = _currentState.navStack.indexWhere((e) => e is Artist && e.id == artistId);
-      if (idx != -1) {
-        _currentState.navStack[idx] = updated;
-      }
-    }
-    notifyListeners();
-  }
+  Future<void> toggleArtistFavorite(String artistId) =>
+      LibraryViewModelFavorites(this).toggleArtistFavorite(artistId);
 
-  Future<void> toggleAlbumFavorite(String albumId) async {
-    if (_connectionManager?.isClient ?? false) {
-      unawaited(_connectionManager?.sendCommand(MediaCommand(
-        type: CommandType.custom,
-        payload: {'action': 'toggleAlbumFavorite', 'albumId': albumId},
-      )));
-      return;
-    }
-    await _libraryService.toggleAlbumFavorite(albumId);
-    _albums = await _libraryService.getAlbums();
-
-    if (_currentState.selectedItem is Album && (_currentState.selectedItem as Album).id == albumId) {
-      final updated = _albums.firstWhere((a) => a.id == albumId);
-      _currentState.selectedItem = updated;
-      final idx = _currentState.navStack.indexWhere((e) => e is Album && e.id == albumId);
-      if (idx != -1) {
-        _currentState.navStack[idx] = updated;
-      }
-    }
-    notifyListeners();
-  }
+  Future<void> toggleAlbumFavorite(String albumId) =>
+      LibraryViewModelFavorites(this).toggleAlbumFavorite(albumId);
 
   Future<List<Track>> getAllTracks() => _libraryService.getAllTracks();
 
-  Future<void> loadMore() async {
-    if (_isLoading || !_currentState.hasMore) return;
-    
-    _isLoading = true;
-    notifyListeners();
-    
-    final limit = 50;
-    _currentState.currentOffset += limit;
-    final offset = _currentState.currentOffset;
-    final query = _currentState.searchQuery;
-
-    try {
-      switch (_mode) {
-        case LibraryMode.folders:
-          final newFolders = await _libraryService.getRootFolders(limit: limit, offset: offset, searchQuery: query);
-          _folders.addAll(newFolders);
-          _currentState.hasMore = newFolders.length == limit;
-          break;
-        case LibraryMode.artists:
-          final newArtists = await _libraryService.getArtists(limit: limit, offset: offset, searchQuery: query);
-          _artists.addAll(newArtists);
-          _currentState.hasMore = newArtists.length == limit;
-          break;
-        case LibraryMode.albums:
-          final newAlbums = await _libraryService.getAlbums(limit: limit, offset: offset, searchQuery: query);
-          _albums.addAll(newAlbums);
-          _currentState.hasMore = newAlbums.length == limit;
-          break;
-        case LibraryMode.genres:
-          final newGenres = await _libraryService.getGenres(limit: limit, offset: offset, searchQuery: query);
-          _genres.addAll(newGenres);
-          _currentState.hasMore = newGenres.length == limit;
-          break;
-        default:
-          break;
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
+  Future<void> loadMore() => LibraryViewModelPagination(this).loadMore();
 
   Uint8List? getArtForTrack({required String trackId}) =>
       LibraryViewModelSync(this).getArtForTrack(trackId: trackId);
