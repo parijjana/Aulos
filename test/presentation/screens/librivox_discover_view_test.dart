@@ -51,6 +51,7 @@ void main() {
     when(() => mockLibriVoxVM.selectBook(any())).thenReturn(null);
 
     when(() => mockLibraryVM.books).thenReturn([]);
+    when(() => mockLibraryVM.showFavoritesOnly).thenReturn(false);
     when(() => mockLibraryVM.addListener(any())).thenReturn(null);
     when(() => mockLibraryVM.removeListener(any())).thenReturn(null);
 

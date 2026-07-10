@@ -61,6 +61,7 @@ void main() {
 
     when(() => mockLibraryVM.addListener(any())).thenReturn(null);
     when(() => mockLibraryVM.removeListener(any())).thenReturn(null);
+    when(() => mockLibraryVM.showFavoritesOnly).thenReturn(false);
 
     when(() => mockPlayerVM.addListener(any())).thenReturn(null);
     when(() => mockPlayerVM.removeListener(any())).thenReturn(null);

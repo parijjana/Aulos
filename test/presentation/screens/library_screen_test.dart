@@ -32,6 +32,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(domain.PlaybackState.idle);
+    registerFallbackValue(LibraryMode.folders);
   });
 
   setUp(() {
@@ -49,6 +50,7 @@ void main() {
     when(() => mockLibraryVM.playlists).thenReturn([]);
     when(() => mockLibraryVM.tracks).thenReturn([]);
     when(() => mockLibraryVM.isLoading).thenReturn(false);
+    when(() => mockLibraryVM.showFavoritesOnly).thenReturn(false);
     when(() => mockLibraryVM.selectedItem).thenReturn(null);
     when(() => mockLibraryVM.isAtRoot).thenReturn(true);
     when(() => mockLibraryVM.isPartialView).thenReturn(false);
@@ -58,6 +60,10 @@ void main() {
     when(() => mockLibraryVM.viewType).thenReturn(LibraryViewType.list);
     when(() => mockLibraryVM.currentScrollKey).thenReturn('root');
     when(() => mockLibraryVM.getScrollOffset()).thenReturn(0.0);
+    when(() => mockLibraryVM.tempShowHome).thenReturn(false);
+    when(() => mockLibraryVM.tempShowHomeFor(any())).thenReturn(false);
+    when(() => mockLibraryVM.navStack).thenReturn([]);
+    when(() => mockLibraryVM.stateFor(any())).thenReturn(LibraryNavigationState());
     when(() => mockLibraryVM.addListener(any())).thenReturn(null);
     when(() => mockLibraryVM.removeListener(any())).thenReturn(null);
 

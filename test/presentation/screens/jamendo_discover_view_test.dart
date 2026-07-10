@@ -35,6 +35,7 @@ void main() {
     when(() => mockJamendoVM.removeListener(any())).thenReturn(null);
 
     when(() => mockLibraryVM.tracks).thenReturn([]);
+    when(() => mockLibraryVM.showFavoritesOnly).thenReturn(false);
     when(() => mockLibraryVM.addListener(any())).thenReturn(null);
     when(() => mockLibraryVM.removeListener(any())).thenReturn(null);
 

@@ -172,6 +172,7 @@ void main() {
 
     when(() => mockLibraryVM.isAtRoot).thenReturn(true);
     when(() => mockLibraryVM.isLoading).thenReturn(false);
+    when(() => mockLibraryVM.showFavoritesOnly).thenReturn(false);
     when(() => mockLibraryVM.mode).thenReturn(LibraryMode.folders);
     when(() => mockLibraryVM.lastMusicMode).thenReturn(LibraryMode.folders);
     when(() => mockLibraryVM.isAtRootFor(any())).thenReturn(true);
@@ -185,6 +186,10 @@ void main() {
     when(() => mockLibraryVM.genres).thenReturn([]);
     when(() => mockLibraryVM.years).thenReturn([]);
     when(() => mockLibraryVM.playlists).thenReturn([]);
+    when(() => mockLibraryVM.tempShowHome).thenReturn(false);
+    when(() => mockLibraryVM.tempShowHomeFor(any())).thenReturn(false);
+    when(() => mockLibraryVM.navStack).thenReturn([]);
+    when(() => mockLibraryVM.stateFor(any())).thenReturn(LibraryNavigationState());
     when(() => mockLibraryVM.addListener(any())).thenReturn(null);
     when(() => mockLibraryVM.removeListener(any())).thenReturn(null);
 
@@ -197,6 +202,7 @@ void main() {
     when(() => mockIndexer.addListener(any())).thenReturn(null);
     when(() => mockIndexer.removeListener(any())).thenReturn(null);
 
+    when(() => mockPodcastVM.tempShowHome).thenReturn(false);
     when(() => mockPodcastVM.isLoading).thenReturn(false);
     when(() => mockPodcastVM.podcasts).thenReturn([]);
     when(() => mockPodcastVM.episodes).thenReturn([]);
@@ -213,6 +219,7 @@ void main() {
     when(() => mockRadioVM.categories).thenReturn([]);
     when(() => mockRadioVM.isLoading).thenReturn(false);
     when(() => mockRadioVM.error).thenReturn(null);
+    when(() => mockRadioVM.tempShowHome).thenReturn(false);
     when(() => mockRadioVM.addListener(any())).thenReturn(null);
     when(() => mockRadioVM.removeListener(any())).thenReturn(null);
 

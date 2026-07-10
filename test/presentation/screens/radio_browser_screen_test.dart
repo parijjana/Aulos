@@ -52,6 +52,7 @@ void main() {
     when(() => mockRadioVM.allLanguages).thenReturn([]);
     when(() => mockRadioVM.browseResults).thenReturn([]);
     when(() => mockRadioVM.searchResults).thenReturn([]);
+    when(() => mockRadioVM.tempShowHome).thenReturn(false);
     when(() => mockRadioVM.addListener(any())).thenReturn(null);
     when(() => mockRadioVM.removeListener(any())).thenReturn(null);
 
