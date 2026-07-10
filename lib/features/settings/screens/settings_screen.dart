@@ -8,6 +8,7 @@ import '../widgets/ui_section.dart';
 import '../widgets/services_storage_section.dart';
 import '../widgets/logs_about_section.dart';
 import '../widgets/services_dashboard_section.dart';
+import '../widgets/storage_cache_manager_widget.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -55,6 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
           const SizedBox(height: 16),
           ServicesStorageSection(vm: vm, connectivityVM: connectivityVM, indexerService: service),
           const SizedBox(height: 16),
+          const StorageCacheManagerWidget(),
+          const SizedBox(height: 16),
           SizedBox(
             height: 500,
             child: LogsAboutSection(isDesktop: false),
@@ -92,7 +95,13 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
           Expanded(
             flex: 4,
             child: SingleChildScrollView(
-              child: ServicesStorageSection(vm: vm, connectivityVM: connectivityVM, indexerService: service),
+              child: Column(
+                children: [
+                  ServicesStorageSection(vm: vm, connectivityVM: connectivityVM, indexerService: service),
+                  const SizedBox(height: 20),
+                  const StorageCacheManagerWidget(),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 20),
