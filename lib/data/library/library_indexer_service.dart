@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/data/database/app_database.dart';
@@ -9,19 +8,9 @@ import 'package:aulos/domain/network/log_service.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:aulos/core/utils/benchmark.dart';
-
-Future<String?> _saveArtToDisk(Uint8List? art, String generatedId) async {
-  if (art == null) return null;
-  final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'artwork'));
-  if (!dir.existsSync()) dir.createSync(recursive: true);
-  final file = File(p.join(dir.path, '$generatedId.jpg'));
-  if (!file.existsSync()) {
-    await file.writeAsBytes(art);
-  }
-  return file.path;
-}
+import 'package:aulos/data/library/art_disk_writer.dart';
+import 'package:aulos/data/library/indexer_folder_watcher.dart';
 
 enum IndexerState { idle, scanning, optimizing, hardening, paused, error }
 
@@ -48,11 +37,7 @@ class LibraryIndexerService extends ChangeNotifier {
 
   SettingsViewModel? _settingsVM;
   PersistentLibraryService? _libService;
-  Timer? _watchDebounceTimer;
-  final List<StreamSubscription<dynamic>> _watchSubscriptions = [];
-  bool? _lastWatcherEnabled;
-  List<String>? _lastMonitoredFolders;
-  List<String>? _lastAudiobookFolders;
+  late final IndexerFolderWatcher _folderWatcher;
 
   LibraryIndexerService({
     required AppDatabase db,
@@ -69,123 +54,25 @@ class LibraryIndexerService extends ChangeNotifier {
        _logService = logService ?? NoOpLogService(),
        _settingsVM = settingsVM,
        _libService = libService {
+    _folderWatcher = IndexerFolderWatcher(
+      settingsVM: settingsVM,
+      libService: libService,
+      log: log,
+      currentState: () => _state,
+      scanLibrary: scanLibrary,
+    );
     unawaited(_resumeIfNeeded());
     unawaited(_updateTotalCount());
-    if (settingsVM != null && libService != null) {
-      settingsVM.addListener(_onSettingsChanged);
-      _lastWatcherEnabled = settingsVM.isFolderWatcherEnabled;
-      _lastMonitoredFolders = List.from(settingsVM.monitoredFolders);
-      _lastAudiobookFolders = List.from(settingsVM.audiobookFolders);
-      updateWatcherSubscriptions();
-    }
   }
 
   void log(String message) => _logService.log(message);
 
-  void _onSettingsChanged() {
-    if (_settingsVM == null) return;
-    final enabled = _settingsVM!.isFolderWatcherEnabled;
-    final monitored = _settingsVM!.monitoredFolders;
-    final audiobooks = _settingsVM!.audiobookFolders;
-
-    bool listEquals(List<String> a, List<String> b) {
-      if (a.length != b.length) return false;
-      for (int i = 0; i < a.length; i++) {
-        if (a[i] != b[i]) return false;
-      }
-      return true;
-    }
-
-    if (_lastWatcherEnabled == enabled &&
-        _lastMonitoredFolders != null &&
-        listEquals(_lastMonitoredFolders!, monitored) &&
-        _lastAudiobookFolders != null &&
-        listEquals(_lastAudiobookFolders!, audiobooks)) {
-      return;
-    }
-
-    _lastWatcherEnabled = enabled;
-    _lastMonitoredFolders = List.from(monitored);
-    _lastAudiobookFolders = List.from(audiobooks);
-
-    updateWatcherSubscriptions();
-  }
-
-  void updateWatcherSubscriptions() {
-    if (_settingsVM == null || _libService == null) return;
-
-    for (var sub in _watchSubscriptions) {
-      sub.cancel();
-    }
-    _watchSubscriptions.clear();
-    _watchDebounceTimer?.cancel();
-
-    if (!_settingsVM!.isFolderWatcherEnabled) {
-      log('INDEXER: Folder watcher is disabled in settings.');
-      return;
-    }
-
-    for (final folderPath in _settingsVM!.monitoredFolders) {
-      _watchFolder(folderPath, folderType: 0);
-    }
-
-    for (final folderPath in _settingsVM!.audiobookFolders) {
-      _watchFolder(folderPath, folderType: 1);
-    }
-  }
-
-  void _watchFolder(String path, {required int folderType}) {
-    final dir = Directory(path);
-    if (!dir.existsSync()) return;
-
-    log('INDEXER: Starting filesystem watcher on: $path');
-    try {
-      late StreamSubscription<FileSystemEvent> sub;
-      sub = dir.watch(recursive: true).listen((event) {
-        log('INDEXER: Detected FS change in $path: ${event.type} on ${event.path}');
-        _triggerDebouncedScan();
-      }, onError: (Object e) {
-        log('INDEXER: FS Watcher error on $path: $e');
-        sub.cancel();
-        _watchSubscriptions.remove(sub);
-      }, onDone: () {
-        log('INDEXER: FS Watcher closed on $path');
-        sub.cancel();
-        _watchSubscriptions.remove(sub);
-      });
-      _watchSubscriptions.add(sub);
-    } catch (e) {
-      log('INDEXER: Failed to start FS Watcher on $path: $e');
-    }
-  }
-
-  void _triggerDebouncedScan() {
-    if (_settingsVM == null || _libService == null) return;
-    _watchDebounceTimer?.cancel();
-    _watchDebounceTimer = Timer(const Duration(seconds: 3), () {
-      if (_state == IndexerState.idle) {
-        log('INDEXER: Debounce timer fired. Running background library scan.');
-        unawaited(scanLibrary(_settingsVM!.monitoredFolders, _libService!, folderType: 0).then((_) {
-          if (_settingsVM!.audiobookFolders.isNotEmpty) {
-            unawaited(scanLibrary(_settingsVM!.audiobookFolders, _libService!, folderType: 1));
-          }
-        }));
-      } else {
-        log('INDEXER: Library indexer is busy (${_state.name}), deferring background scan.');
-        _watchDebounceTimer = Timer(const Duration(seconds: 5), _triggerDebouncedScan);
-      }
-    });
-  }
+  void updateWatcherSubscriptions() => _folderWatcher.updateWatcherSubscriptions();
 
   @override
   void dispose() {
     _disposed = true;
-    _settingsVM?.removeListener(_onSettingsChanged);
-    for (var sub in _watchSubscriptions) {
-      sub.cancel();
-    }
-    _watchSubscriptions.clear();
-    _watchDebounceTimer?.cancel();
+    _folderWatcher.dispose();
     super.dispose();
   }
 
@@ -293,7 +180,7 @@ class LibraryIndexerService extends ChangeNotifier {
           }
           
           if (art != null) {
-            final artPath = await _saveArtToDisk(art, album.id);
+            final artPath = await saveArtToDisk(art, album.id);
             await service.updateAlbumArt(album.id, null, localArtPath: artPath);
             _lastFetchedArt = art;
             log('INDEXER: Saved art for "${album.name}"');
@@ -342,7 +229,7 @@ class LibraryIndexerService extends ChangeNotifier {
           }
 
           if (photo != null) {
-            final photoPath = await _saveArtToDisk(photo, artist.id);
+            final photoPath = await saveArtToDisk(photo, artist.id);
             await service.updateArtistPhoto(artist.id, null, localArtPath: photoPath);
             _lastFetchedArt = photo;
             log('INDEXER: Saved photo for "${artist.name}"');
