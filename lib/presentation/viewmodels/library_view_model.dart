@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
+import 'package:aulos/data/library/persistent_library_partial_views.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/playback_database.dart';
 import 'package:aulos/domain/network/connection_manager.dart';

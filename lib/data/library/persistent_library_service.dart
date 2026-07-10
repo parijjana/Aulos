@@ -387,57 +387,6 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   @override
   Future<void> deletePlaylist(String playlistId) => _db.deletePlaylist(playlistId);
 
-  // Partial Views
-  Future<List<Album>> getAlbumsForArtist(String artistId) async {
-    final query = _db.select(_db.artistAlbumRelations).join([
-      innerJoin(
-        _db.albums,
-        _db.albums.id.equalsExp(_db.artistAlbumRelations.albumId),
-      ),
-    ])..where(_db.artistAlbumRelations.artistId.equals(artistId));
-
-    final result = await query.get();
-    return result.map((row) => row.readTable(_db.albums)).toList();
-  }
-
-  Future<List<Track>> getTracksForArtistInAlbum(String artistId, String albumId) =>
-      _db.getTracksForArtistInAlbum(artistId, albumId);
-
-  Future<List<Album>> getAlbumsForGenre(String genreId) async {
-    final query = _db.selectOnly(_db.tracks, distinct: true)
-      ..addColumns([_db.tracks.albumId])
-      ..where(_db.tracks.genreId.equals(genreId));
-    final rows = await query.get();
-    final albumIds = rows
-        .map((r) => r.read(_db.tracks.albumId))
-        .whereType<String>()
-        .toList();
-    return (_db.select(_db.albums)..where((a) => a.id.isIn(albumIds))).get();
-  }
-
-  Future<List<Album>> getAlbumsForYear(int year) async {
-    final query = _db.selectOnly(_db.tracks, distinct: true)
-      ..addColumns([_db.tracks.albumId])
-      ..where(_db.tracks.year.equals(year));
-    final rows = await query.get();
-    final albumIds = rows
-        .map((r) => r.read(_db.tracks.albumId))
-        .whereType<String>()
-        .toList();
-    return (_db.select(_db.albums)..where((a) => a.id.isIn(albumIds))).get();
-  }
-
-  Future<List<Track>> getTracksForGenreInAlbum(String genreId, String albumId) =>
-      (_db.select(_db.tracks)..where(
-            (t) => t.genreId.equals(genreId) & t.albumId.equals(albumId),
-          ))
-          .get();
-
-  Future<List<Track>> getTracksForYearInAlbum(int year, String albumId) =>
-      (_db.select(
-        _db.tracks,
-      )..where((t) => t.year.equals(year) & t.albumId.equals(albumId))).get();
-
   @override
   Future<void> toggleArtistFavorite(String artistId) => _db.toggleArtistFavorite(artistId);
 
