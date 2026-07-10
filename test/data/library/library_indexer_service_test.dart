@@ -12,6 +12,7 @@ import 'package:drift/drift.dart';
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/domain/network/log_service.dart';
 
@@ -23,18 +24,34 @@ class MockSettingsViewModel extends Mock implements SettingsViewModel {}
 class MockLogService extends Mock implements LogService {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase db;
   late MockSharedPreferences mockPrefs;
   late MockArtworkService mockArtworkService;
   late MockPersistentLibraryService mockLibraryService;
   late MockEnsembleArtworkService mockEnsembleService;
   late LibraryIndexerService indexerService;
+  late Directory tempArtDir;
 
   setUpAll(() {
     registerFallbackValue(Uint8List.fromList([]));
   });
 
   setUp(() {
+    tempArtDir = Directory.systemTemp.createTempSync('aulos_indexer_test');
+
+    // Mock PathProvider so _saveArtToDisk can resolve a real directory on disk.
+    const MethodChannel channel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      if (methodCall.method == 'getApplicationSupportDirectory' ||
+          methodCall.method == 'getApplicationDocumentsDirectory') {
+        return tempArtDir.path;
+      }
+      return null;
+    });
+
     db = AppDatabase.testing(NativeDatabase.memory());
     mockPrefs = MockSharedPreferences();
     mockArtworkService = MockArtworkService();
@@ -58,6 +75,9 @@ void main() {
 
   tearDown(() async {
     await db.close();
+    try {
+      tempArtDir.deleteSync(recursive: true);
+    } catch (_) {}
   });
 
   group('LibraryIndexerService - fetchMissingMetadata', () {
@@ -89,8 +109,8 @@ void main() {
     when(() => mockArtworkService.tryGetLocalArtwork(any())).thenAnswer((_) async => null);
     when(() => mockArtworkService.tryGetLocalArtistPhoto(any())).thenAnswer((_) async => null);
     when(() => mockArtworkService.extractEmbeddedArtwork(any())).thenAnswer((_) async => null);
-    when(() => mockLibraryService.updateAlbumArt(any(), any())).thenAnswer((_) async {});
-    when(() => mockLibraryService.updateArtistPhoto(any(), any())).thenAnswer((_) async {});
+    when(() => mockLibraryService.updateAlbumArt(any(), any(), localArtPath: any(named: 'localArtPath'))).thenAnswer((_) async {});
+    when(() => mockLibraryService.updateArtistPhoto(any(), any(), localArtPath: any(named: 'localArtPath'))).thenAnswer((_) async {});
 
       // Act
       final progressValues = <double>[];

@@ -58,11 +58,28 @@ void main() {
     when(() => mockService.audiobookDb).thenReturn(audiobookDb);
 
     // Default stubs
-    when(() => mockService.getRootFolders()).thenAnswer((_) async => []);
-    when(() => mockService.getSubFolders(any())).thenAnswer((_) async => []);
-    when(() => mockService.getArtists()).thenAnswer((_) async => []);
-    when(() => mockService.getAlbums()).thenAnswer((_) async => []);
-    when(() => mockService.getGenres()).thenAnswer((_) async => []);
+    when(() => mockService.getRootFolders(
+      folderType: any(named: 'folderType'),
+      limit: any(named: 'limit'),
+      offset: any(named: 'offset'),
+      searchQuery: any(named: 'searchQuery'),
+    )).thenAnswer((_) async => []);
+    when(() => mockService.getSubFolders(any(), folderType: any(named: 'folderType'))).thenAnswer((_) async => []);
+    when(() => mockService.getArtists(
+      limit: any(named: 'limit'),
+      offset: any(named: 'offset'),
+      searchQuery: any(named: 'searchQuery'),
+    )).thenAnswer((_) async => []);
+    when(() => mockService.getAlbums(
+      limit: any(named: 'limit'),
+      offset: any(named: 'offset'),
+      searchQuery: any(named: 'searchQuery'),
+    )).thenAnswer((_) async => []);
+    when(() => mockService.getGenres(
+      limit: any(named: 'limit'),
+      offset: any(named: 'offset'),
+      searchQuery: any(named: 'searchQuery'),
+    )).thenAnswer((_) async => []);
     when(() => mockService.getYears()).thenAnswer((_) async => []);
     when(() => mockService.getPlaylists()).thenAnswer((_) async => []);
     when(() => mockAudnexus.getAuthorMetadata(any())).thenAnswer((_) async => null);
@@ -191,8 +208,17 @@ void main() {
       final folder1 = Folder(id: '1', name: 'Folder 1', path: '/path1', folderType: 0);
       final artist1 = Artist(id: '1', name: 'Artist 1', isFavorite: false, playCount: 0);
       
-      when(() => mockService.getRootFolders()).thenAnswer((_) async => [folder1]);
-      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1]);
+      when(() => mockService.getRootFolders(
+        folderType: any(named: 'folderType'),
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [folder1]);
+      when(() => mockService.getArtists(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [artist1]);
 
       final testViewModel = LibraryViewModel(
         libraryService: mockService,
@@ -217,8 +243,17 @@ void main() {
       final folder2 = Folder(id: '2', name: 'Folder 2', path: '/path2', folderType: 0);
       final artist2 = Artist(id: '2', name: 'Artist 2', isFavorite: false, playCount: 0);
       
-      when(() => mockService.getRootFolders()).thenAnswer((_) async => [folder1, folder2]);
-      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1, artist2]);
+      when(() => mockService.getRootFolders(
+        folderType: any(named: 'folderType'),
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [folder1, folder2]);
+      when(() => mockService.getArtists(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [artist1, artist2]);
 
       await testViewModel.reloadLibrary();
       expect(testViewModel.artists, contains(artist2));
@@ -235,7 +270,12 @@ void main() {
       when(() => mockIndexer.state).thenReturn(IndexerState.scanning);
       
       final folder1 = Folder(id: '1', name: 'Folder 1', path: '/path1', folderType: 0);
-      when(() => mockService.getRootFolders()).thenAnswer((_) async => [folder1]);
+      when(() => mockService.getRootFolders(
+        folderType: any(named: 'folderType'),
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [folder1]);
 
       final vmWithIndexer = LibraryViewModel(
         libraryService: mockService,
@@ -252,7 +292,12 @@ void main() {
       expect(vmWithIndexer.folders, contains(folder1));
 
       final folder2 = Folder(id: '2', name: 'Folder 2', path: '/path2', folderType: 0);
-      when(() => mockService.getRootFolders()).thenAnswer((_) async => [folder1, folder2]);
+      when(() => mockService.getRootFolders(
+        folderType: any(named: 'folderType'),
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [folder1, folder2]);
 
       expect(mockIndexer.listener, isNotNull);
       
@@ -272,8 +317,16 @@ void main() {
       final album1 = Album(id: '1', name: 'Album 1', isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
       final album1Fav = Album(id: '1', name: 'Album 1', isFavorite: true, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
 
-      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1]);
-      when(() => mockService.getAlbums()).thenAnswer((_) async => [album1]);
+      when(() => mockService.getArtists(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [artist1]);
+      when(() => mockService.getAlbums(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [album1]);
       when(() => mockService.toggleArtistFavorite('1')).thenAnswer((_) async {});
       when(() => mockService.toggleAlbumFavorite('1')).thenAnswer((_) async {});
 
@@ -283,7 +336,11 @@ void main() {
       }
       expect(viewModel.artists, contains(artist1));
 
-      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1Fav]);
+      when(() => mockService.getArtists(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [artist1Fav]);
       await viewModel.toggleArtistFavorite('1');
       verify(() => mockService.toggleArtistFavorite('1')).called(1);
       expect(viewModel.artists.first.isFavorite, isTrue);
@@ -294,7 +351,11 @@ void main() {
       }
       expect(viewModel.albums, contains(album1));
 
-      when(() => mockService.getAlbums()).thenAnswer((_) async => [album1Fav]);
+      when(() => mockService.getAlbums(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [album1Fav]);
       await viewModel.toggleAlbumFavorite('1');
       verify(() => mockService.toggleAlbumFavorite('1')).called(1);
       expect(viewModel.albums.first.isFavorite, isTrue);
@@ -306,8 +367,16 @@ void main() {
       final album1 = Album(id: '1', name: 'Album 1', isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
       final album2 = Album(id: '2', name: 'Album 2', isFavorite: true, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
 
-      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1, artist2]);
-      when(() => mockService.getAlbums()).thenAnswer((_) async => [album1, album2]);
+      when(() => mockService.getArtists(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [artist1, artist2]);
+      when(() => mockService.getAlbums(
+        limit: any(named: 'limit'),
+        offset: any(named: 'offset'),
+        searchQuery: any(named: 'searchQuery'),
+      )).thenAnswer((_) async => [album1, album2]);
 
       viewModel.setMode(LibraryMode.artists);
       while (viewModel.isLoading) {
