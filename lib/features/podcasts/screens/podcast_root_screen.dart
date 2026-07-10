@@ -26,29 +26,42 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsVM = context.watch<settings.SettingsViewModel>();
+    final podcastVM = context.watch<PodcastViewModel>();
     final isDesktop = MediaQuery.of(context).size.width > 1100;
+    final bool podcastStackNotEmpty = podcastVM.activePodcast != null;
+    final bool podcastTempShowHome = podcastVM.tempShowHome;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const SizedBox(height: 16),
-              _buildTopBar(isDesktop, settingsVM),
-              const SizedBox(height: 16),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: const [
-                    PodcastLibraryView(),
-                    PodcastBrowserScreen(),
-                  ],
+    return PopScope(
+      canPop: !podcastStackNotEmpty && !podcastTempShowHome,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (podcastTempShowHome) {
+          podcastVM.setTempShowHome(false);
+          return;
+        }
+        podcastVM.setActivePodcast(null);
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                const SizedBox(height: 16),
+                _buildTopBar(isDesktop, settingsVM),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: const [
+                      PodcastLibraryView(),
+                      PodcastBrowserScreen(),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           
           // BOOKMARKS SIDEBAR (Pull-tab style)
           if (isDesktop)
@@ -74,11 +87,12 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
             ),
         ],
       ),
+     ),
     );
   }
   Widget _buildTopBar(bool isDesktop, settings.SettingsViewModel settingsVM) {
     final theme = Theme.of(context);
-    final podcastVM = context.read<PodcastViewModel>();
+    final podcastVM = context.watch<PodcastViewModel>();
     int currentPage = 0;
     if (_pageController.hasClients) {
       currentPage = _pageController.page?.round() ?? 0;
@@ -87,11 +101,44 @@ class _PodcastRootScreenState extends State<PodcastRootScreen> {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double horizontalPadding = screenWidth <= 380 ? 12 : 24;
     final double buttonSpacing = screenWidth <= 380 ? 4 : 8;
+    final bool podcastStackNotEmpty = podcastVM.activePodcast != null;
+    final bool podcastTempShowHome = podcastVM.tempShowHome;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
+          if (podcastStackNotEmpty) ...[
+            IconButton(
+              icon: Icon(Icons.arrow_back_ios, color: theme.colorScheme.primary, size: 16),
+              onPressed: () {
+                if (podcastTempShowHome) {
+                  podcastVM.setTempShowHome(false);
+                } else {
+                  podcastVM.setActivePodcast(null);
+                }
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+          ],
+          IconButton(
+            icon: Icon(
+              podcastTempShowHome ? Icons.home : Icons.home_outlined,
+              color: podcastTempShowHome
+                  ? theme.colorScheme.primary
+                  : (!podcastStackNotEmpty
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                      : theme.colorScheme.primary),
+              size: 20,
+            ),
+            onPressed: !podcastStackNotEmpty
+                ? null
+                : () => podcastVM.setTempShowHome(!podcastTempShowHome),
+            tooltip: 'Home View',
+          ),
+          const SizedBox(width: 12),
           _buildNavButton(screenWidth <= 380 ? 'LIBRARY' : 'YOUR LIBRARY', 0, currentPage == 0, theme),
           SizedBox(width: buttonSpacing),
           _buildNavButton(screenWidth <= 380 ? 'DISCOVER' : 'FIND MORE', 1, currentPage == 1, theme),

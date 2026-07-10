@@ -265,5 +265,69 @@ void main() {
 
       expect(vmWithIndexer.folders, contains(folder2));
     });
+
+    test('toggleArtistFavorite and toggleAlbumFavorite should call service and update list', () async {
+      final artist1 = Artist(id: '1', name: 'Artist 1', isFavorite: false, playCount: 0);
+      final artist1Fav = Artist(id: '1', name: 'Artist 1', isFavorite: true, playCount: 0);
+      final album1 = Album(id: '1', name: 'Album 1', isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
+      final album1Fav = Album(id: '1', name: 'Album 1', isFavorite: true, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
+
+      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1]);
+      when(() => mockService.getAlbums()).thenAnswer((_) async => [album1]);
+      when(() => mockService.toggleArtistFavorite('1')).thenAnswer((_) async {});
+      when(() => mockService.toggleAlbumFavorite('1')).thenAnswer((_) async {});
+
+      viewModel.setMode(LibraryMode.artists);
+      while (viewModel.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+      expect(viewModel.artists, contains(artist1));
+
+      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1Fav]);
+      await viewModel.toggleArtistFavorite('1');
+      verify(() => mockService.toggleArtistFavorite('1')).called(1);
+      expect(viewModel.artists.first.isFavorite, isTrue);
+
+      viewModel.setMode(LibraryMode.albums);
+      while (viewModel.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+      expect(viewModel.albums, contains(album1));
+
+      when(() => mockService.getAlbums()).thenAnswer((_) async => [album1Fav]);
+      await viewModel.toggleAlbumFavorite('1');
+      verify(() => mockService.toggleAlbumFavorite('1')).called(1);
+      expect(viewModel.albums.first.isFavorite, isTrue);
+    });
+
+    test('showFavoritesOnly filtering should isolate favorited artists and albums', () async {
+      final artist1 = Artist(id: '1', name: 'Artist 1', isFavorite: false, playCount: 0);
+      final artist2 = Artist(id: '2', name: 'Artist 2', isFavorite: true, playCount: 0);
+      final album1 = Album(id: '1', name: 'Album 1', isFavorite: false, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
+      final album2 = Album(id: '2', name: 'Album 2', isFavorite: true, playCount: 0, isAudiobook: false, isPlayed: false, isDownloadedViaAulos: false);
+
+      when(() => mockService.getArtists()).thenAnswer((_) async => [artist1, artist2]);
+      when(() => mockService.getAlbums()).thenAnswer((_) async => [album1, album2]);
+
+      viewModel.setMode(LibraryMode.artists);
+      while (viewModel.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+      expect(viewModel.artists.length, 2);
+
+      viewModel.setShowFavoritesOnly(true);
+      expect(viewModel.artists.length, 1);
+      expect(viewModel.artists.first.id, '2');
+
+      viewModel.setMode(LibraryMode.albums);
+      while (viewModel.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+      expect(viewModel.albums.length, 1);
+      expect(viewModel.albums.first.id, '2');
+
+      viewModel.setShowFavoritesOnly(false);
+      expect(viewModel.albums.length, 2);
+    });
   });
 }

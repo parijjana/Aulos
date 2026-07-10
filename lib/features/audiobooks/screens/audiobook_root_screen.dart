@@ -39,42 +39,55 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
     super.build(context);
     final theme = Theme.of(context);
     final libraryVM = context.watch<LibraryViewModel>();
+    final booksStackNotEmpty = libraryVM.stateFor(LibraryMode.books).navStack.isNotEmpty;
+    final booksTempShowHome = libraryVM.tempShowHomeFor(LibraryMode.books);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const SizedBox(height: 16),
-              _buildUnifiedHeader(libraryVM),
-              const SizedBox(height: 16),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) => setState(() => _activeTab = index),
-                  children: [
-                    const AudiobookLibraryView(),
-                    const LibriVoxDiscoverView(),
-                  ],
+    return PopScope(
+      canPop: !booksStackNotEmpty && !booksTempShowHome,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (booksTempShowHome) {
+          libraryVM.setTempShowHomeFor(LibraryMode.books, false);
+          return;
+        }
+        libraryVM.goBack();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                const SizedBox(height: 16),
+                _buildUnifiedHeader(libraryVM),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) => setState(() => _activeTab = index),
+                    children: [
+                      const AudiobookLibraryView(),
+                      const LibriVoxDiscoverView(),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            
+            // SIDEBAR (Global Clips)
+            if (_activeTab == 0 && libraryVM.isAtRoot) ...[
+              _buildSidebarPullTab(theme),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                right: _isSidebarOpen ? 0 : -350,
+                top: 0,
+                bottom: 0,
+                child: const AudiobookBookmarksSidebar(),
               ),
             ],
-          ),
-          
-          // SIDEBAR (Global Clips)
-          if (_activeTab == 0 && libraryVM.isAtRoot) ...[
-            _buildSidebarPullTab(theme),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              right: _isSidebarOpen ? 0 : -350,
-              top: 0,
-              bottom: 0,
-              child: const AudiobookBookmarksSidebar(),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -109,13 +122,46 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
   Widget _buildUnifiedHeader(LibraryViewModel vm) {
     final theme = Theme.of(context);
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double horizontalPadding = screenWidth < 360 ? 12 : 24;
-    final double buttonSpacing = screenWidth < 360 ? 4 : 8;
+    final double horizontalPadding = screenWidth <= 380 ? 12 : 24;
+    final double buttonSpacing = screenWidth <= 380 ? 4 : 8;
+    final bool booksStackNotEmpty = vm.stateFor(LibraryMode.books).navStack.isNotEmpty;
+    final bool booksTempShowHome = vm.tempShowHomeFor(LibraryMode.books);
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
+          if (booksStackNotEmpty) ...[
+            IconButton(
+              icon: Icon(Icons.arrow_back_ios, color: theme.colorScheme.primary, size: 16),
+              onPressed: () {
+                if (booksTempShowHome) {
+                  vm.setTempShowHomeFor(LibraryMode.books, false);
+                } else {
+                  vm.goBack();
+                }
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+          ],
+          IconButton(
+            icon: Icon(
+              booksTempShowHome ? Icons.home : Icons.home_outlined,
+              color: booksTempShowHome
+                  ? theme.colorScheme.primary
+                  : (!booksStackNotEmpty
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                      : theme.colorScheme.primary),
+              size: 20,
+            ),
+            onPressed: !booksStackNotEmpty
+                ? null
+                : () => vm.setTempShowHomeFor(LibraryMode.books, !booksTempShowHome),
+            tooltip: 'Home View',
+          ),
+          const SizedBox(width: 12),
           if (!_isSearchExpanded) ...[
             _buildNavButton('LIBRARY', 0, _activeTab == 0, theme),
             SizedBox(width: buttonSpacing),
@@ -189,9 +235,9 @@ class _AudiobookRootScreenState extends State<AudiobookRootScreen> with Automati
 
   Widget _buildNavButton(String label, int index, bool isActive, ThemeData theme) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double horizPadding = screenWidth < 360 ? 10 : 16;
-    final double vertPadding = screenWidth < 360 ? 5 : 8;
-    final double fontSize = screenWidth < 360 ? 9 : 10;
+    final double horizPadding = screenWidth <= 380 ? 10 : 16;
+    final double vertPadding = screenWidth <= 380 ? 5 : 8;
+    final double fontSize = screenWidth <= 380 ? 9 : 10;
 
     return InkWell(
       onTap: () => _navigateToPage(index),

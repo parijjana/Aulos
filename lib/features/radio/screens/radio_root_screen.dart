@@ -3,7 +3,7 @@ import 'package:aulos/features/library/widgets/radio_library_view.dart';
 import 'package:aulos/features/radio/screens/radio_browser_screen.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'package:provider/provider.dart';
-
+import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
 class RadioRootScreen extends StatefulWidget {
   const RadioRootScreen({super.key});
 
@@ -32,29 +32,57 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
   Widget build(BuildContext context) {
     super.build(context);
     final settingsVM = context.watch<settings.SettingsViewModel>();
+    final radioVM = context.watch<RadioViewModel>();
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          _buildTopBar(settingsVM),
-          const SizedBox(height: 8),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
+    return PopScope(
+      canPop: !radioVM.tempShowHome,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (radioVM.tempShowHome) {
+          radioVM.setTempShowHome(false);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Column(
               children: [
-                const RadioLibraryView(),
-                RadioBrowserScreen(onBack: () => _navigateToPage(0)),
+                const SizedBox(height: 16),
+                _buildTopBar(settingsVM, radioVM),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      const RadioLibraryView(),
+                      RadioBrowserScreen(onBack: () => _navigateToPage(0)),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+            if (radioVM.tempShowHome)
+              Positioned.fill(
+                child: Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildTopBar(settingsVM, radioVM),
+                      const SizedBox(height: 8),
+                      const Expanded(child: RadioLibraryView()),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
-  Widget _buildTopBar(settings.SettingsViewModel settingsVM) {
+  Widget _buildTopBar(settings.SettingsViewModel settingsVM, RadioViewModel radioVM) {
     final theme = Theme.of(context);
     int currentPage = 0;
     if (_pageController.hasClients) {
@@ -69,6 +97,16 @@ class _RadioRootScreenState extends State<RadioRootScreen> with AutomaticKeepAli
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
+          IconButton(
+            icon: Icon(
+              radioVM.tempShowHome ? Icons.home : Icons.home_outlined,
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
+            onPressed: () => radioVM.setTempShowHome(!radioVM.tempShowHome),
+            tooltip: 'Home View',
+          ),
+          const SizedBox(width: 12),
           _buildNavButton('YOUR LIBRARY', 0, currentPage == 0, theme),
           SizedBox(width: buttonSpacing),
           _buildNavButton('FIND MORE', 1, currentPage == 1, theme),

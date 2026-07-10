@@ -41,7 +41,7 @@ class _PodcastLibraryViewState extends State<PodcastLibraryView> {
     debugPrint('PODCAST_LIBRARY: Building. Filter: ${podcastVM.libraryFilter}, Count: ${podcastVM.filteredPodcasts.length}');
 
     final activePod = podcastVM.activePodcast;
-    if (activePod != null) {
+    if (activePod != null && !podcastVM.tempShowHome) {
       return PodcastDetailView(
         podcast: activePod,
         onBack: () => podcastVM.setActivePodcast(null),

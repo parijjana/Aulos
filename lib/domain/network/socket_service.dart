@@ -39,6 +39,7 @@ enum CommandType {
   artData,
   syncState,
   auth,
+  custom,
   unknown,
 }
 

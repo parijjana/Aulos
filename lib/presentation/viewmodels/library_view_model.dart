@@ -11,6 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:aulos/data/library/providers/audnexus_service.dart';
 import 'package:aulos/domain/network/log_service.dart';
 import 'package:aulos/data/library/library_indexer_service.dart';
+import 'package:aulos/core/utils/benchmark.dart';
 import 'library_view_model_sync.dart';
 import 'library_view_model_enrichment.dart';
 
@@ -27,6 +28,9 @@ class LibraryNavigationState {
   double scrollOffset = 0.0;
   bool isPartialView = false;
   bool wasRevealed = false;
+  bool tempShowHome = false;
+  int currentOffset = 0;
+  bool hasMore = true;
 }
 
 class LibraryViewModel extends ChangeNotifier {
@@ -43,6 +47,7 @@ class LibraryViewModel extends ChangeNotifier {
   int _libraryTabIndex = 0;
   AudiobookSort _bookSort = AudiobookSort.name;
   bool _bookFilterAulos = false;
+  bool _showFavoritesOnly = false;
 
   List<Folder> _folders = [];
   List<Artist> _artists = [];
@@ -226,20 +231,33 @@ class LibraryViewModel extends ChangeNotifier {
   }
 
   LibraryNavigationState stateFor(LibraryMode m) => _states[m] ?? LibraryNavigationState();
-  bool isAtRootFor(LibraryMode m) => stateFor(m).navStack.isEmpty;
-  dynamic selectedItemFor(LibraryMode m) => stateFor(m).selectedItem;
+  bool isAtRootFor(LibraryMode m) => stateFor(m).navStack.isEmpty || stateFor(m).tempShowHome;
+  dynamic selectedItemFor(LibraryMode m) => stateFor(m).tempShowHome ? null : stateFor(m).selectedItem;
   List<Track> tracksFor(LibraryMode m) => stateFor(m).tracks;
   List<Album> subAlbumsFor(LibraryMode m) => stateFor(m).subAlbums;
   List<Folder> subFoldersFor(LibraryMode m) => stateFor(m).subFolders;
 
+  bool tempShowHomeFor(LibraryMode m) => stateFor(m).tempShowHome;
+  void setTempShowHomeFor(LibraryMode m, bool show) {
+    stateFor(m).tempShowHome = show;
+    notifyListeners();
+  }
+
+  bool get tempShowHome => _currentState.tempShowHome;
+  void setTempShowHome(bool show) {
+    _currentState.tempShowHome = show;
+    notifyListeners();
+  }
+
   List<dynamic> get navStack => _currentState.navStack;
-  dynamic get selectedItem => _currentState.selectedItem;
-  bool get isAtRoot => _currentState.navStack.isEmpty;
+  dynamic get selectedItem => _currentState.tempShowHome ? null : _currentState.selectedItem;
+  bool get isAtRoot => _currentState.navStack.isEmpty || _currentState.tempShowHome;
 
   void setMode(LibraryMode newMode) {
     if (_mode == newMode) return;
     if (newMode != LibraryMode.books) _lastMusicMode = newMode;
     _mode = newMode;
+    _currentState.tempShowHome = false;
     
     if (!_isModeLoaded(newMode)) {
       unawaited(_loadInitialData());
@@ -284,7 +302,9 @@ class LibraryViewModel extends ChangeNotifier {
 
   void setSearchQuery(String q) {
     _currentState.searchQuery = q.trim();
-    notifyListeners();
+    _currentState.currentOffset = 0;
+    _currentState.hasMore = true;
+    unawaited(_loadInitialData());
   }
 
   Future<void> reloadLibrary() async {
@@ -300,6 +320,8 @@ class LibraryViewModel extends ChangeNotifier {
         s.subAlbums = [];
         s.tracks = [];
         s.searchQuery = '';
+        s.currentOffset = 0;
+        s.hasMore = true;
       }
     }
     _folders = [];
@@ -326,14 +348,31 @@ class LibraryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final limit = 50;
+      final query = _currentState.searchQuery;
       switch (_mode) {
-        case LibraryMode.folders: _folders = await _libraryService.getRootFolders(); break;
-        case LibraryMode.artists: _artists = await _libraryService.getArtists(); break;
-        case LibraryMode.albums: _albums = await _libraryService.getAlbums(); break;
-        case LibraryMode.genres: _genres = await _libraryService.getGenres(); break;
-        case LibraryMode.years: _years = await _libraryService.getYears(); break;
-        case LibraryMode.playlists: _playlists = await _libraryService.getPlaylists(); break;
-        case LibraryMode.books: _books = await _libraryService.getAudiobooks(); await calculateBookProgress(); break;
+        case LibraryMode.folders: 
+          _folders = await Benchmark.measureAsync('LibraryVM_LoadFolders', _logService, () => _libraryService.getRootFolders(limit: limit, offset: 0, searchQuery: query)); 
+          _currentState.hasMore = _folders.length == limit;
+          break;
+        case LibraryMode.artists: 
+          _artists = await Benchmark.measureAsync('LibraryVM_LoadArtists', _logService, () => _libraryService.getArtists(limit: limit, offset: 0, searchQuery: query)); 
+          _currentState.hasMore = _artists.length == limit;
+          break;
+        case LibraryMode.albums: 
+          _albums = await Benchmark.measureAsync('LibraryVM_LoadAlbums', _logService, () => _libraryService.getAlbums(limit: limit, offset: 0, searchQuery: query)); 
+          _currentState.hasMore = _albums.length == limit;
+          break;
+        case LibraryMode.genres: 
+          _genres = await Benchmark.measureAsync('LibraryVM_LoadGenres', _logService, () => _libraryService.getGenres(limit: limit, offset: 0, searchQuery: query)); 
+          _currentState.hasMore = _genres.length == limit;
+          break;
+        case LibraryMode.years: _years = await Benchmark.measureAsync('LibraryVM_LoadYears', _logService, () => _libraryService.getYears()); break;
+        case LibraryMode.playlists: _playlists = await Benchmark.measureAsync('LibraryVM_LoadPlaylists', _logService, () => _libraryService.getPlaylists()); break;
+        case LibraryMode.books: 
+          _books = await Benchmark.measureAsync('LibraryVM_LoadBooks', _logService, () => _libraryService.getAudiobooks()); 
+          await Benchmark.measureAsync('LibraryVM_CalcBookProgress', _logService, () => calculateBookProgress()); 
+          break;
       }
     } finally {
       _isLoading = false;
@@ -343,6 +382,7 @@ class LibraryViewModel extends ChangeNotifier {
 
   Future<void> selectItem(dynamic item) async {
     if (item == null) return;
+    _currentState.tempShowHome = false;
     _isLoading = true; notifyListeners();
 
     _currentState.navStack.add(item);
@@ -366,6 +406,7 @@ class LibraryViewModel extends ChangeNotifier {
   }
 
   Future<void> selectArtistAlbum(String artistId, String albumId) async {
+    _currentState.tempShowHome = false;
     _isLoading = true; notifyListeners();
     final service = _libraryService as PersistentLibraryServiceImpl;
     
@@ -378,6 +419,7 @@ class LibraryViewModel extends ChangeNotifier {
   }
 
   Future<void> selectGenreAlbum(String genreId, String albumId) async {
+    _currentState.tempShowHome = false;
     _isLoading = true; notifyListeners();
     final service = _libraryService as PersistentLibraryServiceImpl;
     
@@ -390,6 +432,7 @@ class LibraryViewModel extends ChangeNotifier {
   }
 
   Future<void> selectYearAlbum(int year, String albumId) async {
+    _currentState.tempShowHome = false;
     _isLoading = true; notifyListeners();
     final service = _libraryService as PersistentLibraryServiceImpl;
     
@@ -402,6 +445,7 @@ class LibraryViewModel extends ChangeNotifier {
   }
 
   void goBack() {
+    _currentState.tempShowHome = false;
     if (_currentState.navStack.isEmpty) return;
     
     _currentState.scrollOffset = 0.0;
@@ -420,10 +464,22 @@ class LibraryViewModel extends ChangeNotifier {
     }
   }
 
-  List<Folder> get folders => _applySearch(_folders, (f) => f.name);
-  List<Artist> get artists => _applySearch(_artists, (a) => a.name);
-  List<Album> get albums => _applySearch(_albums, (a) => a.name);
-  List<Genre> get genres => _applySearch(_genres, (g) => g.name);
+  List<Folder> get folders => _folders;
+  List<Artist> get artists {
+    var list = _artists;
+    if (_showFavoritesOnly) {
+      list = list.where((a) => a.isFavorite).toList();
+    }
+    return list;
+  }
+  List<Album> get albums {
+    var list = _albums;
+    if (_showFavoritesOnly) {
+      list = list.where((a) => a.isFavorite).toList();
+    }
+    return list;
+  }
+  List<Genre> get genres => _genres;
   List<int> get years => _applySearch(_years, (y) => y.toString());
   List<Playlist> get playlists => _applySearch(_playlists, (p) => p.name);
 
@@ -491,7 +547,100 @@ class LibraryViewModel extends ChangeNotifier {
     _isLoading = false; notifyListeners();
   }
 
+  bool get showFavoritesOnly => _showFavoritesOnly;
+
+  void setShowFavoritesOnly(bool val) {
+    _showFavoritesOnly = val;
+    notifyListeners();
+  }
+
+  Future<void> toggleArtistFavorite(String artistId) async {
+    if (_connectionManager?.isClient ?? false) {
+      unawaited(_connectionManager?.sendCommand(MediaCommand(
+        type: CommandType.custom,
+        payload: {'action': 'toggleArtistFavorite', 'artistId': artistId},
+      )));
+      return;
+    }
+    await _libraryService.toggleArtistFavorite(artistId);
+    _artists = await _libraryService.getArtists();
+    
+    if (_currentState.selectedItem is Artist && (_currentState.selectedItem as Artist).id == artistId) {
+      final updated = _artists.firstWhere((a) => a.id == artistId);
+      _currentState.selectedItem = updated;
+      final idx = _currentState.navStack.indexWhere((e) => e is Artist && e.id == artistId);
+      if (idx != -1) {
+        _currentState.navStack[idx] = updated;
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> toggleAlbumFavorite(String albumId) async {
+    if (_connectionManager?.isClient ?? false) {
+      unawaited(_connectionManager?.sendCommand(MediaCommand(
+        type: CommandType.custom,
+        payload: {'action': 'toggleAlbumFavorite', 'albumId': albumId},
+      )));
+      return;
+    }
+    await _libraryService.toggleAlbumFavorite(albumId);
+    _albums = await _libraryService.getAlbums();
+
+    if (_currentState.selectedItem is Album && (_currentState.selectedItem as Album).id == albumId) {
+      final updated = _albums.firstWhere((a) => a.id == albumId);
+      _currentState.selectedItem = updated;
+      final idx = _currentState.navStack.indexWhere((e) => e is Album && e.id == albumId);
+      if (idx != -1) {
+        _currentState.navStack[idx] = updated;
+      }
+    }
+    notifyListeners();
+  }
+
   Future<List<Track>> getAllTracks() => _libraryService.getAllTracks();
+
+  Future<void> loadMore() async {
+    if (_isLoading || !_currentState.hasMore) return;
+    
+    _isLoading = true;
+    notifyListeners();
+    
+    final limit = 50;
+    _currentState.currentOffset += limit;
+    final offset = _currentState.currentOffset;
+    final query = _currentState.searchQuery;
+
+    try {
+      switch (_mode) {
+        case LibraryMode.folders:
+          final newFolders = await _libraryService.getRootFolders(limit: limit, offset: offset, searchQuery: query);
+          _folders.addAll(newFolders);
+          _currentState.hasMore = newFolders.length == limit;
+          break;
+        case LibraryMode.artists:
+          final newArtists = await _libraryService.getArtists(limit: limit, offset: offset, searchQuery: query);
+          _artists.addAll(newArtists);
+          _currentState.hasMore = newArtists.length == limit;
+          break;
+        case LibraryMode.albums:
+          final newAlbums = await _libraryService.getAlbums(limit: limit, offset: offset, searchQuery: query);
+          _albums.addAll(newAlbums);
+          _currentState.hasMore = newAlbums.length == limit;
+          break;
+        case LibraryMode.genres:
+          final newGenres = await _libraryService.getGenres(limit: limit, offset: offset, searchQuery: query);
+          _genres.addAll(newGenres);
+          _currentState.hasMore = newGenres.length == limit;
+          break;
+        default:
+          break;
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Uint8List? getArtForTrack({required String trackId}) =>
       LibraryViewModelSync(this).getArtForTrack(trackId: trackId);

@@ -21,8 +21,20 @@ extension LibraryViewModelSync on LibraryViewModel {
 
   void handleRemoteCommand(MediaCommand command) {
     if (connectionManager?.isHost ?? false) {
-      if (command.type == CommandType.getLibrary) unawaited(sendLibraryPage(command.payload));
-      else if (command.type == CommandType.getArt) unawaited(sendArt(command.payload));
+      if (command.type == CommandType.getLibrary) {
+        unawaited(sendLibraryPage(command.payload));
+      } else if (command.type == CommandType.getArt) {
+        unawaited(sendArt(command.payload));
+      } else if (command.type == CommandType.custom) {
+        final action = command.payload?['action'];
+        if (action == 'toggleArtistFavorite') {
+          final artistId = command.payload?['artistId']?.toString();
+          if (artistId != null) unawaited(toggleArtistFavorite(artistId));
+        } else if (action == 'toggleAlbumFavorite') {
+          final albumId = command.payload?['albumId']?.toString();
+          if (albumId != null) unawaited(toggleAlbumFavorite(albumId));
+        }
+      }
     } else if (connectionManager?.isClient ?? false) {
       if (command.type == CommandType.libraryData) processRemoteLibraryData(command.payload);
       else if (command.type == CommandType.artData) processRemoteArt(command.payload);
@@ -64,12 +76,12 @@ extension LibraryViewModelSync on LibraryViewModel {
           break;
         case 'artists':
           final items = await libraryService.getArtists();
-          responsePayload['items'] = items.map((e) => {'id': e.id, 'name': e.name}).toList();
+          responsePayload['items'] = items.map((e) => {'id': e.id, 'name': e.name, 'isFavorite': e.isFavorite}).toList();
           break;
         case 'albums':
         case 'books':
           final items = modeStr == 'books' ? await libraryService.getAudiobooks() : await libraryService.getAlbums();
-          responsePayload['items'] = items.map((e) => { 'id': e.id, 'name': e.name, 'coverArt': e.coverArt != null ? base64.encode(e.coverArt!) : null }).toList();
+          responsePayload['items'] = items.map((e) => { 'id': e.id, 'name': e.name, 'isFavorite': e.isFavorite, 'coverArt': e.coverArt != null ? base64.encode(e.coverArt!) : null }).toList();
           break;
         case 'genres':
           final items = await libraryService.getGenres();
@@ -94,7 +106,7 @@ extension LibraryViewModelSync on LibraryViewModel {
           break;
         case 'artists':
           final items = await service.getAlbumsForArtist(parentId);
-          responsePayload['albums'] = items.map((e) => {'id': e.id, 'name': e.name, 'coverArt': e.coverArt != null ? base64.encode(e.coverArt!) : null}).toList();
+          responsePayload['albums'] = items.map((e) => {'id': e.id, 'name': e.name, 'isFavorite': e.isFavorite, 'coverArt': e.coverArt != null ? base64.encode(e.coverArt!) : null}).toList();
           break;
       }
     }
@@ -117,7 +129,7 @@ extension LibraryViewModelSync on LibraryViewModel {
         case 'artists':
           artistsRaw = items.map((e) {
             final map = e as Map<String, dynamic>;
-            return Artist(id: map['id']?.toString() ?? '', name: map['name'] as String, isFavorite: false, playCount: 0);
+            return Artist(id: map['id']?.toString() ?? '', name: map['name'] as String, isFavorite: map['isFavorite'] as bool? ?? false, playCount: 0);
           }).toList();
           break;
         case 'albums':
@@ -127,7 +139,7 @@ extension LibraryViewModelSync on LibraryViewModel {
             return Album(
               id: map['id']?.toString() ?? '',
               name: map['name'] as String,
-              isFavorite: false,
+              isFavorite: map['isFavorite'] as bool? ?? false,
               playCount: 0,
               isAudiobook: modeStr == 'books',
               isPlayed: false,
@@ -175,7 +187,7 @@ extension LibraryViewModelSync on LibraryViewModel {
           return Album(
             id: map['id']?.toString() ?? '',
             name: map['name'] as String,
-            isFavorite: false,
+            isFavorite: map['isFavorite'] as bool? ?? false,
             playCount: 0,
             isAudiobook: false,
             isPlayed: false,

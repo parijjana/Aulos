@@ -33,9 +33,21 @@ class LibraryCategoryList extends StatelessWidget with LibraryUtilsMixin {
         final item = items[index];
         return ListTile(
           leading: LibraryArtWidget(item: item, viewModel: viewModel, size: 40),
-          title: Text(
-            getCategoryName(item),
-            style: TextStyle(color: onSurface),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  getCategoryName(item),
+                  style: TextStyle(color: onSurface),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if ((item is Artist && item.isFavorite) || (item is Album && item.isFavorite)) ...[
+                const SizedBox(width: 6),
+                const Icon(Icons.favorite, color: Colors.redAccent, size: 14),
+              ],
+            ],
           ),
           subtitle: getCategorySubtitle(item, theme),
           trailing: Row(

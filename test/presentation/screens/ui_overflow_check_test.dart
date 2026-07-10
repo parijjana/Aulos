@@ -29,10 +29,12 @@ import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:drift/native.dart';
+import 'package:aulos/presentation/viewmodels/storage_cache_view_model.dart';
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}
 class MockDisplayViewModel extends Mock implements DisplayViewModel {}
 class MockConnectivityViewModel extends Mock implements ConnectivityViewModel {}
+class MockStorageCacheViewModel extends Mock implements StorageCacheViewModel {}
 class MockSettingsViewModel extends Mock implements SettingsViewModel {}
 class MockLibraryViewModel extends Mock implements LibraryViewModel {}
 class MockIndexerService extends Mock implements LibraryIndexerService {}
@@ -62,6 +64,7 @@ void main() {
   late RadioDatabase radioDb;
   late InsightsViewModel insightsVM;
   late MockNoiseViewModel noiseVM;
+  late MockStorageCacheViewModel storageCacheVM;
 
   setUpAll(() {
     registerFallbackValue(domain.PlaybackState.idle);
@@ -86,6 +89,14 @@ void main() {
     radioDb = RadioDatabase.testing(NativeDatabase.memory());
     insightsVM = InsightsViewModel(db: db, podcastDb: podcastDb, radioDb: radioDb);
     noiseVM = MockNoiseViewModel();
+    storageCacheVM = MockStorageCacheViewModel();
+
+    when(() => storageCacheVM.podcastSize).thenReturn(1024);
+    when(() => storageCacheVM.audiobookSize).thenReturn(2048);
+    when(() => storageCacheVM.totalSize).thenReturn(3072);
+    when(() => storageCacheVM.isLoading).thenReturn(false);
+    when(() => storageCacheVM.addListener(any())).thenReturn(null);
+    when(() => storageCacheVM.removeListener(any())).thenReturn(null);
 
     when(() => playerVM.isPlaying).thenReturn(false);
     when(() => playerVM.isShuffle).thenReturn(false);
@@ -153,6 +164,7 @@ void main() {
 
     when(() => libraryVM.isAtRoot).thenReturn(true);
     when(() => libraryVM.isLoading).thenReturn(false);
+    when(() => libraryVM.showFavoritesOnly).thenReturn(false);
     when(() => libraryVM.mode).thenReturn(LibraryMode.folders);
     when(() => libraryVM.lastMusicMode).thenReturn(LibraryMode.folders);
     when(() => libraryVM.isAtRootFor(any())).thenReturn(true);
@@ -167,6 +179,10 @@ void main() {
     when(() => libraryVM.years).thenReturn([]);
     when(() => libraryVM.playlists).thenReturn([]);
     when(() => libraryVM.books).thenReturn([]);
+    when(() => libraryVM.tempShowHome).thenReturn(false);
+    when(() => libraryVM.tempShowHomeFor(any())).thenReturn(false);
+    when(() => libraryVM.navStack).thenReturn([]);
+    when(() => libraryVM.stateFor(any())).thenReturn(LibraryNavigationState());
     when(() => libraryVM.addListener(any())).thenReturn(null);
     when(() => libraryVM.removeListener(any())).thenReturn(null);
 
@@ -179,6 +195,7 @@ void main() {
     when(() => indexerService.addListener(any())).thenReturn(null);
     when(() => indexerService.removeListener(any())).thenReturn(null);
 
+    when(() => podcastVM.tempShowHome).thenReturn(false);
     when(() => podcastVM.isLoading).thenReturn(false);
     when(() => podcastVM.podcasts).thenReturn([]);
     when(() => podcastVM.episodes).thenReturn([]);
@@ -200,6 +217,7 @@ void main() {
     when(() => radioVM.categories).thenReturn([]);
     when(() => radioVM.isLoading).thenReturn(false);
     when(() => radioVM.error).thenReturn(null);
+    when(() => radioVM.tempShowHome).thenReturn(false);
     when(() => radioVM.libraryFilter).thenReturn('ALL STATIONS');
     when(() => radioVM.isShowingHidden).thenReturn(false);
     when(() => radioVM.filteredFavorites).thenReturn([]);
@@ -251,6 +269,7 @@ void main() {
         ListenableProvider<LogService>.value(value: logService),
         ChangeNotifierProvider<InsightsViewModel>.value(value: insightsVM),
         ChangeNotifierProvider<NoiseViewModel>.value(value: noiseVM),
+        ChangeNotifierProvider<StorageCacheViewModel>.value(value: storageCacheVM),
       ],
       child: MaterialApp(home: Scaffold(body: child)),
     );

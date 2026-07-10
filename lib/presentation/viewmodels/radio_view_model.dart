@@ -37,6 +37,8 @@ class RadioViewModel extends ChangeNotifier {
   String _libraryFilter = 'ALL STATIONS';
   bool _disposed = false;
 
+  bool _tempShowHome = false;
+
   RadioViewModel({
     required RadioBrowserService api,
     required RadioDatabase db,
@@ -76,6 +78,12 @@ class RadioViewModel extends ChangeNotifier {
   String? get error => _error;
   bool get isShowingHidden => _isShowingHidden;
   String get libraryFilter => _libraryFilter;
+  bool get tempShowHome => _tempShowHome;
+
+  void setTempShowHome(bool value) {
+    _tempShowHome = value;
+    notifyListeners();
+  }
 
   List<RadioStation> get filteredFavorites {
     var list = List<RadioStation>.from(_favorites);

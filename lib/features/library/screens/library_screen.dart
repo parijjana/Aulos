@@ -73,9 +73,13 @@ class _LibraryScreenState extends State<LibraryScreen>
     }
 
     return PopScope(
-      canPop: viewModel.isAtRoot,
+      canPop: viewModel.isAtRoot && !viewModel.tempShowHome,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        if (viewModel.tempShowHome) {
+          viewModel.setTempShowHome(false);
+          return;
+        }
         if (_scrollController.hasClients) {
           viewModel.saveScrollOffset(_scrollController.offset);
         }

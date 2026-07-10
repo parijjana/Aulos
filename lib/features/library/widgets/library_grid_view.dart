@@ -32,15 +32,22 @@ class LibraryGridView extends StatelessWidget with LibraryUtilsMixin {
       builder: (context, constraints) {
         if (constraints.maxWidth <= 0) return const SizedBox.shrink();
 
-        return GridView.builder(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 220,
-            mainAxisSpacing: 24,
-            crossAxisSpacing: 24,
-            childAspectRatio: 0.85,
-          ),
+        return NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification scrollInfo) {
+            if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+              viewModel.loadMore();
+            }
+            return false;
+          },
+          child: GridView.builder(
+            controller: scrollController,
+            padding: const EdgeInsets.all(24),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 220,
+              mainAxisSpacing: 24,
+              crossAxisSpacing: 24,
+              childAspectRatio: 0.85,
+            ),
           itemCount: combined.length,
           itemBuilder: (context, index) {
             final item = combined[index];
@@ -62,6 +69,23 @@ class LibraryGridView extends StatelessWidget with LibraryUtilsMixin {
                           tag: 'cat_${getCategoryId(item)}',
                           child: LibraryArtWidget(item: item, viewModel: viewModel),
                         ),
+                        if ((item is Artist && item.isFavorite) || (item is Album && item.isFavorite))
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.black45,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Colors.redAccent,
+                                size: 14,
+                              ),
+                            ),
+                          ),
                         if (item is Album && item.isAudiobook)
                           Positioned(
                             bottom: 0,
@@ -166,7 +190,7 @@ class LibraryGridView extends StatelessWidget with LibraryUtilsMixin {
               ),
             );
           },
-        );
+        ));
       }
     );
   }

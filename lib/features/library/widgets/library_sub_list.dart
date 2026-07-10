@@ -4,6 +4,7 @@ import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 import 'library_art_widget.dart';
+import 'package:aulos/presentation/widgets/wikipedia_knowledge_dialog.dart';
 import 'library_utils_mixin.dart';
 
 class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
@@ -63,10 +64,19 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
           mainContent = _buildTrackList(combined, playerVM, onSurface);
         }
 
+        final bool isAlbum = item is Album;
+
         if (isArtist) {
           return Column(
             children: [
-              _ArtistHeader(artist: item),
+              _ArtistHeader(artist: item, viewModel: viewModel),
+              Expanded(child: mainContent),
+            ],
+          );
+        } else if (isAlbum) {
+          return Column(
+            children: [
+              _AlbumHeader(album: item, viewModel: viewModel),
               Expanded(child: mainContent),
             ],
           );
@@ -151,7 +161,8 @@ class LibrarySubList extends StatelessWidget with LibraryUtilsMixin {
 
 class _ArtistHeader extends StatefulWidget {
   final Artist artist;
-  const _ArtistHeader({required this.artist});
+  final LibraryViewModel viewModel;
+  const _ArtistHeader({required this.artist, required this.viewModel});
 
   @override
   State<_ArtistHeader> createState() => _ArtistHeaderState();
@@ -204,13 +215,41 @@ class _ArtistHeaderState extends State<_ArtistHeader> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.artist.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.artist.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        widget.artist.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: widget.artist.isFavorite ? Colors.redAccent : theme.colorScheme.primary,
+                      ),
+                      onPressed: () => widget.viewModel.toggleArtistFavorite(widget.artist.id),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.info_outline_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        WikipediaKnowledgeDialog.show(
+                          context,
+                          widget.artist.name,
+                          subtitle: 'Artist Wiki',
+                          fallbackIcon: Icons.person_rounded,
+                        );
+                      },
+                      tooltip: 'Wikipedia Bio',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 if (bio != null && bio.isNotEmpty) ...[
@@ -256,6 +295,89 @@ class _ArtistHeaderState extends State<_ArtistHeader> {
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlbumHeader extends StatelessWidget {
+  final Album album;
+  final LibraryViewModel viewModel;
+  const _AlbumHeader({required this.album, required this.viewModel});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+          ],
+        ),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 80,
+              height: 80,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+              child: album.coverArt != null
+                  ? Image.memory(album.coverArt!, fit: BoxFit.cover)
+                  : Icon(Icons.album_rounded, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        album.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        album.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: album.isFavorite ? Colors.redAccent : theme.colorScheme.primary,
+                      ),
+                      onPressed: () => viewModel.toggleAlbumFavorite(album.id),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  album.isAudiobook ? 'Audiobook' : 'Music Album',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
               ],
             ),
           ),

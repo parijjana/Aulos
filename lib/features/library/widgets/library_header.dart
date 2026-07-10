@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'smart_playlist_builder_dialog.dart';
+import 'library_expandable_search.dart';
 
 class LibraryHeader extends StatefulWidget {
   final LibraryViewModel viewModel;
@@ -47,14 +48,7 @@ class _LibraryHeaderState extends State<LibraryHeader> {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          // 1. Back Button or Breadcrumb
-          if (!widget.viewModel.isAtRoot)
-            IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: theme.colorScheme.primary, size: 16),
-              onPressed: widget.viewModel.goBack,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
+
           
           // Primary Nav (Always LIBRARY in music)
           _buildNavButton('YOUR LIBRARY', true, theme),
@@ -62,6 +56,16 @@ class _LibraryHeaderState extends State<LibraryHeader> {
           const Spacer(),
           
           if (settingsVM != null) _ViewModeSelector(settingsVM: settingsVM),
+          
+          IconButton(
+            icon: Icon(
+              widget.viewModel.showFavoritesOnly ? Icons.favorite : Icons.favorite_border,
+              color: widget.viewModel.showFavoritesOnly ? Colors.redAccent : theme.colorScheme.primary,
+              size: 20,
+            ),
+            onPressed: () => widget.viewModel.setShowFavoritesOnly(!widget.viewModel.showFavoritesOnly),
+            tooltip: 'Filter Favorites',
+          ),
           
           if (widget.viewModel.mode == LibraryMode.playlists && widget.viewModel.isAtRoot)
             IconButton(
@@ -140,7 +144,7 @@ class _LibraryHeaderState extends State<LibraryHeader> {
             ),
             
             // 2. Expandable Search
-            _ExpandableSearch(viewModel: widget.viewModel),
+            LibraryExpandableSearch(viewModel: widget.viewModel),
             
             if (!widget.viewModel.isAtRoot)
               TextButton.icon(
@@ -187,85 +191,7 @@ class _LibraryHeaderState extends State<LibraryHeader> {
   }
 }
 
-class _ExpandableSearch extends StatefulWidget {
-  final LibraryViewModel viewModel;
-  const _ExpandableSearch({required this.viewModel});
 
-  @override
-  State<_ExpandableSearch> createState() => _ExpandableSearchState();
-}
-
-class _ExpandableSearchState extends State<_ExpandableSearch> {
-  bool _expanded = false;
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final double targetWidth = _expanded
-        ? (screenWidth < 380 ? 120 : 200)
-        : 40;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: targetWidth,
-      height: 36,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              setState(() => _expanded = !_expanded);
-              if (!_expanded) {
-                _controller.clear();
-                widget.viewModel.setSearchQuery('');
-              } else {
-                _focusNode.requestFocus();
-              }
-            },
-            child: SizedBox(
-              width: 40,
-              height: 36,
-              child: Icon(
-                Icons.search,
-                size: 18,
-                color: _expanded ? theme.colorScheme.primary : null,
-              ),
-            ),
-          ),
-          if (_expanded)
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                decoration: const InputDecoration(
-                  hintText: 'Search library...',
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                style: const TextStyle(fontSize: 13),
-                onChanged: (val) => widget.viewModel.setSearchQuery(val),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 class _ViewModeSelector extends StatelessWidget {
   final settings.SettingsViewModel settingsVM;

@@ -59,6 +59,7 @@ class PodcastViewModel extends ChangeNotifier {
   Map<String, dynamic>? _activeDiscoveryDetail;
   podcast_db.Podcast? _activePodcast;
   String _libraryFilter = 'ALL SHOWS';
+  bool _tempShowHome = false;
 
   PodcastViewModel({
     required PodcastService podcastService,
@@ -76,15 +77,13 @@ class PodcastViewModel extends ChangeNotifier {
        _settingsVM = settingsVM,
        _logService = logService ?? NoOpLogService() {
     log('PODCAST_VM: Initializing...');
-    _libraryFilter = 'ALL SHOWS'; // RESET FILTER ON BOOT
+    _libraryFilter = 'ALL SHOWS';
     unawaited(loadPodcasts());
     unawaited(_syncManager.triggerInitialSync());
-    
     _downloadSub = _downloadService.progressStream.listen((progress) {
       _downloadProgress = progress;
       notifyListeners();
     });
-
     _syncManager.addListener(notifyListeners);
   }
 
@@ -105,6 +104,12 @@ class PodcastViewModel extends ChangeNotifier {
   Map<String, dynamic>? get activeDiscoveryDetail => _activeDiscoveryDetail;
   podcast_db.Podcast? get activePodcast => _activePodcast;
   String get libraryFilter => _libraryFilter;
+  bool get tempShowHome => _tempShowHome;
+
+  void setTempShowHome(bool show) {
+    _tempShowHome = show;
+    notifyListeners();
+  }
 
   List<podcast_db.Podcast> get filteredPodcasts {
     var list = List<podcast_db.Podcast>.from(_podcasts);
@@ -140,6 +145,7 @@ class PodcastViewModel extends ChangeNotifier {
 
   void setActivePodcast(podcast_db.Podcast? podcast) {
     _activePodcast = podcast;
+    _tempShowHome = false;
     notifyListeners();
   }
 
@@ -160,9 +166,7 @@ class PodcastViewModel extends ChangeNotifier {
     }
   }
 
-  /// Sets up a real-time watch for a specific category shelf with a dynamic limit.
   void watchCategory(String catId, {int limit = 10}) {
-    // If limit hasn't changed and we already have a sub, do nothing
     if (_categoryLimits[catId] == limit && _categorySubs.containsKey(catId)) return;
 
     _categoryLimits[catId] = limit;
@@ -509,7 +513,6 @@ class PodcastViewModel extends ChangeNotifier {
     try {
       String? newPath = episode.localFilePath;
       
-      // Physically move the file if it exists
       final localFilePath = episode.localFilePath;
       if (episode.downloadState == 2 && localFilePath != null) {
         final storage = _settingsVM.podcastStorageLocation;
@@ -524,16 +527,13 @@ class PodcastViewModel extends ChangeNotifier {
             final podcastName = _sanitize(podcast.title);
 
             if (!episode.isPinned) {
-              // PINNING: Move to favorites
               final targetPath = p.join(favoritesDir.path, '${podcastName}_$fileName');
               await file.rename(targetPath);
               newPath = targetPath;
             } else {
-              // UNPINNING: Move back to podcast-specific folder
               final podDir = Directory(p.join(storage, podcastName));
               if (!podDir.existsSync()) await podDir.create(recursive: true);
               
-              // Remove the podcast prefix if we added it
               final cleanName = fileName.replaceFirst('${podcastName}_', '');
               final targetPath = p.join(podDir.path, cleanName);
               await file.rename(targetPath);
@@ -582,8 +582,6 @@ class PodcastViewModel extends ChangeNotifier {
   }
 
   Future<void> loadPodcastDetails(String iTunesId, String? feedUrl) async {
-    // Note: We don't set _isLoading here because syncManager has its own state
-    // and we want the UI to show partial data from DB immediately.
     unawaited(_syncManager.syncPodcastDetails(iTunesId, feedUrl));
   }
 

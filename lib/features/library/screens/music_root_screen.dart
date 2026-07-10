@@ -38,34 +38,82 @@ class _MusicRootScreenState extends State<MusicRootScreen> with AutomaticKeepAli
     super.build(context);
     final libraryVM = context.watch<LibraryViewModel>();
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          _buildUnifiedHeader(libraryVM),
-          const SizedBox(height: 16),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) => setState(() => _activeTab = index),
-              children: const [
-                MusicLibraryView(),
-                JamendoDiscoverView(),
-              ],
+    final bool musicStackNotEmpty = libraryVM.navStack.isNotEmpty;
+    final bool musicTempShowHome = libraryVM.tempShowHome;
+
+    return PopScope(
+      canPop: !musicStackNotEmpty && !musicTempShowHome,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (musicTempShowHome) {
+          libraryVM.setTempShowHome(false);
+          return;
+        }
+        libraryVM.goBack();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            const SizedBox(height: 16),
+            _buildUnifiedHeader(libraryVM),
+            const SizedBox(height: 16),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) => setState(() => _activeTab = index),
+                children: const [
+                  MusicLibraryView(),
+                  JamendoDiscoverView(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildUnifiedHeader(LibraryViewModel vm) {
     final theme = Theme.of(context);
+    final bool musicStackNotEmpty = vm.navStack.isNotEmpty;
+    final bool musicTempShowHome = vm.tempShowHome;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
+          if (musicStackNotEmpty) ...[
+            IconButton(
+              icon: Icon(Icons.arrow_back_ios, color: theme.colorScheme.primary, size: 16),
+              onPressed: () {
+                if (musicTempShowHome) {
+                  vm.setTempShowHome(false);
+                } else {
+                  vm.goBack();
+                }
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+          ],
+          IconButton(
+            icon: Icon(
+              musicTempShowHome ? Icons.home : Icons.home_outlined,
+              color: musicTempShowHome
+                  ? theme.colorScheme.primary
+                  : (!musicStackNotEmpty
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                      : theme.colorScheme.primary),
+              size: 20,
+            ),
+            onPressed: !musicStackNotEmpty
+                ? null
+                : () => vm.setTempShowHome(!musicTempShowHome),
+            tooltip: 'Home View',
+          ),
+          const SizedBox(width: 12),
           _buildNavButton('LIBRARY', 0, _activeTab == 0, theme),
           const SizedBox(width: 8),
           _buildNavButton('DISCOVER', 1, _activeTab == 1, theme),
