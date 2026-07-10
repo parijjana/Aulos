@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'radio_station_list_updater.dart';
 
 class RadioViewModel extends ChangeNotifier {
   final RadioBrowserService _api;
@@ -259,23 +260,7 @@ class RadioViewModel extends ChangeNotifier {
   }
 
   void _updateInMemoryStation(String uuid, bool available) {
-    final now = DateTime.now();
-    
-    final bIndex = _browseResults.indexWhere((s) => s.stationUuid == uuid);
-    if (bIndex != -1) {
-      _browseResults[bIndex] = _browseResults[bIndex].copyWith(
-        isAvailable: available,
-        lastCheck: Value(now),
-      );
-    }
-    
-    final sIndex = _searchResults.indexWhere((s) => s.stationUuid == uuid);
-    if (sIndex != -1) {
-      _searchResults[sIndex] = _searchResults[sIndex].copyWith(
-        isAvailable: available,
-        lastCheck: Value(now),
-      );
-    }
+    RadioStationListUpdater.updateAvailability(_browseResults, _searchResults, uuid, available);
   }
 
   Future<void> toggleHidden(RadioStation station) async {
@@ -440,57 +425,21 @@ class RadioViewModel extends ChangeNotifier {
   }
 
   void _updateStationFavoriteState(String uuid, bool isFavorite) {
-    bool changed = false;
-    for (int i = 0; i < _browseResults.length; i++) {
-      if (_browseResults[i].stationUuid == uuid) {
-        _browseResults[i] = _browseResults[i].copyWith(isFavorite: isFavorite);
-        changed = true;
-      }
-    }
-    for (int i = 0; i < _searchResults.length; i++) {
-      if (_searchResults[i].stationUuid == uuid) {
-        _searchResults[i] = _searchResults[i].copyWith(isFavorite: isFavorite);
-        changed = true;
-      }
-    }
+    final changed = RadioStationListUpdater.updateFavorite(_browseResults, _searchResults, uuid, isFavorite);
     if (changed) {
       notifyListeners();
     }
   }
 
   void _updateStationPinState(String uuid, bool isPinned) {
-    bool changed = false;
-    for (int i = 0; i < _browseResults.length; i++) {
-      if (_browseResults[i].stationUuid == uuid) {
-        _browseResults[i] = _browseResults[i].copyWith(isPinned: isPinned);
-        changed = true;
-      }
-    }
-    for (int i = 0; i < _searchResults.length; i++) {
-      if (_searchResults[i].stationUuid == uuid) {
-        _searchResults[i] = _searchResults[i].copyWith(isPinned: isPinned);
-        changed = true;
-      }
-    }
+    final changed = RadioStationListUpdater.updatePinned(_browseResults, _searchResults, uuid, isPinned);
     if (changed) {
       notifyListeners();
     }
   }
 
   void _updateStationHiddenState(String uuid, bool isHidden) {
-    bool changed = false;
-    for (int i = 0; i < _browseResults.length; i++) {
-      if (_browseResults[i].stationUuid == uuid) {
-        _browseResults[i] = _browseResults[i].copyWith(isHidden: isHidden);
-        changed = true;
-      }
-    }
-    for (int i = 0; i < _searchResults.length; i++) {
-      if (_searchResults[i].stationUuid == uuid) {
-        _searchResults[i] = _searchResults[i].copyWith(isHidden: isHidden);
-        changed = true;
-      }
-    }
+    final changed = RadioStationListUpdater.updateHidden(_browseResults, _searchResults, uuid, isHidden);
     if (changed) {
       notifyListeners();
     }
