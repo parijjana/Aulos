@@ -1,11 +1,11 @@
 ## About
-A high-performance, offline-first local audio player designed for focus and architectural elegance. It serves as a unified hub for Music, Podcasts, Audiobooks, and Radio.
+A high-performance, offline-first local audio player designed for focus and architectural elegance. It serves as a unified hub for Music, Podcasts, Audiobooks, Internet Radio, and Ambient Noise.
 
 ## Stack
-Flutter, Dart, Just_Audio, Drift
+Flutter, Dart, Just_Audio, Audio_Service, Drift, Provider, XXH3, themer_sdk, media_fetcher, qr_secure_handshake
 
 ## GitHub
-https://github.com/parijjana/AULOS
+https://github.com/parijjana/Aulos
 
 ## Philosophy
 Built with "Overengineered" quality at its heart, Aulos features a completely decoupled architecture where the Domain layer depends on nothing.
@@ -39,5 +39,7 @@ Data Layer (Drift / Services)
 - [ ] **Jamendo Music Integration:** High-quality royalty-free music streaming and discovery (Core implemented, UI currently parked).
 - [x] 2026-07-04: **Advanced Smart Playlists:** Rule-based automated queue generation (ratings and metadata-driven).
 - [ ] **Deep Metadata Enrichment:** Extended integration with MusicBrainz and Wikimedia for rich artist biographies and high-res covers.
-- [ ] **Wikipedia Knowledge Integration:** Structured information display for artists, authors, podcast hosts/guests, and radio station history.
+- [x] 2026-07-07: **Wikipedia Knowledge Integration:** Structured Wikipedia knowledge panels for artists, authors, podcast hosts, and radio stations with offline SQLite caching.
+- [x] 2026-07-08: **Storage Cache Manager:** Disk usage viewer and cache pruning UI for audiobook downloads and podcast episodes.
+- [x] 2026-07-09: **Performance Architecture:** Cover art filesystem offloading (localArtPath), OOM mitigation for large libraries, and a benchmarking utility.
 - [ ] **Visualizer Expansion:** Additional pluggable visualizer painters and theme-reactive coloring.

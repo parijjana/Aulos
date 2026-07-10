@@ -1,5 +1,5 @@
 name: aulos
-description: "A new Flutter project."
+description: "Aulos — an offline-first, multi-domain local audio player for Music, Podcasts, Audiobooks, Radio, and Ambient Noise."
 publish_to: 'none'
 
 version: 1.0.0+1

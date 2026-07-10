@@ -62,3 +62,15 @@ gate_summary.md
 /.antigravitycli/
 /scratch/
 /screenshots/*.png
+
+# Scratch output files (agent-generated, never commit)
+analyze_output*.txt
+test_output*.txt
+
+# UX tool database
+design_rules.db
+
+# Lore/AI operational scripts (live in scripts/, root copies are transient)
+check_health.py
+push_lessons.py
+synthesize_lessons.py
