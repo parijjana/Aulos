@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/presentation/widgets/wikipedia_knowledge_dialog.dart';
 
 class RadioStationInfoDrawer extends StatelessWidget {
   final RadioStation station;
@@ -68,6 +69,25 @@ class RadioStationInfoDrawer extends StatelessWidget {
               Expanded(
                 child: ListView(
                   children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        WikipediaKnowledgeDialog.show(
+                          context,
+                          station.name,
+                          subtitle: 'Radio Station Wiki',
+                          fallbackIcon: Icons.radio_rounded,
+                        );
+                      },
+                      icon: const Icon(Icons.history_edu_rounded, size: 16),
+                      label: const Text('SEARCH STATION HISTORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        foregroundColor: theme.colorScheme.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     _buildInfoRow(context, 'Stream URL', station.url, isUrl: true),
                     if (station.homepage != null && station.homepage!.isNotEmpty)
                       _buildInfoRow(context, 'Homepage', station.homepage!, isUrl: true),

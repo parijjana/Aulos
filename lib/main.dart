@@ -39,10 +39,12 @@ import 'package:aulos/data/database/audiobook_database.dart';
 import 'package:aulos/data/database/playback_database.dart';
 import 'package:aulos/data/database/noise_database.dart';
 import 'package:aulos/data/database/radio_database.dart';
+import 'package:aulos/data/database/discovery_database.dart';
 import 'package:aulos/data/database/migration_worker.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/core/network/rate_limit_dispatcher.dart';
 import 'package:aulos/data/library/providers/audnexus_service.dart';
+import 'package:aulos/data/library/providers/wikipedia_service.dart';
 import 'package:aulos/data/library/librivox_service.dart';
 import 'package:aulos/presentation/viewmodels/librivox_view_model.dart';
 import 'package:aulos/data/library/jamendo_service.dart';
@@ -50,6 +52,9 @@ import 'package:aulos/presentation/viewmodels/jamendo_view_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:aulos/data/library/librivox_book_downloader.dart';
 import 'package:aulos/data/library/jamendo_track_downloader.dart';
+import 'package:aulos/data/library/storage_manager_service.dart';
+import 'package:aulos/presentation/viewmodels/storage_cache_view_model.dart';
+
 
 import 'package:aulos/data/network/nsd_discovery_service.dart';
 import 'package:aulos/data/network/websocket_service.dart';
@@ -132,6 +137,7 @@ void main() async {
   final playbackDb = PlaybackDatabase(dbPath);
   final noiseDb = NoiseDatabase(dbPath);
   final radioDb = RadioDatabase(dbPath);
+  final discoveryDb = DiscoveryDatabase(dbPath);
 
   final migrationCompleted = prefs.getBool('database_migration_completed') ?? false;
   if (!migrationCompleted) {
@@ -182,6 +188,7 @@ void main() async {
   final audnexusService = AudnexusService(logService: logService, rateLimiter: rateLimitDispatcher);
   final librivoxService = LibriVoxService(logService: logService, rateLimiter: rateLimitDispatcher);
   final jamendoService = JamendoService(logService: logService, rateLimiter: rateLimitDispatcher);
+  final wikipediaService = WikipediaService(logService: logService, rateLimiter: rateLimitDispatcher, db: discoveryDb);
 
   final libraryIndexerService = LibraryIndexerService(
     db: database,
@@ -298,6 +305,12 @@ void main() async {
     radioDb: radioDb,
   );
 
+  final storageManagerService = StorageManagerService(
+    settingsVM: settingsViewModel,
+    audiobookDb: audiobookDb,
+  );
+  final storageCacheViewModel = StorageCacheViewModel(storageManagerService);
+
   runApp(
     MultiProvider(
       providers: [
@@ -309,6 +322,7 @@ void main() async {
         Provider<PlaybackDatabase>.value(value: playbackDb),
         Provider<NoiseDatabase>.value(value: noiseDb),
         Provider<RadioDatabase>.value(value: radioDb),
+        Provider<DiscoveryDatabase>.value(value: discoveryDb),
         ChangeNotifierProvider<DiscoverySyncManager>.value(value: syncManager),
         Provider<PodcastStorageManager>.value(value: storageManager),
         Provider<PersistentLibraryService>.value(value: persistentLibrary),
@@ -316,6 +330,7 @@ void main() async {
         Provider<PodcastService>.value(value: podcastService),
         Provider<AmbientMixerService>.value(value: ambientMixerService),
         Provider<AudnexusService>.value(value: audnexusService),
+        Provider<WikipediaService>.value(value: wikipediaService),
         ChangeNotifierProvider.value(value: playerViewModel),
         ChangeNotifierProvider.value(value: libraryViewModel),
         ChangeNotifierProvider.value(value: queueViewModel),
@@ -331,6 +346,8 @@ void main() async {
         ChangeNotifierProvider.value(value: librivoxViewModel),
         ChangeNotifierProvider.value(value: jamendoViewModel),
         ChangeNotifierProvider.value(value: moodViewModel),
+        Provider<StorageManagerService>.value(value: storageManagerService),
+        ChangeNotifierProvider<StorageCacheViewModel>.value(value: storageCacheViewModel),
       ],
       child: const AulosApp(),
     ),

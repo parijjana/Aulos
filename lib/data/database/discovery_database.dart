@@ -40,12 +40,31 @@ class DiscoveryLogs extends Table {
   TextColumn get status => text()(); // e.g., 'success', 'failed'
 }
 
-@DriftDatabase(tables: [DiscoveredPodcasts, DiscoveredEpisodes, DiscoveryCategoryRelations, DiscoveryLogs])
+@DataClassName('WikipediaSummaryRow')
+class WikipediaSummaries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get cacheKey => text().unique()();
+  TextColumn get query => text()();
+  TextColumn get title => text()();
+  TextColumn get extract => text()();
+  TextColumn get thumbnailUrl => text().nullable()();
+  TextColumn get pageUrl => text().nullable()();
+  DateTimeColumn get cachedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DriftDatabase(tables: [
+  DiscoveredPodcasts,
+  DiscoveredEpisodes,
+  DiscoveryCategoryRelations,
+  DiscoveryLogs,
+  WikipediaSummaries,
+])
 class DiscoveryDatabase extends _$DiscoveryDatabase {
-  DiscoveryDatabase() : super(_openConnection());
+  DiscoveryDatabase([String? basePath]) : super(_openConnection(basePath));
+  DiscoveryDatabase.testing(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -61,6 +80,9 @@ class DiscoveryDatabase extends _$DiscoveryDatabase {
         await m.createTable(discoveredEpisodes);
         await m.createTable(discoveryCategoryRelations);
         await m.createTable(discoveryLogs);
+      }
+      if (from < 6) {
+        await m.createTable(wikipediaSummaries);
       }
     },
   );
@@ -167,12 +189,20 @@ class DiscoveryDatabase extends _$DiscoveryDatabase {
       ),
     );
   }
+
+  Future<WikipediaSummaryRow?> getWikipediaSummary(String cacheKey) {
+    return (select(wikipediaSummaries)..where((t) => t.cacheKey.equals(cacheKey))).getSingleOrNull();
+  }
+
+  Future<void> insertWikipediaSummary(WikipediaSummariesCompanion summary) async {
+    await into(wikipediaSummaries).insert(summary, mode: InsertMode.insertOrReplace);
+  }
 }
 
-LazyDatabase _openConnection() {
+LazyDatabase _openConnection(String? basePath) {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'discovery.sqlite'));
+    final path = basePath ?? (await getApplicationSupportDirectory()).path;
+    final file = File(p.join(path, 'discovery.sqlite'));
     return NativeDatabase(file);
   });
 }

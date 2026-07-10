@@ -4,6 +4,7 @@ import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/screens/widgets/html_text.dart';
 import 'package:aulos/presentation/screens/widgets/bookmarks_view.dart';
 import 'package:provider/provider.dart';
+import 'package:aulos/presentation/widgets/wikipedia_knowledge_dialog.dart';
 import 'package:intl/intl.dart';
 
 class PodcastNotesPane extends StatelessWidget {
@@ -63,7 +64,29 @@ class PodcastNotesPane extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(ep.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.2)),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(ep.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.2)),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.info_outline_rounded, size: 20),
+                            onPressed: () {
+                              WikipediaKnowledgeDialog.show(
+                                context,
+                                ep.title,
+                                subtitle: 'Episode/Topic Wiki',
+                                fallbackIcon: Icons.podcasts_rounded,
+                              );
+                            },
+                            tooltip: 'Lookup Topic on Wikipedia',
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         ep.pubDate != null ? DateFormat.yMMMd().format(ep.pubDate!) : 'Unknown Date',

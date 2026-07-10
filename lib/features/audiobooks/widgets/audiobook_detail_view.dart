@@ -6,6 +6,7 @@ import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:provider/provider.dart';
 import 'audiobook_clips_pane.dart';
+import 'package:aulos/presentation/widgets/wikipedia_knowledge_dialog.dart';
 
 class AudiobookDetailView extends StatefulWidget {
   final Album book;
@@ -185,14 +186,55 @@ class _AudiobookInfoPane extends StatelessWidget {
           if (book.subtitle != null && book.subtitle!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                book.subtitle!,
-                style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      book.subtitle!,
+                      style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.info_outline_rounded, size: 16),
+                    onPressed: () {
+                      WikipediaKnowledgeDialog.show(
+                        context,
+                        book.subtitle!,
+                        subtitle: 'Author Wiki',
+                        fallbackIcon: Icons.menu_book_rounded,
+                      );
+                    },
+                    tooltip: 'Wikipedia Author Info',
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
               ),
             ),
-          Text(
-            'BY ${book.narrator ?? "UNKNOWN NARRATOR"}',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'BY ${book.narrator ?? "UNKNOWN NARRATOR"}',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                ),
+              ),
+              if (book.narrator != null)
+                IconButton(
+                  icon: const Icon(Icons.info_outline_rounded, size: 16),
+                  onPressed: () {
+                    WikipediaKnowledgeDialog.show(
+                      context,
+                      book.narrator!,
+                      subtitle: 'Narrator Wiki',
+                      fallbackIcon: Icons.record_voice_over_rounded,
+                    );
+                  },
+                  tooltip: 'Wikipedia Narrator Info',
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+            ],
           ),
           if (book.seriesName != null)
             Padding(

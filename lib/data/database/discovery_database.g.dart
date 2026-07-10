@@ -1397,6 +1397,511 @@ class DiscoveryLogsCompanion extends UpdateCompanion<DiscoveryLog> {
   }
 }
 
+class $WikipediaSummariesTable extends WikipediaSummaries
+    with TableInfo<$WikipediaSummariesTable, WikipediaSummaryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WikipediaSummariesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _cacheKeyMeta = const VerificationMeta(
+    'cacheKey',
+  );
+  @override
+  late final GeneratedColumn<String> cacheKey = GeneratedColumn<String>(
+    'cache_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _queryMeta = const VerificationMeta('query');
+  @override
+  late final GeneratedColumn<String> query = GeneratedColumn<String>(
+    'query',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _extractMeta = const VerificationMeta(
+    'extract',
+  );
+  @override
+  late final GeneratedColumn<String> extract = GeneratedColumn<String>(
+    'extract',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _thumbnailUrlMeta = const VerificationMeta(
+    'thumbnailUrl',
+  );
+  @override
+  late final GeneratedColumn<String> thumbnailUrl = GeneratedColumn<String>(
+    'thumbnail_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pageUrlMeta = const VerificationMeta(
+    'pageUrl',
+  );
+  @override
+  late final GeneratedColumn<String> pageUrl = GeneratedColumn<String>(
+    'page_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    cacheKey,
+    query,
+    title,
+    extract,
+    thumbnailUrl,
+    pageUrl,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'wikipedia_summaries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WikipediaSummaryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('cache_key')) {
+      context.handle(
+        _cacheKeyMeta,
+        cacheKey.isAcceptableOrUnknown(data['cache_key']!, _cacheKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cacheKeyMeta);
+    }
+    if (data.containsKey('query')) {
+      context.handle(
+        _queryMeta,
+        query.isAcceptableOrUnknown(data['query']!, _queryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_queryMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('extract')) {
+      context.handle(
+        _extractMeta,
+        extract.isAcceptableOrUnknown(data['extract']!, _extractMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_extractMeta);
+    }
+    if (data.containsKey('thumbnail_url')) {
+      context.handle(
+        _thumbnailUrlMeta,
+        thumbnailUrl.isAcceptableOrUnknown(
+          data['thumbnail_url']!,
+          _thumbnailUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('page_url')) {
+      context.handle(
+        _pageUrlMeta,
+        pageUrl.isAcceptableOrUnknown(data['page_url']!, _pageUrlMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WikipediaSummaryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WikipediaSummaryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      cacheKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cache_key'],
+      )!,
+      query: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}query'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      extract: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}extract'],
+      )!,
+      thumbnailUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thumbnail_url'],
+      ),
+      pageUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}page_url'],
+      ),
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WikipediaSummariesTable createAlias(String alias) {
+    return $WikipediaSummariesTable(attachedDatabase, alias);
+  }
+}
+
+class WikipediaSummaryRow extends DataClass
+    implements Insertable<WikipediaSummaryRow> {
+  final int id;
+  final String cacheKey;
+  final String query;
+  final String title;
+  final String extract;
+  final String? thumbnailUrl;
+  final String? pageUrl;
+  final DateTime cachedAt;
+  const WikipediaSummaryRow({
+    required this.id,
+    required this.cacheKey,
+    required this.query,
+    required this.title,
+    required this.extract,
+    this.thumbnailUrl,
+    this.pageUrl,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['cache_key'] = Variable<String>(cacheKey);
+    map['query'] = Variable<String>(query);
+    map['title'] = Variable<String>(title);
+    map['extract'] = Variable<String>(extract);
+    if (!nullToAbsent || thumbnailUrl != null) {
+      map['thumbnail_url'] = Variable<String>(thumbnailUrl);
+    }
+    if (!nullToAbsent || pageUrl != null) {
+      map['page_url'] = Variable<String>(pageUrl);
+    }
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  WikipediaSummariesCompanion toCompanion(bool nullToAbsent) {
+    return WikipediaSummariesCompanion(
+      id: Value(id),
+      cacheKey: Value(cacheKey),
+      query: Value(query),
+      title: Value(title),
+      extract: Value(extract),
+      thumbnailUrl: thumbnailUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(thumbnailUrl),
+      pageUrl: pageUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pageUrl),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory WikipediaSummaryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WikipediaSummaryRow(
+      id: serializer.fromJson<int>(json['id']),
+      cacheKey: serializer.fromJson<String>(json['cacheKey']),
+      query: serializer.fromJson<String>(json['query']),
+      title: serializer.fromJson<String>(json['title']),
+      extract: serializer.fromJson<String>(json['extract']),
+      thumbnailUrl: serializer.fromJson<String?>(json['thumbnailUrl']),
+      pageUrl: serializer.fromJson<String?>(json['pageUrl']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'cacheKey': serializer.toJson<String>(cacheKey),
+      'query': serializer.toJson<String>(query),
+      'title': serializer.toJson<String>(title),
+      'extract': serializer.toJson<String>(extract),
+      'thumbnailUrl': serializer.toJson<String?>(thumbnailUrl),
+      'pageUrl': serializer.toJson<String?>(pageUrl),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  WikipediaSummaryRow copyWith({
+    int? id,
+    String? cacheKey,
+    String? query,
+    String? title,
+    String? extract,
+    Value<String?> thumbnailUrl = const Value.absent(),
+    Value<String?> pageUrl = const Value.absent(),
+    DateTime? cachedAt,
+  }) => WikipediaSummaryRow(
+    id: id ?? this.id,
+    cacheKey: cacheKey ?? this.cacheKey,
+    query: query ?? this.query,
+    title: title ?? this.title,
+    extract: extract ?? this.extract,
+    thumbnailUrl: thumbnailUrl.present ? thumbnailUrl.value : this.thumbnailUrl,
+    pageUrl: pageUrl.present ? pageUrl.value : this.pageUrl,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  WikipediaSummaryRow copyWithCompanion(WikipediaSummariesCompanion data) {
+    return WikipediaSummaryRow(
+      id: data.id.present ? data.id.value : this.id,
+      cacheKey: data.cacheKey.present ? data.cacheKey.value : this.cacheKey,
+      query: data.query.present ? data.query.value : this.query,
+      title: data.title.present ? data.title.value : this.title,
+      extract: data.extract.present ? data.extract.value : this.extract,
+      thumbnailUrl: data.thumbnailUrl.present
+          ? data.thumbnailUrl.value
+          : this.thumbnailUrl,
+      pageUrl: data.pageUrl.present ? data.pageUrl.value : this.pageUrl,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WikipediaSummaryRow(')
+          ..write('id: $id, ')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('query: $query, ')
+          ..write('title: $title, ')
+          ..write('extract: $extract, ')
+          ..write('thumbnailUrl: $thumbnailUrl, ')
+          ..write('pageUrl: $pageUrl, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    cacheKey,
+    query,
+    title,
+    extract,
+    thumbnailUrl,
+    pageUrl,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WikipediaSummaryRow &&
+          other.id == this.id &&
+          other.cacheKey == this.cacheKey &&
+          other.query == this.query &&
+          other.title == this.title &&
+          other.extract == this.extract &&
+          other.thumbnailUrl == this.thumbnailUrl &&
+          other.pageUrl == this.pageUrl &&
+          other.cachedAt == this.cachedAt);
+}
+
+class WikipediaSummariesCompanion extends UpdateCompanion<WikipediaSummaryRow> {
+  final Value<int> id;
+  final Value<String> cacheKey;
+  final Value<String> query;
+  final Value<String> title;
+  final Value<String> extract;
+  final Value<String?> thumbnailUrl;
+  final Value<String?> pageUrl;
+  final Value<DateTime> cachedAt;
+  const WikipediaSummariesCompanion({
+    this.id = const Value.absent(),
+    this.cacheKey = const Value.absent(),
+    this.query = const Value.absent(),
+    this.title = const Value.absent(),
+    this.extract = const Value.absent(),
+    this.thumbnailUrl = const Value.absent(),
+    this.pageUrl = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  WikipediaSummariesCompanion.insert({
+    this.id = const Value.absent(),
+    required String cacheKey,
+    required String query,
+    required String title,
+    required String extract,
+    this.thumbnailUrl = const Value.absent(),
+    this.pageUrl = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  }) : cacheKey = Value(cacheKey),
+       query = Value(query),
+       title = Value(title),
+       extract = Value(extract);
+  static Insertable<WikipediaSummaryRow> custom({
+    Expression<int>? id,
+    Expression<String>? cacheKey,
+    Expression<String>? query,
+    Expression<String>? title,
+    Expression<String>? extract,
+    Expression<String>? thumbnailUrl,
+    Expression<String>? pageUrl,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (cacheKey != null) 'cache_key': cacheKey,
+      if (query != null) 'query': query,
+      if (title != null) 'title': title,
+      if (extract != null) 'extract': extract,
+      if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+      if (pageUrl != null) 'page_url': pageUrl,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  WikipediaSummariesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? cacheKey,
+    Value<String>? query,
+    Value<String>? title,
+    Value<String>? extract,
+    Value<String?>? thumbnailUrl,
+    Value<String?>? pageUrl,
+    Value<DateTime>? cachedAt,
+  }) {
+    return WikipediaSummariesCompanion(
+      id: id ?? this.id,
+      cacheKey: cacheKey ?? this.cacheKey,
+      query: query ?? this.query,
+      title: title ?? this.title,
+      extract: extract ?? this.extract,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      pageUrl: pageUrl ?? this.pageUrl,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (cacheKey.present) {
+      map['cache_key'] = Variable<String>(cacheKey.value);
+    }
+    if (query.present) {
+      map['query'] = Variable<String>(query.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (extract.present) {
+      map['extract'] = Variable<String>(extract.value);
+    }
+    if (thumbnailUrl.present) {
+      map['thumbnail_url'] = Variable<String>(thumbnailUrl.value);
+    }
+    if (pageUrl.present) {
+      map['page_url'] = Variable<String>(pageUrl.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WikipediaSummariesCompanion(')
+          ..write('id: $id, ')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('query: $query, ')
+          ..write('title: $title, ')
+          ..write('extract: $extract, ')
+          ..write('thumbnailUrl: $thumbnailUrl, ')
+          ..write('pageUrl: $pageUrl, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$DiscoveryDatabase extends GeneratedDatabase {
   _$DiscoveryDatabase(QueryExecutor e) : super(e);
   $DiscoveryDatabaseManager get managers => $DiscoveryDatabaseManager(this);
@@ -1407,6 +1912,8 @@ abstract class _$DiscoveryDatabase extends GeneratedDatabase {
   late final $DiscoveryCategoryRelationsTable discoveryCategoryRelations =
       $DiscoveryCategoryRelationsTable(this);
   late final $DiscoveryLogsTable discoveryLogs = $DiscoveryLogsTable(this);
+  late final $WikipediaSummariesTable wikipediaSummaries =
+      $WikipediaSummariesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1416,6 +1923,7 @@ abstract class _$DiscoveryDatabase extends GeneratedDatabase {
     discoveredEpisodes,
     discoveryCategoryRelations,
     discoveryLogs,
+    wikipediaSummaries,
   ];
 }
 
@@ -1459,10 +1967,8 @@ final class $$DiscoveredPodcastsTableReferences
   _discoveredEpisodesRefsTable(_$DiscoveryDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.discoveredEpisodes,
-        aliasName: $_aliasNameGenerator(
-          db.discoveredPodcasts.iTunesId,
-          db.discoveredEpisodes.iTunesId,
-        ),
+        aliasName:
+            'discovered_podcasts__i_tunes_id__discovered_episodes__i_tunes_id',
       );
 
   $$DiscoveredEpisodesTableProcessedTableManager get discoveredEpisodesRefs {
@@ -1488,14 +1994,13 @@ final class $$DiscoveredPodcastsTableReferences
     $DiscoveryCategoryRelationsTable,
     List<DiscoveryCategoryRelation>
   >
-  _discoveryCategoryRelationsRefsTable(_$DiscoveryDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.discoveryCategoryRelations,
-        aliasName: $_aliasNameGenerator(
-          db.discoveredPodcasts.iTunesId,
-          db.discoveryCategoryRelations.iTunesId,
-        ),
-      );
+  _discoveryCategoryRelationsRefsTable(
+    _$DiscoveryDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.discoveryCategoryRelations,
+    aliasName:
+        'discovered_podcasts__i_tunes_id__discovery_category_relations__i_tunes_id',
+  );
 
   $$DiscoveryCategoryRelationsTableProcessedTableManager
   get discoveryCategoryRelationsRefs {
@@ -1957,10 +2462,7 @@ final class $$DiscoveredEpisodesTableReferences
 
   static $DiscoveredPodcastsTable _iTunesIdTable(_$DiscoveryDatabase db) =>
       db.discoveredPodcasts.createAlias(
-        $_aliasNameGenerator(
-          db.discoveredEpisodes.iTunesId,
-          db.discoveredPodcasts.iTunesId,
-        ),
+        'discovered_episodes__i_tunes_id__discovered_podcasts__i_tunes_id',
       );
 
   $$DiscoveredPodcastsTableProcessedTableManager get iTunesId {
@@ -2284,13 +2786,11 @@ final class $$DiscoveryCategoryRelationsTableReferences
     super.$_typedResult,
   );
 
-  static $DiscoveredPodcastsTable _iTunesIdTable(_$DiscoveryDatabase db) =>
-      db.discoveredPodcasts.createAlias(
-        $_aliasNameGenerator(
-          db.discoveryCategoryRelations.iTunesId,
-          db.discoveredPodcasts.iTunesId,
-        ),
-      );
+  static $DiscoveredPodcastsTable _iTunesIdTable(
+    _$DiscoveryDatabase db,
+  ) => db.discoveredPodcasts.createAlias(
+    'discovery_category_relations__i_tunes_id__discovered_podcasts__i_tunes_id',
+  );
 
   $$DiscoveredPodcastsTableProcessedTableManager get iTunesId {
     final $_column = $_itemColumn<String>('i_tunes_id')!;
@@ -2734,6 +3234,272 @@ typedef $$DiscoveryLogsTableProcessedTableManager =
       DiscoveryLog,
       PrefetchHooks Function()
     >;
+typedef $$WikipediaSummariesTableCreateCompanionBuilder =
+    WikipediaSummariesCompanion Function({
+      Value<int> id,
+      required String cacheKey,
+      required String query,
+      required String title,
+      required String extract,
+      Value<String?> thumbnailUrl,
+      Value<String?> pageUrl,
+      Value<DateTime> cachedAt,
+    });
+typedef $$WikipediaSummariesTableUpdateCompanionBuilder =
+    WikipediaSummariesCompanion Function({
+      Value<int> id,
+      Value<String> cacheKey,
+      Value<String> query,
+      Value<String> title,
+      Value<String> extract,
+      Value<String?> thumbnailUrl,
+      Value<String?> pageUrl,
+      Value<DateTime> cachedAt,
+    });
+
+class $$WikipediaSummariesTableFilterComposer
+    extends Composer<_$DiscoveryDatabase, $WikipediaSummariesTable> {
+  $$WikipediaSummariesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cacheKey => $composableBuilder(
+    column: $table.cacheKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get query => $composableBuilder(
+    column: $table.query,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get extract => $composableBuilder(
+    column: $table.extract,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get thumbnailUrl => $composableBuilder(
+    column: $table.thumbnailUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pageUrl => $composableBuilder(
+    column: $table.pageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WikipediaSummariesTableOrderingComposer
+    extends Composer<_$DiscoveryDatabase, $WikipediaSummariesTable> {
+  $$WikipediaSummariesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cacheKey => $composableBuilder(
+    column: $table.cacheKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get query => $composableBuilder(
+    column: $table.query,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get extract => $composableBuilder(
+    column: $table.extract,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get thumbnailUrl => $composableBuilder(
+    column: $table.thumbnailUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pageUrl => $composableBuilder(
+    column: $table.pageUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WikipediaSummariesTableAnnotationComposer
+    extends Composer<_$DiscoveryDatabase, $WikipediaSummariesTable> {
+  $$WikipediaSummariesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get cacheKey =>
+      $composableBuilder(column: $table.cacheKey, builder: (column) => column);
+
+  GeneratedColumn<String> get query =>
+      $composableBuilder(column: $table.query, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get extract =>
+      $composableBuilder(column: $table.extract, builder: (column) => column);
+
+  GeneratedColumn<String> get thumbnailUrl => $composableBuilder(
+    column: $table.thumbnailUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pageUrl =>
+      $composableBuilder(column: $table.pageUrl, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$WikipediaSummariesTableTableManager
+    extends
+        RootTableManager<
+          _$DiscoveryDatabase,
+          $WikipediaSummariesTable,
+          WikipediaSummaryRow,
+          $$WikipediaSummariesTableFilterComposer,
+          $$WikipediaSummariesTableOrderingComposer,
+          $$WikipediaSummariesTableAnnotationComposer,
+          $$WikipediaSummariesTableCreateCompanionBuilder,
+          $$WikipediaSummariesTableUpdateCompanionBuilder,
+          (
+            WikipediaSummaryRow,
+            BaseReferences<
+              _$DiscoveryDatabase,
+              $WikipediaSummariesTable,
+              WikipediaSummaryRow
+            >,
+          ),
+          WikipediaSummaryRow,
+          PrefetchHooks Function()
+        > {
+  $$WikipediaSummariesTableTableManager(
+    _$DiscoveryDatabase db,
+    $WikipediaSummariesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WikipediaSummariesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WikipediaSummariesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WikipediaSummariesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> cacheKey = const Value.absent(),
+                Value<String> query = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> extract = const Value.absent(),
+                Value<String?> thumbnailUrl = const Value.absent(),
+                Value<String?> pageUrl = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => WikipediaSummariesCompanion(
+                id: id,
+                cacheKey: cacheKey,
+                query: query,
+                title: title,
+                extract: extract,
+                thumbnailUrl: thumbnailUrl,
+                pageUrl: pageUrl,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String cacheKey,
+                required String query,
+                required String title,
+                required String extract,
+                Value<String?> thumbnailUrl = const Value.absent(),
+                Value<String?> pageUrl = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => WikipediaSummariesCompanion.insert(
+                id: id,
+                cacheKey: cacheKey,
+                query: query,
+                title: title,
+                extract: extract,
+                thumbnailUrl: thumbnailUrl,
+                pageUrl: pageUrl,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WikipediaSummariesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$DiscoveryDatabase,
+      $WikipediaSummariesTable,
+      WikipediaSummaryRow,
+      $$WikipediaSummariesTableFilterComposer,
+      $$WikipediaSummariesTableOrderingComposer,
+      $$WikipediaSummariesTableAnnotationComposer,
+      $$WikipediaSummariesTableCreateCompanionBuilder,
+      $$WikipediaSummariesTableUpdateCompanionBuilder,
+      (
+        WikipediaSummaryRow,
+        BaseReferences<
+          _$DiscoveryDatabase,
+          $WikipediaSummariesTable,
+          WikipediaSummaryRow
+        >,
+      ),
+      WikipediaSummaryRow,
+      PrefetchHooks Function()
+    >;
 
 class $DiscoveryDatabaseManager {
   final _$DiscoveryDatabase _db;
@@ -2750,4 +3516,6 @@ class $DiscoveryDatabaseManager {
       );
   $$DiscoveryLogsTableTableManager get discoveryLogs =>
       $$DiscoveryLogsTableTableManager(_db, _db.discoveryLogs);
+  $$WikipediaSummariesTableTableManager get wikipediaSummaries =>
+      $$WikipediaSummariesTableTableManager(_db, _db.wikipediaSummaries);
 }

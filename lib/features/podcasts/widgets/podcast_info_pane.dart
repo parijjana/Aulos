@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aulos/data/database/podcast_database.dart';
 import 'package:aulos/presentation/viewmodels/podcast_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:aulos/presentation/widgets/wikipedia_knowledge_dialog.dart';
 
 class PodcastInfoPane extends StatelessWidget {
   final Podcast podcast;
@@ -35,7 +36,33 @@ class PodcastInfoPane extends StatelessWidget {
             const SizedBox(height: 24),
             Text(podcast.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, height: 1.1)),
             const SizedBox(height: 8),
-            Text(podcast.author ?? 'Unknown Author', style: TextStyle(fontSize: 14, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    podcast.author ?? 'Unknown Author',
+                    style: TextStyle(fontSize: 14, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (podcast.author != null && podcast.author!.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.info_outline_rounded, size: 16),
+                    onPressed: () {
+                      WikipediaKnowledgeDialog.show(
+                        context,
+                        podcast.author!,
+                        subtitle: 'Podcast Host Wiki',
+                        fallbackIcon: Icons.podcasts_rounded,
+                      );
+                    },
+                    tooltip: 'Wikipedia Host Info',
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+              ],
+            ),
             const SizedBox(height: 24),
             const Text('ABOUT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
             const SizedBox(height: 8),
