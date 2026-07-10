@@ -16,10 +16,27 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   Future<void> addFolder(FoldersCompanion folder) =>
       into(folders).insert(folder, mode: InsertMode.insertOrIgnore);
       
-  Future<List<Folder>> getAllFolders() => select(folders).get();
+  Future<List<Folder>> getAllFolders({int? limit, int? offset, String? searchQuery}) {
+    var query = select(folders);
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query.where((t) => t.name.like('%$searchQuery%'));
+    }
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
   
-  Future<List<Folder>> getRootFolders({int folderType = 0}) =>
-      (select(folders)..where((f) => f.parentId.isNull() & f.folderType.equals(folderType))).get();
+  Future<List<Folder>> getRootFolders({int folderType = 0, int? limit, int? offset, String? searchQuery}) {
+    var query = select(folders);
+    query.where((f) {
+      var predicate = f.parentId.isNull() & f.folderType.equals(folderType);
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        predicate = predicate & f.name.like('%$searchQuery%');
+      }
+      return predicate;
+    });
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
       
   Future<List<Folder>> getSubFolders(String parentId, {int folderType = 0}) =>
       (select(folders)..where((f) => f.parentId.equals(parentId) & f.folderType.equals(folderType))).get();
@@ -45,7 +62,7 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   }
 
   // Metadata Operations
-  Future<String> ensureArtist(String name) async {
+  Future<String> ensureArtist(String name, {String? localArtPath}) async {
     final generatedId = generateContentId(name);
     final existing = await (select(artists)..where((a) => a.id.equals(generatedId))).getSingleOrNull();
     if (existing != null) return existing.id;
@@ -54,12 +71,13 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
       ArtistsCompanion.insert(
         id: generatedId,
         name: name,
+        localArtPath: Value(localArtPath),
       ),
     );
     return generatedId;
   }
 
-  Future<String> ensureAlbum(String name, String? artistId, {Uint8List? coverArt, bool isAudiobook = false}) async {
+  Future<String> ensureAlbum(String name, String? artistId, {Uint8List? coverArt, String? localArtPath, bool isAudiobook = false}) async {
     final fingerprint = "${artistId ?? ''}|$name";
     final generatedId = generateContentId(fingerprint);
 
@@ -73,6 +91,11 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
           AlbumsCompanion(coverArt: Value(coverArt)),
         );
       }
+      if (existing.localArtPath == null && localArtPath != null) {
+        await (update(albums)..where((a) => a.id.equals(existing.id))).write(
+          AlbumsCompanion(localArtPath: Value(localArtPath)),
+        );
+      }
       return existing.id;
     }
 
@@ -82,6 +105,7 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
         name: name,
         artistId: Value(artistId),
         coverArt: Value(coverArt),
+        localArtPath: Value(localArtPath),
         isAudiobook: Value(isAudiobook),
       ),
     );
@@ -102,9 +126,32 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
     return generatedId;
   }
 
-  Future<List<Artist>> getAllArtists() => select(artists).get();
-  Future<List<Album>> getAllAlbums() => select(albums).get();
-  Future<List<Genre>> getAllGenres() => select(genres).get();
+  Future<List<Artist>> getAllArtists({int? limit, int? offset, String? searchQuery}) {
+    var query = select(artists);
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query.where((t) => t.name.like('%$searchQuery%'));
+    }
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<List<Album>> getAllAlbums({int? limit, int? offset, String? searchQuery}) {
+    var query = select(albums);
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query.where((t) => t.name.like('%$searchQuery%'));
+    }
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<List<Genre>> getAllGenres({int? limit, int? offset, String? searchQuery}) {
+    var query = select(genres);
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query.where((t) => t.name.like('%$searchQuery%'));
+    }
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
   
   Future<List<int>> getAllYears() async {
     final query = selectOnly(tracks, distinct: true)..addColumns([tracks.year]);
@@ -124,15 +171,15 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   Future<List<Track>> getTracksForYear(int year) =>
       (select(tracks)..where((t) => t.year.equals(year))).get();
 
-  Future<void> updateAlbumArt(String albumId, Uint8List art) {
+  Future<void> updateAlbumArt(String albumId, Uint8List? art, {String? localArtPath}) {
     return (update(albums)..where((a) => a.id.equals(albumId))).write(
-      AlbumsCompanion(coverArt: Value(art)),
+      AlbumsCompanion(coverArt: Value(art), localArtPath: Value(localArtPath)),
     );
   }
 
-  Future<void> updateArtistPhoto(String artistId, Uint8List photo) {
+  Future<void> updateArtistPhoto(String artistId, Uint8List? photo, {String? localArtPath}) {
     return (update(artists)..where((a) => a.id.equals(artistId))).write(
-      ArtistsCompanion(photo: Value(photo)),
+      ArtistsCompanion(photo: Value(photo), localArtPath: Value(localArtPath)),
     );
   }
 
@@ -142,9 +189,9 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
     );
   }
 
-  Future<void> updateTrackArt(String trackId, Uint8List art) {
+  Future<void> updateTrackArt(String trackId, Uint8List? art, {String? localArtPath}) {
     return (update(tracks)..where((t) => t.id.equals(trackId))).write(
-      TracksCompanion(coverArt: Value(art)),
+      TracksCompanion(coverArt: Value(art), localArtPath: Value(localArtPath)),
     );
   }
 
@@ -170,7 +217,14 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
   Future<Album?> getAlbumById(String id) =>
       (select(albums)..where((a) => a.id.equals(id))).getSingleOrNull();
 
-  Future<List<Track>> getAllTracks() => select(tracks).get();
+  Future<List<Track>> getAllTracks({int? limit, int? offset, String? searchQuery}) {
+    var query = select(tracks);
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query.where((t) => t.title.like('%$searchQuery%'));
+    }
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
 
   Future<void> updateTrackRating(String trackId, int rating) {
     return (update(tracks)..where((t) => t.id.equals(trackId))).write(
@@ -186,4 +240,22 @@ class LibraryDao extends DatabaseAccessor<AppDatabase> with _$LibraryDaoMixin {
 
   Future<List<Track>> getDislikedTracks() =>
       (select(tracks)..where((t) => t.rating.equals(-1))).get();
+
+  Future<void> toggleArtistFavorite(String artistId) async {
+    final artist = await (select(artists)..where((a) => a.id.equals(artistId))).getSingleOrNull();
+    if (artist != null) {
+      await (update(artists)..where((a) => a.id.equals(artistId))).write(
+        ArtistsCompanion(isFavorite: Value(!artist.isFavorite)),
+      );
+    }
+  }
+
+  Future<void> toggleAlbumFavorite(String albumId) async {
+    final album = await (select(albums)..where((a) => a.id.equals(albumId))).getSingleOrNull();
+    if (album != null) {
+      await (update(albums)..where((a) => a.id.equals(albumId))).write(
+        AlbumsCompanion(isFavorite: Value(!album.isFavorite)),
+      );
+    }
+  }
 }

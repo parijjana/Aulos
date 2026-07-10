@@ -7,6 +7,18 @@ import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/audiobook_database.dart';
 import 'package:aulos/core/utils/id_generator.dart';
 import 'persistent_library_service.dart';
+import 'package:path_provider/path_provider.dart';
+
+Future<String?> _saveArtToDisk(Uint8List? art, String generatedId) async {
+  if (art == null) return null;
+  final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'artwork'));
+  if (!dir.existsSync()) dir.createSync(recursive: true);
+  final file = File(p.join(dir.path, '$generatedId.jpg'));
+  if (!file.existsSync()) {
+    await file.writeAsBytes(art);
+  }
+  return file.path;
+}
 
 extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
   Future<void> pickAndAddFolder({int folderType = 0}) async {
@@ -45,10 +57,14 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
         
         String bookName = f.album ?? p.basename(fileDir);
         
+        final albumFingerprint = "${albumArtistId}|$bookName";
+        final albumIdExpected = generateContentId(albumFingerprint);
+        final albumArtPath = await _saveArtToDisk(f.coverArt, albumIdExpected);
+
         final albumId = await audiobookDb.ensureAudiobook(
           bookName, 
           albumArtistId, 
-          coverArt: f.coverArt,
+          localArtPath: albumArtPath,
         );
 
         String effectiveTrackId;
@@ -82,6 +98,8 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
             trackId = generateContentId(fingerprint);
           }
 
+          final trackArtPath = await _saveArtToDisk(f.coverArt, trackId);
+
           await audiobookDb.into(audiobookDb.audiobookTracks).insert(
             AudiobookTracksCompanion.insert(
               id: trackId,
@@ -90,7 +108,8 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
               artistId: Value(artistId),
               audiobookId: Value(albumId),
               durationSeconds: Value(f.duration?.inSeconds),
-              coverArt: Value(f.coverArt),
+              coverArt: const Value(null),
+              localArtPath: Value(trackArtPath),
               isStream: const Value(false),
               duplicateOf: Value(duplicateOf),
             ),
@@ -159,10 +178,14 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
       
       String bookName = f.album ?? p.basename(fileDir);
       
+      final albumFingerprint = "${albumArtistId}|$bookName";
+      final albumIdExpected = generateContentId(albumFingerprint);
+      final albumArtPath = await _saveArtToDisk(f.coverArt, albumIdExpected);
+
       final albumId = await db.ensureAlbum(
         bookName, 
         albumArtistId, 
-        coverArt: f.coverArt,
+        localArtPath: albumArtPath,
         isAudiobook: isAudiobook,
       );
       
@@ -199,6 +222,8 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
           trackId = generateContentId(fingerprint);
         }
 
+        final trackArtPath = await _saveArtToDisk(f.coverArt, trackId);
+
         await db.into(db.tracks).insert(
           TracksCompanion.insert(
             id: trackId,
@@ -210,7 +235,8 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
             genreId: Value(genreId),
             year: Value(f.year),
             durationSeconds: Value(f.duration?.inSeconds),
-            coverArt: Value(f.coverArt),
+            coverArt: const Value(null),
+            localArtPath: Value(trackArtPath),
             isAudiobook: Value(isAudiobook),
             duplicateOf: Value(duplicateOf),
           ),
@@ -274,9 +300,13 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
 
     for (final f in files) {
       final artistId = await db.ensureArtist(f.artist);
-      final albumId = f.album != null
-          ? await db.ensureAlbum(f.album!, artistId, coverArt: f.coverArt)
-          : null;
+      String? albumId;
+      if (f.album != null) {
+        final albumFingerprint = "${artistId}|${f.album!}";
+        final albumIdExpected = generateContentId(albumFingerprint);
+        final albumArtPath = await _saveArtToDisk(f.coverArt, albumIdExpected);
+        albumId = await db.ensureAlbum(f.album!, artistId, localArtPath: albumArtPath);
+      }
 
       int fileSize = 0;
       try {
@@ -304,6 +334,8 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
         trackId = generateContentId(fingerprint);
       }
 
+      final trackArtPath = await _saveArtToDisk(f.coverArt, trackId);
+
       await db.addTracks([
         TracksCompanion(
           id: Value(trackId),
@@ -313,7 +345,8 @@ extension PersistentLibraryImportExtension on PersistentLibraryServiceImpl {
           artistId: Value(artistId),
           albumId: Value(albumId),
           durationSeconds: Value(f.duration?.inSeconds),
-          coverArt: Value(f.coverArt),
+          coverArt: const Value(null),
+          localArtPath: Value(trackArtPath),
           duplicateOf: Value(duplicateOf),
         ),
       ]);

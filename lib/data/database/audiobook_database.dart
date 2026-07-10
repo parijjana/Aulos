@@ -63,7 +63,7 @@ class AudiobookDatabase extends _$AudiobookDatabase {
   }
 
   // Metadata Operations
-  Future<String> ensureArtist(String name) async {
+  Future<String> ensureArtist(String name, {String? localArtPath}) async {
     final generatedId = generateContentId(name);
     final existing = await (select(audiobookArtists)..where((a) => a.id.equals(generatedId))).getSingleOrNull();
     if (existing != null) return existing.id;
@@ -72,12 +72,13 @@ class AudiobookDatabase extends _$AudiobookDatabase {
       AudiobookArtistsCompanion.insert(
         id: generatedId,
         name: name,
+        localArtPath: Value(localArtPath),
       ),
     );
     return generatedId;
   }
 
-  Future<String> ensureAudiobook(String name, String? artistId, {Uint8List? coverArt}) async {
+  Future<String> ensureAudiobook(String name, String? artistId, {Uint8List? coverArt, String? localArtPath}) async {
     final fingerprint = "${artistId ?? ''}|$name";
     final generatedId = generateContentId(fingerprint);
 
@@ -89,6 +90,11 @@ class AudiobookDatabase extends _$AudiobookDatabase {
           AudiobooksCompanion(coverArt: Value(coverArt)),
         );
       }
+      if (existing.localArtPath == null && localArtPath != null) {
+        await (update(audiobooks)..where((a) => a.id.equals(existing.id))).write(
+          AudiobooksCompanion(localArtPath: Value(localArtPath)),
+        );
+      }
       return existing.id;
     }
 
@@ -98,6 +104,7 @@ class AudiobookDatabase extends _$AudiobookDatabase {
         name: name,
         artistId: Value(artistId),
         coverArt: Value(coverArt),
+        localArtPath: Value(localArtPath),
       ),
     );
     return generatedId;

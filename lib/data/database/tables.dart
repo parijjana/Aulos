@@ -13,6 +13,7 @@ class Artists extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().unique()();
   BlobColumn get photo => blob().nullable()();
+  TextColumn get localArtPath => text().nullable()();
   TextColumn get bio => text().nullable()(); 
   TextColumn get photoUrl => text().nullable()(); 
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
@@ -25,6 +26,7 @@ class Albums extends Table {
   TextColumn get name => text()();
   TextColumn get artistId => text().nullable().references(Artists, #id)();
   BlobColumn get coverArt => blob().nullable()();
+  TextColumn get localArtPath => text().nullable()();
   TextColumn get coverArtUrl => text().nullable()(); 
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
@@ -69,6 +71,7 @@ class Tracks extends Table {
   TextColumn get folderId => text().references(Folders, #id)();
   IntColumn get rating => integer().withDefault(const Constant(0))();
   BlobColumn get coverArt => blob().nullable()();
+  TextColumn get localArtPath => text().nullable()();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();
@@ -202,6 +205,7 @@ class AudiobookArtists extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().unique()();
   BlobColumn get photo => blob().nullable()();
+  TextColumn get localArtPath => text().nullable()();
   TextColumn get bio => text().nullable()(); 
   TextColumn get photoUrl => text().nullable()(); 
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
@@ -214,6 +218,7 @@ class Audiobooks extends Table {
   TextColumn get name => text()();
   TextColumn get artistId => text().nullable().references(AudiobookArtists, #id)(); // References author in AudiobookArtists table
   BlobColumn get coverArt => blob().nullable()();
+  TextColumn get localArtPath => text().nullable()();
   TextColumn get coverArtUrl => text().nullable()();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
@@ -245,6 +250,7 @@ class AudiobookTracks extends Table {
   IntColumn get durationSeconds => integer().nullable()();
   IntColumn get rating => integer().withDefault(const Constant(0))();
   BlobColumn get coverArt => blob().nullable()();
+  TextColumn get localArtPath => text().nullable()();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   IntColumn get playCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPlayed => dateTime().nullable()();

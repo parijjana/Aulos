@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.testing(super.executor);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
 
 
@@ -67,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
       );
     },
     onUpgrade: (m, from, to) async {
-      if (from < 25) {
+      if (from < 26) {
         // Recreate all tables to migrate from old integer primary keys to text/string primary keys
         for (final table in allTables) {
           await _safeDeleteTable(m, table.actualTableName);
@@ -85,16 +85,16 @@ class AppDatabase extends _$AppDatabase {
 
   // Delegation methods
   Future<void> addFolder(FoldersCompanion folder) => libraryDao.addFolder(folder);
-  Future<List<Folder>> getAllFolders() => libraryDao.getAllFolders();
-  Future<List<Folder>> getRootFolders({int folderType = 0}) => libraryDao.getRootFolders(folderType: folderType);
+  Future<List<Folder>> getAllFolders({int? limit, int? offset, String? searchQuery}) => libraryDao.getAllFolders(limit: limit, offset: offset, searchQuery: searchQuery);
+  Future<List<Folder>> getRootFolders({int folderType = 0, int? limit, int? offset, String? searchQuery}) => libraryDao.getRootFolders(folderType: folderType, limit: limit, offset: offset, searchQuery: searchQuery);
   Future<List<Folder>> getSubFolders(String parentId, {int folderType = 0}) => libraryDao.getSubFolders(parentId, folderType: folderType);
   Future<String> ensureFolder(String path, {String? parentId, int folderType = 0}) => libraryDao.ensureFolder(path, parentId: parentId, folderType: folderType);
-  Future<String> ensureArtist(String name) => libraryDao.ensureArtist(name);
-  Future<String> ensureAlbum(String name, String? artistId, {Uint8List? coverArt, bool isAudiobook = false}) => libraryDao.ensureAlbum(name, artistId, coverArt: coverArt, isAudiobook: isAudiobook);
+  Future<String> ensureArtist(String name, {String? localArtPath}) => libraryDao.ensureArtist(name, localArtPath: localArtPath);
+  Future<String> ensureAlbum(String name, String? artistId, {Uint8List? coverArt, String? localArtPath, bool isAudiobook = false}) => libraryDao.ensureAlbum(name, artistId, coverArt: coverArt, localArtPath: localArtPath, isAudiobook: isAudiobook);
   Future<String> ensureGenre(String name) => libraryDao.ensureGenre(name);
-  Future<List<Artist>> getAllArtists() => libraryDao.getAllArtists();
-  Future<List<Album>> getAllAlbums() => libraryDao.getAllAlbums();
-  Future<List<Genre>> getAllGenres() => libraryDao.getAllGenres();
+  Future<List<Artist>> getAllArtists({int? limit, int? offset, String? searchQuery}) => libraryDao.getAllArtists(limit: limit, offset: offset, searchQuery: searchQuery);
+  Future<List<Album>> getAllAlbums({int? limit, int? offset, String? searchQuery}) => libraryDao.getAllAlbums(limit: limit, offset: offset, searchQuery: searchQuery);
+  Future<List<Genre>> getAllGenres({int? limit, int? offset, String? searchQuery}) => libraryDao.getAllGenres(limit: limit, offset: offset, searchQuery: searchQuery);
   Future<Track?> getTrackById(String id) => libraryDao.getTrackById(id);
   Future<Album?> getAlbumById(String id) => libraryDao.getAlbumById(id);
   Future<List<int>> getAllYears() => libraryDao.getAllYears();
@@ -102,18 +102,20 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Track>> getTracksForAlbum(String albumId) => libraryDao.getTracksForAlbum(albumId);
   Future<List<Track>> getTracksForGenre(String genreId) => libraryDao.getTracksForGenre(genreId);
   Future<List<Track>> getTracksForYear(int year) => libraryDao.getTracksForYear(year);
-  Future<void> updateAlbumArt(String albumId, Uint8List art) => libraryDao.updateAlbumArt(albumId, art);
-  Future<void> updateArtistPhoto(String artistId, Uint8List photo) => libraryDao.updateArtistPhoto(artistId, photo);
+  Future<void> updateAlbumArt(String albumId, Uint8List? art, {String? localArtPath}) => libraryDao.updateAlbumArt(albumId, art, localArtPath: localArtPath);
+  Future<void> updateArtistPhoto(String artistId, Uint8List? photo, {String? localArtPath}) => libraryDao.updateArtistPhoto(artistId, photo, localArtPath: localArtPath);
   Future<void> updateArtistBiography(String artistId, String biography) => libraryDao.updateArtistBiography(artistId, biography);
-  Future<void> updateTrackArt(String trackId, Uint8List art) => libraryDao.updateTrackArt(trackId, art);
+  Future<void> updateTrackArt(String trackId, Uint8List? art, {String? localArtPath}) => libraryDao.updateTrackArt(trackId, art, localArtPath: localArtPath);
   Future<List<Track>> getTracksForArtistInAlbum(String artistId, String albumId) => libraryDao.getTracksForArtistInAlbum(artistId, albumId);
   Future<void> cacheArtistAlbumRelations(List<ArtistAlbumRelation> relations) => libraryDao.cacheArtistAlbumRelations(relations);
   Future<void> addTracks(List<TracksCompanion> trackCompanions) => libraryDao.addTracks(trackCompanions);
   Future<List<Track>> getTracksForFolder(String folderId) => libraryDao.getTracksForFolder(folderId);
-  Future<List<Track>> getAllTracks() => libraryDao.getAllTracks();
+  Future<List<Track>> getAllTracks({int? limit, int? offset, String? searchQuery}) => libraryDao.getAllTracks(limit: limit, offset: offset, searchQuery: searchQuery);
   Future<void> updateTrackRating(String trackId, int rating) => libraryDao.updateTrackRating(trackId, rating);
   Future<List<Track>> getLikedTracks() => libraryDao.getLikedTracks();
   Future<List<Track>> getDislikedTracks() => libraryDao.getDislikedTracks();
+  Future<void> toggleArtistFavorite(String artistId) => libraryDao.toggleArtistFavorite(artistId);
+  Future<void> toggleAlbumFavorite(String albumId) => libraryDao.toggleAlbumFavorite(albumId);
 
   Future<List<Playlist>> getAllPlaylists() => playlistDao.getAllPlaylists();
   Future<void> deletePlaylist(String id) => playlistDao.deletePlaylist(id);

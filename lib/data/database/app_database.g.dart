@@ -392,6 +392,17 @@ class $ArtistsTable extends Artists with TableInfo<$ArtistsTable, Artist> {
     type: DriftSqlType.blob,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _localArtPathMeta = const VerificationMeta(
+    'localArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> localArtPath = GeneratedColumn<String>(
+    'local_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _bioMeta = const VerificationMeta('bio');
   @override
   late final GeneratedColumn<String> bio = GeneratedColumn<String>(
@@ -455,6 +466,7 @@ class $ArtistsTable extends Artists with TableInfo<$ArtistsTable, Artist> {
     id,
     name,
     photo,
+    localArtPath,
     bio,
     photoUrl,
     isFavorite,
@@ -490,6 +502,15 @@ class $ArtistsTable extends Artists with TableInfo<$ArtistsTable, Artist> {
       context.handle(
         _photoMeta,
         photo.isAcceptableOrUnknown(data['photo']!, _photoMeta),
+      );
+    }
+    if (data.containsKey('local_art_path')) {
+      context.handle(
+        _localArtPathMeta,
+        localArtPath.isAcceptableOrUnknown(
+          data['local_art_path']!,
+          _localArtPathMeta,
+        ),
       );
     }
     if (data.containsKey('bio')) {
@@ -543,6 +564,10 @@ class $ArtistsTable extends Artists with TableInfo<$ArtistsTable, Artist> {
         DriftSqlType.blob,
         data['${effectivePrefix}photo'],
       ),
+      localArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_art_path'],
+      ),
       bio: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}bio'],
@@ -576,6 +601,7 @@ class Artist extends DataClass implements Insertable<Artist> {
   final String id;
   final String name;
   final Uint8List? photo;
+  final String? localArtPath;
   final String? bio;
   final String? photoUrl;
   final bool isFavorite;
@@ -585,6 +611,7 @@ class Artist extends DataClass implements Insertable<Artist> {
     required this.id,
     required this.name,
     this.photo,
+    this.localArtPath,
     this.bio,
     this.photoUrl,
     required this.isFavorite,
@@ -598,6 +625,9 @@ class Artist extends DataClass implements Insertable<Artist> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || photo != null) {
       map['photo'] = Variable<Uint8List>(photo);
+    }
+    if (!nullToAbsent || localArtPath != null) {
+      map['local_art_path'] = Variable<String>(localArtPath);
     }
     if (!nullToAbsent || bio != null) {
       map['bio'] = Variable<String>(bio);
@@ -620,6 +650,9 @@ class Artist extends DataClass implements Insertable<Artist> {
       photo: photo == null && nullToAbsent
           ? const Value.absent()
           : Value(photo),
+      localArtPath: localArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localArtPath),
       bio: bio == null && nullToAbsent ? const Value.absent() : Value(bio),
       photoUrl: photoUrl == null && nullToAbsent
           ? const Value.absent()
@@ -641,6 +674,7 @@ class Artist extends DataClass implements Insertable<Artist> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       photo: serializer.fromJson<Uint8List?>(json['photo']),
+      localArtPath: serializer.fromJson<String?>(json['localArtPath']),
       bio: serializer.fromJson<String?>(json['bio']),
       photoUrl: serializer.fromJson<String?>(json['photoUrl']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
@@ -655,6 +689,7 @@ class Artist extends DataClass implements Insertable<Artist> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'photo': serializer.toJson<Uint8List?>(photo),
+      'localArtPath': serializer.toJson<String?>(localArtPath),
       'bio': serializer.toJson<String?>(bio),
       'photoUrl': serializer.toJson<String?>(photoUrl),
       'isFavorite': serializer.toJson<bool>(isFavorite),
@@ -667,6 +702,7 @@ class Artist extends DataClass implements Insertable<Artist> {
     String? id,
     String? name,
     Value<Uint8List?> photo = const Value.absent(),
+    Value<String?> localArtPath = const Value.absent(),
     Value<String?> bio = const Value.absent(),
     Value<String?> photoUrl = const Value.absent(),
     bool? isFavorite,
@@ -676,6 +712,7 @@ class Artist extends DataClass implements Insertable<Artist> {
     id: id ?? this.id,
     name: name ?? this.name,
     photo: photo.present ? photo.value : this.photo,
+    localArtPath: localArtPath.present ? localArtPath.value : this.localArtPath,
     bio: bio.present ? bio.value : this.bio,
     photoUrl: photoUrl.present ? photoUrl.value : this.photoUrl,
     isFavorite: isFavorite ?? this.isFavorite,
@@ -687,6 +724,9 @@ class Artist extends DataClass implements Insertable<Artist> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       photo: data.photo.present ? data.photo.value : this.photo,
+      localArtPath: data.localArtPath.present
+          ? data.localArtPath.value
+          : this.localArtPath,
       bio: data.bio.present ? data.bio.value : this.bio,
       photoUrl: data.photoUrl.present ? data.photoUrl.value : this.photoUrl,
       isFavorite: data.isFavorite.present
@@ -705,6 +745,7 @@ class Artist extends DataClass implements Insertable<Artist> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('photo: $photo, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('bio: $bio, ')
           ..write('photoUrl: $photoUrl, ')
           ..write('isFavorite: $isFavorite, ')
@@ -719,6 +760,7 @@ class Artist extends DataClass implements Insertable<Artist> {
     id,
     name,
     $driftBlobEquality.hash(photo),
+    localArtPath,
     bio,
     photoUrl,
     isFavorite,
@@ -732,6 +774,7 @@ class Artist extends DataClass implements Insertable<Artist> {
           other.id == this.id &&
           other.name == this.name &&
           $driftBlobEquality.equals(other.photo, this.photo) &&
+          other.localArtPath == this.localArtPath &&
           other.bio == this.bio &&
           other.photoUrl == this.photoUrl &&
           other.isFavorite == this.isFavorite &&
@@ -743,6 +786,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
   final Value<String> id;
   final Value<String> name;
   final Value<Uint8List?> photo;
+  final Value<String?> localArtPath;
   final Value<String?> bio;
   final Value<String?> photoUrl;
   final Value<bool> isFavorite;
@@ -753,6 +797,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.photo = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.bio = const Value.absent(),
     this.photoUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
@@ -764,6 +809,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
     required String id,
     required String name,
     this.photo = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.bio = const Value.absent(),
     this.photoUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
@@ -776,6 +822,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<Uint8List>? photo,
+    Expression<String>? localArtPath,
     Expression<String>? bio,
     Expression<String>? photoUrl,
     Expression<bool>? isFavorite,
@@ -787,6 +834,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (photo != null) 'photo': photo,
+      if (localArtPath != null) 'local_art_path': localArtPath,
       if (bio != null) 'bio': bio,
       if (photoUrl != null) 'photo_url': photoUrl,
       if (isFavorite != null) 'is_favorite': isFavorite,
@@ -800,6 +848,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
     Value<String>? id,
     Value<String>? name,
     Value<Uint8List?>? photo,
+    Value<String?>? localArtPath,
     Value<String?>? bio,
     Value<String?>? photoUrl,
     Value<bool>? isFavorite,
@@ -811,6 +860,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
       id: id ?? this.id,
       name: name ?? this.name,
       photo: photo ?? this.photo,
+      localArtPath: localArtPath ?? this.localArtPath,
       bio: bio ?? this.bio,
       photoUrl: photoUrl ?? this.photoUrl,
       isFavorite: isFavorite ?? this.isFavorite,
@@ -831,6 +881,9 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
     }
     if (photo.present) {
       map['photo'] = Variable<Uint8List>(photo.value);
+    }
+    if (localArtPath.present) {
+      map['local_art_path'] = Variable<String>(localArtPath.value);
     }
     if (bio.present) {
       map['bio'] = Variable<String>(bio.value);
@@ -859,6 +912,7 @@ class ArtistsCompanion extends UpdateCompanion<Artist> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('photo: $photo, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('bio: $bio, ')
           ..write('photoUrl: $photoUrl, ')
           ..write('isFavorite: $isFavorite, ')
@@ -916,6 +970,17 @@ class $AlbumsTable extends Albums with TableInfo<$AlbumsTable, Album> {
     aliasedName,
     true,
     type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _localArtPathMeta = const VerificationMeta(
+    'localArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> localArtPath = GeneratedColumn<String>(
+    'local_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _coverArtUrlMeta = const VerificationMeta(
@@ -1115,6 +1180,7 @@ class $AlbumsTable extends Albums with TableInfo<$AlbumsTable, Album> {
     name,
     artistId,
     coverArt,
+    localArtPath,
     coverArtUrl,
     isFavorite,
     playCount,
@@ -1167,6 +1233,15 @@ class $AlbumsTable extends Albums with TableInfo<$AlbumsTable, Album> {
       context.handle(
         _coverArtMeta,
         coverArt.isAcceptableOrUnknown(data['cover_art']!, _coverArtMeta),
+      );
+    }
+    if (data.containsKey('local_art_path')) {
+      context.handle(
+        _localArtPathMeta,
+        localArtPath.isAcceptableOrUnknown(
+          data['local_art_path']!,
+          _localArtPathMeta,
+        ),
       );
     }
     if (data.containsKey('cover_art_url')) {
@@ -1312,6 +1387,10 @@ class $AlbumsTable extends Albums with TableInfo<$AlbumsTable, Album> {
         DriftSqlType.blob,
         data['${effectivePrefix}cover_art'],
       ),
+      localArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_art_path'],
+      ),
       coverArtUrl: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cover_art_url'],
@@ -1390,6 +1469,7 @@ class Album extends DataClass implements Insertable<Album> {
   final String name;
   final String? artistId;
   final Uint8List? coverArt;
+  final String? localArtPath;
   final String? coverArtUrl;
   final bool isFavorite;
   final int playCount;
@@ -1411,6 +1491,7 @@ class Album extends DataClass implements Insertable<Album> {
     required this.name,
     this.artistId,
     this.coverArt,
+    this.localArtPath,
     this.coverArtUrl,
     required this.isFavorite,
     required this.playCount,
@@ -1438,6 +1519,9 @@ class Album extends DataClass implements Insertable<Album> {
     }
     if (!nullToAbsent || coverArt != null) {
       map['cover_art'] = Variable<Uint8List>(coverArt);
+    }
+    if (!nullToAbsent || localArtPath != null) {
+      map['local_art_path'] = Variable<String>(localArtPath);
     }
     if (!nullToAbsent || coverArtUrl != null) {
       map['cover_art_url'] = Variable<String>(coverArtUrl);
@@ -1490,6 +1574,9 @@ class Album extends DataClass implements Insertable<Album> {
       coverArt: coverArt == null && nullToAbsent
           ? const Value.absent()
           : Value(coverArt),
+      localArtPath: localArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localArtPath),
       coverArtUrl: coverArtUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(coverArtUrl),
@@ -1539,6 +1626,7 @@ class Album extends DataClass implements Insertable<Album> {
       name: serializer.fromJson<String>(json['name']),
       artistId: serializer.fromJson<String?>(json['artistId']),
       coverArt: serializer.fromJson<Uint8List?>(json['coverArt']),
+      localArtPath: serializer.fromJson<String?>(json['localArtPath']),
       coverArtUrl: serializer.fromJson<String?>(json['coverArtUrl']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       playCount: serializer.fromJson<int>(json['playCount']),
@@ -1567,6 +1655,7 @@ class Album extends DataClass implements Insertable<Album> {
       'name': serializer.toJson<String>(name),
       'artistId': serializer.toJson<String?>(artistId),
       'coverArt': serializer.toJson<Uint8List?>(coverArt),
+      'localArtPath': serializer.toJson<String?>(localArtPath),
       'coverArtUrl': serializer.toJson<String?>(coverArtUrl),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'playCount': serializer.toJson<int>(playCount),
@@ -1591,6 +1680,7 @@ class Album extends DataClass implements Insertable<Album> {
     String? name,
     Value<String?> artistId = const Value.absent(),
     Value<Uint8List?> coverArt = const Value.absent(),
+    Value<String?> localArtPath = const Value.absent(),
     Value<String?> coverArtUrl = const Value.absent(),
     bool? isFavorite,
     int? playCount,
@@ -1612,6 +1702,7 @@ class Album extends DataClass implements Insertable<Album> {
     name: name ?? this.name,
     artistId: artistId.present ? artistId.value : this.artistId,
     coverArt: coverArt.present ? coverArt.value : this.coverArt,
+    localArtPath: localArtPath.present ? localArtPath.value : this.localArtPath,
     coverArtUrl: coverArtUrl.present ? coverArtUrl.value : this.coverArtUrl,
     isFavorite: isFavorite ?? this.isFavorite,
     playCount: playCount ?? this.playCount,
@@ -1639,6 +1730,9 @@ class Album extends DataClass implements Insertable<Album> {
       name: data.name.present ? data.name.value : this.name,
       artistId: data.artistId.present ? data.artistId.value : this.artistId,
       coverArt: data.coverArt.present ? data.coverArt.value : this.coverArt,
+      localArtPath: data.localArtPath.present
+          ? data.localArtPath.value
+          : this.localArtPath,
       coverArtUrl: data.coverArtUrl.present
           ? data.coverArtUrl.value
           : this.coverArtUrl,
@@ -1685,6 +1779,7 @@ class Album extends DataClass implements Insertable<Album> {
           ..write('name: $name, ')
           ..write('artistId: $artistId, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('coverArtUrl: $coverArtUrl, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
@@ -1706,11 +1801,12 @@ class Album extends DataClass implements Insertable<Album> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     artistId,
     $driftBlobEquality.hash(coverArt),
+    localArtPath,
     coverArtUrl,
     isFavorite,
     playCount,
@@ -1727,7 +1823,7 @@ class Album extends DataClass implements Insertable<Album> {
     isPlayed,
     librivoxId,
     isDownloadedViaAulos,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1736,6 +1832,7 @@ class Album extends DataClass implements Insertable<Album> {
           other.name == this.name &&
           other.artistId == this.artistId &&
           $driftBlobEquality.equals(other.coverArt, this.coverArt) &&
+          other.localArtPath == this.localArtPath &&
           other.coverArtUrl == this.coverArtUrl &&
           other.isFavorite == this.isFavorite &&
           other.playCount == this.playCount &&
@@ -1759,6 +1856,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
   final Value<String> name;
   final Value<String?> artistId;
   final Value<Uint8List?> coverArt;
+  final Value<String?> localArtPath;
   final Value<String?> coverArtUrl;
   final Value<bool> isFavorite;
   final Value<int> playCount;
@@ -1781,6 +1879,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
     this.name = const Value.absent(),
     this.artistId = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.coverArtUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
@@ -1804,6 +1903,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
     required String name,
     this.artistId = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.coverArtUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
@@ -1828,6 +1928,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
     Expression<String>? name,
     Expression<String>? artistId,
     Expression<Uint8List>? coverArt,
+    Expression<String>? localArtPath,
     Expression<String>? coverArtUrl,
     Expression<bool>? isFavorite,
     Expression<int>? playCount,
@@ -1851,6 +1952,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
       if (name != null) 'name': name,
       if (artistId != null) 'artist_id': artistId,
       if (coverArt != null) 'cover_art': coverArt,
+      if (localArtPath != null) 'local_art_path': localArtPath,
       if (coverArtUrl != null) 'cover_art_url': coverArtUrl,
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (playCount != null) 'play_count': playCount,
@@ -1877,6 +1979,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
     Value<String>? name,
     Value<String?>? artistId,
     Value<Uint8List?>? coverArt,
+    Value<String?>? localArtPath,
     Value<String?>? coverArtUrl,
     Value<bool>? isFavorite,
     Value<int>? playCount,
@@ -1900,6 +2003,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
       name: name ?? this.name,
       artistId: artistId ?? this.artistId,
       coverArt: coverArt ?? this.coverArt,
+      localArtPath: localArtPath ?? this.localArtPath,
       coverArtUrl: coverArtUrl ?? this.coverArtUrl,
       isFavorite: isFavorite ?? this.isFavorite,
       playCount: playCount ?? this.playCount,
@@ -1934,6 +2038,9 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
     }
     if (coverArt.present) {
       map['cover_art'] = Variable<Uint8List>(coverArt.value);
+    }
+    if (localArtPath.present) {
+      map['local_art_path'] = Variable<String>(localArtPath.value);
     }
     if (coverArtUrl.present) {
       map['cover_art_url'] = Variable<String>(coverArtUrl.value);
@@ -1998,6 +2105,7 @@ class AlbumsCompanion extends UpdateCompanion<Album> {
           ..write('name: $name, ')
           ..write('artistId: $artistId, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('coverArtUrl: $coverArtUrl, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
@@ -2353,6 +2461,17 @@ class $TracksTable extends Tracks with TableInfo<$TracksTable, Track> {
     type: DriftSqlType.blob,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _localArtPathMeta = const VerificationMeta(
+    'localArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> localArtPath = GeneratedColumn<String>(
+    'local_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isFavoriteMeta = const VerificationMeta(
     'isFavorite',
   );
@@ -2459,6 +2578,7 @@ class $TracksTable extends Tracks with TableInfo<$TracksTable, Track> {
     folderId,
     rating,
     coverArt,
+    localArtPath,
     isFavorite,
     playCount,
     lastPlayed,
@@ -2551,6 +2671,15 @@ class $TracksTable extends Tracks with TableInfo<$TracksTable, Track> {
       context.handle(
         _coverArtMeta,
         coverArt.isAcceptableOrUnknown(data['cover_art']!, _coverArtMeta),
+      );
+    }
+    if (data.containsKey('local_art_path')) {
+      context.handle(
+        _localArtPathMeta,
+        localArtPath.isAcceptableOrUnknown(
+          data['local_art_path']!,
+          _localArtPathMeta,
+        ),
       );
     }
     if (data.containsKey('is_favorite')) {
@@ -2654,6 +2783,10 @@ class $TracksTable extends Tracks with TableInfo<$TracksTable, Track> {
         DriftSqlType.blob,
         data['${effectivePrefix}cover_art'],
       ),
+      localArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_art_path'],
+      ),
       isFavorite: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_favorite'],
@@ -2703,6 +2836,7 @@ class Track extends DataClass implements Insertable<Track> {
   final String folderId;
   final int rating;
   final Uint8List? coverArt;
+  final String? localArtPath;
   final bool isFavorite;
   final int playCount;
   final DateTime? lastPlayed;
@@ -2722,6 +2856,7 @@ class Track extends DataClass implements Insertable<Track> {
     required this.folderId,
     required this.rating,
     this.coverArt,
+    this.localArtPath,
     required this.isFavorite,
     required this.playCount,
     this.lastPlayed,
@@ -2755,6 +2890,9 @@ class Track extends DataClass implements Insertable<Track> {
     map['rating'] = Variable<int>(rating);
     if (!nullToAbsent || coverArt != null) {
       map['cover_art'] = Variable<Uint8List>(coverArt);
+    }
+    if (!nullToAbsent || localArtPath != null) {
+      map['local_art_path'] = Variable<String>(localArtPath);
     }
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['play_count'] = Variable<int>(playCount);
@@ -2795,6 +2933,9 @@ class Track extends DataClass implements Insertable<Track> {
       coverArt: coverArt == null && nullToAbsent
           ? const Value.absent()
           : Value(coverArt),
+      localArtPath: localArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localArtPath),
       isFavorite: Value(isFavorite),
       playCount: Value(playCount),
       lastPlayed: lastPlayed == null && nullToAbsent
@@ -2828,6 +2969,7 @@ class Track extends DataClass implements Insertable<Track> {
       folderId: serializer.fromJson<String>(json['folderId']),
       rating: serializer.fromJson<int>(json['rating']),
       coverArt: serializer.fromJson<Uint8List?>(json['coverArt']),
+      localArtPath: serializer.fromJson<String?>(json['localArtPath']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       playCount: serializer.fromJson<int>(json['playCount']),
       lastPlayed: serializer.fromJson<DateTime?>(json['lastPlayed']),
@@ -2852,6 +2994,7 @@ class Track extends DataClass implements Insertable<Track> {
       'folderId': serializer.toJson<String>(folderId),
       'rating': serializer.toJson<int>(rating),
       'coverArt': serializer.toJson<Uint8List?>(coverArt),
+      'localArtPath': serializer.toJson<String?>(localArtPath),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'playCount': serializer.toJson<int>(playCount),
       'lastPlayed': serializer.toJson<DateTime?>(lastPlayed),
@@ -2874,6 +3017,7 @@ class Track extends DataClass implements Insertable<Track> {
     String? folderId,
     int? rating,
     Value<Uint8List?> coverArt = const Value.absent(),
+    Value<String?> localArtPath = const Value.absent(),
     bool? isFavorite,
     int? playCount,
     Value<DateTime?> lastPlayed = const Value.absent(),
@@ -2895,6 +3039,7 @@ class Track extends DataClass implements Insertable<Track> {
     folderId: folderId ?? this.folderId,
     rating: rating ?? this.rating,
     coverArt: coverArt.present ? coverArt.value : this.coverArt,
+    localArtPath: localArtPath.present ? localArtPath.value : this.localArtPath,
     isFavorite: isFavorite ?? this.isFavorite,
     playCount: playCount ?? this.playCount,
     lastPlayed: lastPlayed.present ? lastPlayed.value : this.lastPlayed,
@@ -2918,6 +3063,9 @@ class Track extends DataClass implements Insertable<Track> {
       folderId: data.folderId.present ? data.folderId.value : this.folderId,
       rating: data.rating.present ? data.rating.value : this.rating,
       coverArt: data.coverArt.present ? data.coverArt.value : this.coverArt,
+      localArtPath: data.localArtPath.present
+          ? data.localArtPath.value
+          : this.localArtPath,
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
           : this.isFavorite,
@@ -2950,6 +3098,7 @@ class Track extends DataClass implements Insertable<Track> {
           ..write('folderId: $folderId, ')
           ..write('rating: $rating, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
           ..write('lastPlayed: $lastPlayed, ')
@@ -2974,6 +3123,7 @@ class Track extends DataClass implements Insertable<Track> {
     folderId,
     rating,
     $driftBlobEquality.hash(coverArt),
+    localArtPath,
     isFavorite,
     playCount,
     lastPlayed,
@@ -2997,6 +3147,7 @@ class Track extends DataClass implements Insertable<Track> {
           other.folderId == this.folderId &&
           other.rating == this.rating &&
           $driftBlobEquality.equals(other.coverArt, this.coverArt) &&
+          other.localArtPath == this.localArtPath &&
           other.isFavorite == this.isFavorite &&
           other.playCount == this.playCount &&
           other.lastPlayed == this.lastPlayed &&
@@ -3018,6 +3169,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
   final Value<String> folderId;
   final Value<int> rating;
   final Value<Uint8List?> coverArt;
+  final Value<String?> localArtPath;
   final Value<bool> isFavorite;
   final Value<int> playCount;
   final Value<DateTime?> lastPlayed;
@@ -3038,6 +3190,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
     this.folderId = const Value.absent(),
     this.rating = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
     this.lastPlayed = const Value.absent(),
@@ -3059,6 +3212,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
     required String folderId,
     this.rating = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
     this.lastPlayed = const Value.absent(),
@@ -3083,6 +3237,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
     Expression<String>? folderId,
     Expression<int>? rating,
     Expression<Uint8List>? coverArt,
+    Expression<String>? localArtPath,
     Expression<bool>? isFavorite,
     Expression<int>? playCount,
     Expression<DateTime>? lastPlayed,
@@ -3104,6 +3259,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
       if (folderId != null) 'folder_id': folderId,
       if (rating != null) 'rating': rating,
       if (coverArt != null) 'cover_art': coverArt,
+      if (localArtPath != null) 'local_art_path': localArtPath,
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (playCount != null) 'play_count': playCount,
       if (lastPlayed != null) 'last_played': lastPlayed,
@@ -3127,6 +3283,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
     Value<String>? folderId,
     Value<int>? rating,
     Value<Uint8List?>? coverArt,
+    Value<String?>? localArtPath,
     Value<bool>? isFavorite,
     Value<int>? playCount,
     Value<DateTime?>? lastPlayed,
@@ -3148,6 +3305,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
       folderId: folderId ?? this.folderId,
       rating: rating ?? this.rating,
       coverArt: coverArt ?? this.coverArt,
+      localArtPath: localArtPath ?? this.localArtPath,
       isFavorite: isFavorite ?? this.isFavorite,
       playCount: playCount ?? this.playCount,
       lastPlayed: lastPlayed ?? this.lastPlayed,
@@ -3195,6 +3353,9 @@ class TracksCompanion extends UpdateCompanion<Track> {
     if (coverArt.present) {
       map['cover_art'] = Variable<Uint8List>(coverArt.value);
     }
+    if (localArtPath.present) {
+      map['local_art_path'] = Variable<String>(localArtPath.value);
+    }
     if (isFavorite.present) {
       map['is_favorite'] = Variable<bool>(isFavorite.value);
     }
@@ -3236,6 +3397,7 @@ class TracksCompanion extends UpdateCompanion<Track> {
           ..write('folderId: $folderId, ')
           ..write('rating: $rating, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
           ..write('lastPlayed: $lastPlayed, ')
@@ -4481,8 +4643,8 @@ final class $$FoldersTableReferences
     extends BaseReferences<_$AppDatabase, $FoldersTable, Folder> {
   $$FoldersTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $FoldersTable _parentIdTable(_$AppDatabase db) => db.folders
-      .createAlias($_aliasNameGenerator(db.folders.parentId, db.folders.id));
+  static $FoldersTable _parentIdTable(_$AppDatabase db) =>
+      db.folders.createAlias('folders__parent_id__folders__id');
 
   $$FoldersTableProcessedTableManager? get parentId {
     final $_column = $_itemColumn<String>('parent_id');
@@ -4502,7 +4664,7 @@ final class $$FoldersTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tracks,
-    aliasName: $_aliasNameGenerator(db.folders.id, db.tracks.folderId),
+    aliasName: 'folders__id__tracks__folder_id',
   );
 
   $$TracksTableProcessedTableManager get tracksRefs {
@@ -4863,6 +5025,7 @@ typedef $$ArtistsTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<Uint8List?> photo,
+      Value<String?> localArtPath,
       Value<String?> bio,
       Value<String?> photoUrl,
       Value<bool> isFavorite,
@@ -4875,6 +5038,7 @@ typedef $$ArtistsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<Uint8List?> photo,
+      Value<String?> localArtPath,
       Value<String?> bio,
       Value<String?> photoUrl,
       Value<bool> isFavorite,
@@ -4891,7 +5055,7 @@ final class $$ArtistsTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.albums,
-    aliasName: $_aliasNameGenerator(db.artists.id, db.albums.artistId),
+    aliasName: 'artists__id__albums__artist_id',
   );
 
   $$AlbumsTableProcessedTableManager get albumsRefs {
@@ -4910,7 +5074,7 @@ final class $$ArtistsTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tracks,
-    aliasName: $_aliasNameGenerator(db.artists.id, db.tracks.artistId),
+    aliasName: 'artists__id__tracks__artist_id',
   );
 
   $$TracksTableProcessedTableManager get tracksRefs {
@@ -4932,10 +5096,7 @@ final class $$ArtistsTableReferences
   _artistAlbumRelationsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.artistAlbumRelations,
-        aliasName: $_aliasNameGenerator(
-          db.artists.id,
-          db.artistAlbumRelations.artistId,
-        ),
+        aliasName: 'artists__id__artist_album_relations__artist_id',
       );
 
   $$ArtistAlbumRelationsTableProcessedTableManager
@@ -4975,6 +5136,11 @@ class $$ArtistsTableFilterComposer
 
   ColumnFilters<Uint8List> get photo => $composableBuilder(
     column: $table.photo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5103,6 +5269,11 @@ class $$ArtistsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get bio => $composableBuilder(
     column: $table.bio,
     builder: (column) => ColumnOrderings(column),
@@ -5146,6 +5317,11 @@ class $$ArtistsTableAnnotationComposer
 
   GeneratedColumn<Uint8List> get photo =>
       $composableBuilder(column: $table.photo, builder: (column) => column);
+
+  GeneratedColumn<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get bio =>
       $composableBuilder(column: $table.bio, builder: (column) => column);
@@ -5278,6 +5454,7 @@ class $$ArtistsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> bio = const Value.absent(),
                 Value<String?> photoUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
@@ -5288,6 +5465,7 @@ class $$ArtistsTableTableManager
                 id: id,
                 name: name,
                 photo: photo,
+                localArtPath: localArtPath,
                 bio: bio,
                 photoUrl: photoUrl,
                 isFavorite: isFavorite,
@@ -5300,6 +5478,7 @@ class $$ArtistsTableTableManager
                 required String id,
                 required String name,
                 Value<Uint8List?> photo = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> bio = const Value.absent(),
                 Value<String?> photoUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
@@ -5310,6 +5489,7 @@ class $$ArtistsTableTableManager
                 id: id,
                 name: name,
                 photo: photo,
+                localArtPath: localArtPath,
                 bio: bio,
                 photoUrl: photoUrl,
                 isFavorite: isFavorite,
@@ -5428,6 +5608,7 @@ typedef $$AlbumsTableCreateCompanionBuilder =
       required String name,
       Value<String?> artistId,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<String?> coverArtUrl,
       Value<bool> isFavorite,
       Value<int> playCount,
@@ -5452,6 +5633,7 @@ typedef $$AlbumsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> artistId,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<String?> coverArtUrl,
       Value<bool> isFavorite,
       Value<int> playCount,
@@ -5475,8 +5657,8 @@ final class $$AlbumsTableReferences
     extends BaseReferences<_$AppDatabase, $AlbumsTable, Album> {
   $$AlbumsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $ArtistsTable _artistIdTable(_$AppDatabase db) => db.artists
-      .createAlias($_aliasNameGenerator(db.albums.artistId, db.artists.id));
+  static $ArtistsTable _artistIdTable(_$AppDatabase db) =>
+      db.artists.createAlias('albums__artist_id__artists__id');
 
   $$ArtistsTableProcessedTableManager? get artistId {
     final $_column = $_itemColumn<String>('artist_id');
@@ -5496,7 +5678,7 @@ final class $$AlbumsTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tracks,
-    aliasName: $_aliasNameGenerator(db.albums.id, db.tracks.albumId),
+    aliasName: 'albums__id__tracks__album_id',
   );
 
   $$TracksTableProcessedTableManager get tracksRefs {
@@ -5518,10 +5700,7 @@ final class $$AlbumsTableReferences
   _artistAlbumRelationsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.artistAlbumRelations,
-        aliasName: $_aliasNameGenerator(
-          db.albums.id,
-          db.artistAlbumRelations.albumId,
-        ),
+        aliasName: 'albums__id__artist_album_relations__album_id',
       );
 
   $$ArtistAlbumRelationsTableProcessedTableManager
@@ -5561,6 +5740,11 @@ class $$AlbumsTableFilterComposer
 
   ColumnFilters<Uint8List> get coverArt => $composableBuilder(
     column: $table.coverArt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5742,6 +5926,11 @@ class $$AlbumsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get coverArtUrl => $composableBuilder(
     column: $table.coverArtUrl,
     builder: (column) => ColumnOrderings(column),
@@ -5863,6 +6052,11 @@ class $$AlbumsTableAnnotationComposer
 
   GeneratedColumn<Uint8List> get coverArt =>
       $composableBuilder(column: $table.coverArt, builder: (column) => column);
+
+  GeneratedColumn<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get coverArtUrl => $composableBuilder(
     column: $table.coverArtUrl,
@@ -6043,6 +6237,7 @@ class $$AlbumsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> artistId = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> coverArtUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
@@ -6065,6 +6260,7 @@ class $$AlbumsTableTableManager
                 name: name,
                 artistId: artistId,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 coverArtUrl: coverArtUrl,
                 isFavorite: isFavorite,
                 playCount: playCount,
@@ -6089,6 +6285,7 @@ class $$AlbumsTableTableManager
                 required String name,
                 Value<String?> artistId = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> coverArtUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
@@ -6111,6 +6308,7 @@ class $$AlbumsTableTableManager
                 name: name,
                 artistId: artistId,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 coverArtUrl: coverArtUrl,
                 isFavorite: isFavorite,
                 playCount: playCount,
@@ -6262,7 +6460,7 @@ final class $$GenresTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tracks,
-    aliasName: $_aliasNameGenerator(db.genres.id, db.tracks.genreId),
+    aliasName: 'genres__id__tracks__genre_id',
   );
 
   $$TracksTableProcessedTableManager get tracksRefs {
@@ -6482,6 +6680,7 @@ typedef $$TracksTableCreateCompanionBuilder =
       required String folderId,
       Value<int> rating,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<bool> isFavorite,
       Value<int> playCount,
       Value<DateTime?> lastPlayed,
@@ -6504,6 +6703,7 @@ typedef $$TracksTableUpdateCompanionBuilder =
       Value<String> folderId,
       Value<int> rating,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<bool> isFavorite,
       Value<int> playCount,
       Value<DateTime?> lastPlayed,
@@ -6518,8 +6718,8 @@ final class $$TracksTableReferences
     extends BaseReferences<_$AppDatabase, $TracksTable, Track> {
   $$TracksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $ArtistsTable _artistIdTable(_$AppDatabase db) => db.artists
-      .createAlias($_aliasNameGenerator(db.tracks.artistId, db.artists.id));
+  static $ArtistsTable _artistIdTable(_$AppDatabase db) =>
+      db.artists.createAlias('tracks__artist_id__artists__id');
 
   $$ArtistsTableProcessedTableManager? get artistId {
     final $_column = $_itemColumn<String>('artist_id');
@@ -6535,9 +6735,8 @@ final class $$TracksTableReferences
     );
   }
 
-  static $AlbumsTable _albumIdTable(_$AppDatabase db) => db.albums.createAlias(
-    $_aliasNameGenerator(db.tracks.albumId, db.albums.id),
-  );
+  static $AlbumsTable _albumIdTable(_$AppDatabase db) =>
+      db.albums.createAlias('tracks__album_id__albums__id');
 
   $$AlbumsTableProcessedTableManager? get albumId {
     final $_column = $_itemColumn<String>('album_id');
@@ -6553,9 +6752,8 @@ final class $$TracksTableReferences
     );
   }
 
-  static $GenresTable _genreIdTable(_$AppDatabase db) => db.genres.createAlias(
-    $_aliasNameGenerator(db.tracks.genreId, db.genres.id),
-  );
+  static $GenresTable _genreIdTable(_$AppDatabase db) =>
+      db.genres.createAlias('tracks__genre_id__genres__id');
 
   $$GenresTableProcessedTableManager? get genreId {
     final $_column = $_itemColumn<String>('genre_id');
@@ -6571,8 +6769,8 @@ final class $$TracksTableReferences
     );
   }
 
-  static $FoldersTable _folderIdTable(_$AppDatabase db) => db.folders
-      .createAlias($_aliasNameGenerator(db.tracks.folderId, db.folders.id));
+  static $FoldersTable _folderIdTable(_$AppDatabase db) =>
+      db.folders.createAlias('tracks__folder_id__folders__id');
 
   $$FoldersTableProcessedTableManager get folderId {
     final $_column = $_itemColumn<String>('folder_id')!;
@@ -6591,7 +6789,7 @@ final class $$TracksTableReferences
   static MultiTypedResultKey<$PlaylistTracksTable, List<PlaylistTrack>>
   _playlistTracksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.playlistTracks,
-    aliasName: $_aliasNameGenerator(db.tracks.id, db.playlistTracks.trackId),
+    aliasName: 'tracks__id__playlist_tracks__track_id',
   );
 
   $$PlaylistTracksTableProcessedTableManager get playlistTracksRefs {
@@ -6648,6 +6846,11 @@ class $$TracksTableFilterComposer
 
   ColumnFilters<Uint8List> get coverArt => $composableBuilder(
     column: $table.coverArt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6848,6 +7051,11 @@ class $$TracksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
     builder: (column) => ColumnOrderings(column),
@@ -7007,6 +7215,11 @@ class $$TracksTableAnnotationComposer
 
   GeneratedColumn<Uint8List> get coverArt =>
       $composableBuilder(column: $table.coverArt, builder: (column) => column);
+
+  GeneratedColumn<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
@@ -7200,6 +7413,7 @@ class $$TracksTableTableManager
                 Value<String> folderId = const Value.absent(),
                 Value<int> rating = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
                 Value<DateTime?> lastPlayed = const Value.absent(),
@@ -7220,6 +7434,7 @@ class $$TracksTableTableManager
                 folderId: folderId,
                 rating: rating,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 isFavorite: isFavorite,
                 playCount: playCount,
                 lastPlayed: lastPlayed,
@@ -7242,6 +7457,7 @@ class $$TracksTableTableManager
                 required String folderId,
                 Value<int> rating = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
                 Value<DateTime?> lastPlayed = const Value.absent(),
@@ -7262,6 +7478,7 @@ class $$TracksTableTableManager
                 folderId: folderId,
                 rating: rating,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 isFavorite: isFavorite,
                 playCount: playCount,
                 lastPlayed: lastPlayed,
@@ -7438,10 +7655,7 @@ final class $$PlaylistsTableReferences
   static MultiTypedResultKey<$PlaylistTracksTable, List<PlaylistTrack>>
   _playlistTracksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.playlistTracks,
-    aliasName: $_aliasNameGenerator(
-      db.playlists.id,
-      db.playlistTracks.playlistId,
-    ),
+    aliasName: 'playlists__id__playlist_tracks__playlist_id',
   );
 
   $$PlaylistTracksTableProcessedTableManager get playlistTracksRefs {
@@ -7742,9 +7956,7 @@ final class $$PlaylistTracksTableReferences
   );
 
   static $PlaylistsTable _playlistIdTable(_$AppDatabase db) =>
-      db.playlists.createAlias(
-        $_aliasNameGenerator(db.playlistTracks.playlistId, db.playlists.id),
-      );
+      db.playlists.createAlias('playlist_tracks__playlist_id__playlists__id');
 
   $$PlaylistsTableProcessedTableManager get playlistId {
     final $_column = $_itemColumn<String>('playlist_id')!;
@@ -7760,9 +7972,8 @@ final class $$PlaylistTracksTableReferences
     );
   }
 
-  static $TracksTable _trackIdTable(_$AppDatabase db) => db.tracks.createAlias(
-    $_aliasNameGenerator(db.playlistTracks.trackId, db.tracks.id),
-  );
+  static $TracksTable _trackIdTable(_$AppDatabase db) =>
+      db.tracks.createAlias('playlist_tracks__track_id__tracks__id');
 
   $$TracksTableProcessedTableManager get trackId {
     final $_column = $_itemColumn<String>('track_id')!;
@@ -8285,9 +8496,7 @@ final class $$ArtistAlbumRelationsTableReferences
   );
 
   static $ArtistsTable _artistIdTable(_$AppDatabase db) =>
-      db.artists.createAlias(
-        $_aliasNameGenerator(db.artistAlbumRelations.artistId, db.artists.id),
-      );
+      db.artists.createAlias('artist_album_relations__artist_id__artists__id');
 
   $$ArtistsTableProcessedTableManager get artistId {
     final $_column = $_itemColumn<String>('artist_id')!;
@@ -8303,9 +8512,8 @@ final class $$ArtistAlbumRelationsTableReferences
     );
   }
 
-  static $AlbumsTable _albumIdTable(_$AppDatabase db) => db.albums.createAlias(
-    $_aliasNameGenerator(db.artistAlbumRelations.albumId, db.albums.id),
-  );
+  static $AlbumsTable _albumIdTable(_$AppDatabase db) =>
+      db.albums.createAlias('artist_album_relations__album_id__albums__id');
 
   $$AlbumsTableProcessedTableManager get albumId {
     final $_column = $_itemColumn<String>('album_id')!;

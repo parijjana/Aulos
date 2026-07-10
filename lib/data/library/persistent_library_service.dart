@@ -6,12 +6,12 @@ import 'package:aulos/domain/library/library_service.dart';
 import 'package:aulos/data/library/persistent_library_importer.dart';
 
 abstract class PersistentLibraryService {
-  Future<List<Folder>> getFolders();
-  Future<List<Folder>> getRootFolders({int folderType = 0});
+  Future<List<Folder>> getFolders({int? limit, int? offset, String? searchQuery});
+  Future<List<Folder>> getRootFolders({int folderType = 0, int? limit, int? offset, String? searchQuery});
   Future<List<Folder>> getSubFolders(String parentId, {int folderType = 0});
-  Future<List<Artist>> getArtists();
-  Future<List<Album>> getAlbums();
-  Future<List<Genre>> getGenres();
+  Future<List<Artist>> getArtists({int? limit, int? offset, String? searchQuery});
+  Future<List<Album>> getAlbums({int? limit, int? offset, String? searchQuery});
+  Future<List<Genre>> getGenres({int? limit, int? offset, String? searchQuery});
   Future<List<int>> getYears();
 
   Future<List<Track>> getTracksForFolder(String folderId);
@@ -20,7 +20,7 @@ abstract class PersistentLibraryService {
   Future<List<Track>> getTracksForGenre(String genreId);
   Future<List<Track>> getTracksForYear(int year);
 
-  Future<List<Track>> getAllTracks();
+  Future<List<Track>> getAllTracks({int? limit, int? offset, String? searchQuery});
   Future<void> importFolder(String path, {VoidCallback? onFileFound, int folderType = 0});
   Future<void> autoDiscoverTracks();
   Future<void> pickAndAddFolder({int folderType = 0});
@@ -28,6 +28,8 @@ abstract class PersistentLibraryService {
   Future<void> updateAlbumArt(String albumId, Uint8List art);
   Future<void> updateArtistPhoto(String artistId, Uint8List photo);
   Future<void> updateArtistBiography(String artistId, String biography);
+  Future<void> toggleArtistFavorite(String artistId);
+  Future<void> toggleAlbumFavorite(String albumId);
   Future<List<Track>> getQueue();
   Future<void> saveQueue(List<String> trackIds);
   Future<List<Playlist>> getPlaylists();
@@ -59,12 +61,18 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   LibraryService get scanner => _scanner;
 
   @override
-  Future<List<Folder>> getFolders() => _db.getAllFolders();
+  Future<List<Folder>> getFolders({int? limit, int? offset, String? searchQuery}) =>
+      _db.getAllFolders(limit: limit, offset: offset, searchQuery: searchQuery);
 
   @override
-  Future<List<Folder>> getRootFolders({int folderType = 0}) async {
+  Future<List<Folder>> getRootFolders({int folderType = 0, int? limit, int? offset, String? searchQuery}) async {
     if (folderType == 1) {
-      final list = await _audiobookDb.getRootFolders();
+      var list = await _audiobookDb.getRootFolders();
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        list = list.where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+      }
+      if (offset != null) list = list.skip(offset).toList();
+      if (limit != null) list = list.take(limit).toList();
       return list.map((f) => Folder(
         id: f.id,
         path: f.path,
@@ -73,7 +81,7 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
         folderType: 1,
       )).toList();
     }
-    return _db.getRootFolders(folderType: folderType);
+    return _db.getRootFolders(folderType: folderType, limit: limit, offset: offset, searchQuery: searchQuery);
   }
 
   @override
@@ -92,13 +100,16 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   }
 
   @override
-  Future<List<Artist>> getArtists() => _db.getAllArtists();
+  Future<List<Artist>> getArtists({int? limit, int? offset, String? searchQuery}) =>
+      _db.getAllArtists(limit: limit, offset: offset, searchQuery: searchQuery);
 
   @override
-  Future<List<Album>> getAlbums() => _db.getAllAlbums();
+  Future<List<Album>> getAlbums({int? limit, int? offset, String? searchQuery}) =>
+      _db.getAllAlbums(limit: limit, offset: offset, searchQuery: searchQuery);
 
   @override
-  Future<List<Genre>> getGenres() => _db.getAllGenres();
+  Future<List<Genre>> getGenres({int? limit, int? offset, String? searchQuery}) =>
+      _db.getAllGenres(limit: limit, offset: offset, searchQuery: searchQuery);
 
   @override
   Future<List<int>> getYears() => _db.getAllYears();
@@ -123,7 +134,8 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
   Future<List<Track>> getTracksForYear(int year) => _db.getTracksForYear(year);
 
   @override
-  Future<List<Track>> getAllTracks() => _db.getAllTracks();
+  Future<List<Track>> getAllTracks({int? limit, int? offset, String? searchQuery}) =>
+      _db.getAllTracks(limit: limit, offset: offset, searchQuery: searchQuery);
 
   @override
   Future<List<Album>> getAudiobooks() async {
@@ -425,4 +437,10 @@ class PersistentLibraryServiceImpl implements PersistentLibraryService {
       (_db.select(
         _db.tracks,
       )..where((t) => t.year.equals(year) & t.albumId.equals(albumId))).get();
+
+  @override
+  Future<void> toggleArtistFavorite(String artistId) => _db.toggleArtistFavorite(artistId);
+
+  @override
+  Future<void> toggleAlbumFavorite(String albumId) => _db.toggleAlbumFavorite(albumId);
 }

@@ -9,6 +9,19 @@ import 'package:aulos/domain/network/log_service.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:aulos/core/utils/benchmark.dart';
+
+Future<String?> _saveArtToDisk(Uint8List? art, String generatedId) async {
+  if (art == null) return null;
+  final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'artwork'));
+  if (!dir.existsSync()) dir.createSync(recursive: true);
+  final file = File(p.join(dir.path, '$generatedId.jpg'));
+  if (!file.existsSync()) {
+    await file.writeAsBytes(art);
+  }
+  return file.path;
+}
 
 enum IndexerState { idle, scanning, optimizing, hardening, paused, error }
 
@@ -280,7 +293,8 @@ class LibraryIndexerService extends ChangeNotifier {
           }
           
           if (art != null) {
-            await service.updateAlbumArt(album.id, art);
+            final artPath = await _saveArtToDisk(art, album.id);
+            await service.updateAlbumArt(album.id, null, localArtPath: artPath);
             _lastFetchedArt = art;
             log('INDEXER: Saved art for "${album.name}"');
           }
@@ -328,7 +342,8 @@ class LibraryIndexerService extends ChangeNotifier {
           }
 
           if (photo != null) {
-            await service.updateArtistPhoto(artist.id, photo);
+            final photoPath = await _saveArtToDisk(photo, artist.id);
+            await service.updateArtistPhoto(artist.id, null, localArtPath: photoPath);
             _lastFetchedArt = photo;
             log('INDEXER: Saved photo for "${artist.name}"');
           }
@@ -448,7 +463,7 @@ class LibraryIndexerService extends ChangeNotifier {
         _statusMessage = 'Scanning: $path';
         notifyListeners();
 
-        await service.importFolder(
+        await Benchmark.measureAsync('Indexer_ScanFolder', _logService, () => service.importFolder(
           path,
           folderType: folderType,
           onFileFound: () {
@@ -456,7 +471,7 @@ class LibraryIndexerService extends ChangeNotifier {
             _totalFilesStored++;
             notifyListeners();
           },
-        );
+        ));
 
         _foldersScanned++;
         notifyListeners();
@@ -519,45 +534,47 @@ class LibraryIndexerService extends ChangeNotifier {
 
       int processed = startOffset;
 
-      for (int i = startOffset; i < totalArtists; i++) {
-        if (_shouldPause) {
-          await _prefs.setInt(_progressKey, processed);
-          return;
-        }
+      await Benchmark.measureAsync('Indexer_DatabaseOptimization', _logService, () async {
+        for (int i = startOffset; i < totalArtists; i++) {
+          if (_shouldPause) {
+            await _prefs.setInt(_progressKey, processed);
+            return;
+          }
 
-        final artist = allArtists[i];
-        final artistTracks = await _db.getTracksForArtist(artist.id);
-        final Map<String, int> albumCounts = {};
-        for (var track in artistTracks) {
-          if (track.albumId != null) {
-            albumCounts[track.albumId!] =
-                (albumCounts[track.albumId!] ?? 0) + 1;
+          final artist = allArtists[i];
+          final artistTracks = await _db.getTracksForArtist(artist.id);
+          final Map<String, int> albumCounts = {};
+          for (var track in artistTracks) {
+            if (track.albumId != null) {
+              albumCounts[track.albumId!] =
+                  (albumCounts[track.albumId!] ?? 0) + 1;
+            }
+          }
+
+          final relations = albumCounts.entries
+              .map(
+                (e) => ArtistAlbumRelation(
+                  artistId: artist.id,
+                  albumId: e.key,
+                  trackCount: e.value,
+                ),
+              )
+              .toList();
+
+          if (relations.isNotEmpty) {
+            await _db.cacheArtistAlbumRelations(relations);
+          }
+
+          processed++;
+          _progress = processed / totalArtists;
+          await _prefs.setInt(_progressKey, processed);
+          notifyListeners();
+
+          if (i % 20 == 0) {
+            await Future<void>.delayed(const Duration(milliseconds: 2));
           }
         }
-
-        final relations = albumCounts.entries
-            .map(
-              (e) => ArtistAlbumRelation(
-                artistId: artist.id,
-                albumId: e.key,
-                trackCount: e.value,
-              ),
-            )
-            .toList();
-
-        if (relations.isNotEmpty) {
-          await _db.cacheArtistAlbumRelations(relations);
-        }
-
-        processed++;
-        _progress = processed / totalArtists;
-        await _prefs.setInt(_progressKey, processed);
-        notifyListeners();
-
-        if (i % 20 == 0) {
-          await Future<void>.delayed(const Duration(milliseconds: 2));
-        }
-      }
+      });
 
       log('INDEXER: Database optimization complete.');
       _state = IndexerState.idle;

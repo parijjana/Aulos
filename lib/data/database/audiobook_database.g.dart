@@ -348,6 +348,17 @@ class $AudiobookArtistsTable extends AudiobookArtists
     type: DriftSqlType.blob,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _localArtPathMeta = const VerificationMeta(
+    'localArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> localArtPath = GeneratedColumn<String>(
+    'local_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _bioMeta = const VerificationMeta('bio');
   @override
   late final GeneratedColumn<String> bio = GeneratedColumn<String>(
@@ -411,6 +422,7 @@ class $AudiobookArtistsTable extends AudiobookArtists
     id,
     name,
     photo,
+    localArtPath,
     bio,
     photoUrl,
     isFavorite,
@@ -446,6 +458,15 @@ class $AudiobookArtistsTable extends AudiobookArtists
       context.handle(
         _photoMeta,
         photo.isAcceptableOrUnknown(data['photo']!, _photoMeta),
+      );
+    }
+    if (data.containsKey('local_art_path')) {
+      context.handle(
+        _localArtPathMeta,
+        localArtPath.isAcceptableOrUnknown(
+          data['local_art_path']!,
+          _localArtPathMeta,
+        ),
       );
     }
     if (data.containsKey('bio')) {
@@ -499,6 +520,10 @@ class $AudiobookArtistsTable extends AudiobookArtists
         DriftSqlType.blob,
         data['${effectivePrefix}photo'],
       ),
+      localArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_art_path'],
+      ),
       bio: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}bio'],
@@ -532,6 +557,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
   final String id;
   final String name;
   final Uint8List? photo;
+  final String? localArtPath;
   final String? bio;
   final String? photoUrl;
   final bool isFavorite;
@@ -541,6 +567,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
     required this.id,
     required this.name,
     this.photo,
+    this.localArtPath,
     this.bio,
     this.photoUrl,
     required this.isFavorite,
@@ -554,6 +581,9 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || photo != null) {
       map['photo'] = Variable<Uint8List>(photo);
+    }
+    if (!nullToAbsent || localArtPath != null) {
+      map['local_art_path'] = Variable<String>(localArtPath);
     }
     if (!nullToAbsent || bio != null) {
       map['bio'] = Variable<String>(bio);
@@ -576,6 +606,9 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
       photo: photo == null && nullToAbsent
           ? const Value.absent()
           : Value(photo),
+      localArtPath: localArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localArtPath),
       bio: bio == null && nullToAbsent ? const Value.absent() : Value(bio),
       photoUrl: photoUrl == null && nullToAbsent
           ? const Value.absent()
@@ -597,6 +630,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       photo: serializer.fromJson<Uint8List?>(json['photo']),
+      localArtPath: serializer.fromJson<String?>(json['localArtPath']),
       bio: serializer.fromJson<String?>(json['bio']),
       photoUrl: serializer.fromJson<String?>(json['photoUrl']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
@@ -611,6 +645,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'photo': serializer.toJson<Uint8List?>(photo),
+      'localArtPath': serializer.toJson<String?>(localArtPath),
       'bio': serializer.toJson<String?>(bio),
       'photoUrl': serializer.toJson<String?>(photoUrl),
       'isFavorite': serializer.toJson<bool>(isFavorite),
@@ -623,6 +658,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
     String? id,
     String? name,
     Value<Uint8List?> photo = const Value.absent(),
+    Value<String?> localArtPath = const Value.absent(),
     Value<String?> bio = const Value.absent(),
     Value<String?> photoUrl = const Value.absent(),
     bool? isFavorite,
@@ -632,6 +668,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
     id: id ?? this.id,
     name: name ?? this.name,
     photo: photo.present ? photo.value : this.photo,
+    localArtPath: localArtPath.present ? localArtPath.value : this.localArtPath,
     bio: bio.present ? bio.value : this.bio,
     photoUrl: photoUrl.present ? photoUrl.value : this.photoUrl,
     isFavorite: isFavorite ?? this.isFavorite,
@@ -643,6 +680,9 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       photo: data.photo.present ? data.photo.value : this.photo,
+      localArtPath: data.localArtPath.present
+          ? data.localArtPath.value
+          : this.localArtPath,
       bio: data.bio.present ? data.bio.value : this.bio,
       photoUrl: data.photoUrl.present ? data.photoUrl.value : this.photoUrl,
       isFavorite: data.isFavorite.present
@@ -661,6 +701,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('photo: $photo, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('bio: $bio, ')
           ..write('photoUrl: $photoUrl, ')
           ..write('isFavorite: $isFavorite, ')
@@ -675,6 +716,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
     id,
     name,
     $driftBlobEquality.hash(photo),
+    localArtPath,
     bio,
     photoUrl,
     isFavorite,
@@ -688,6 +730,7 @@ class AudiobookArtist extends DataClass implements Insertable<AudiobookArtist> {
           other.id == this.id &&
           other.name == this.name &&
           $driftBlobEquality.equals(other.photo, this.photo) &&
+          other.localArtPath == this.localArtPath &&
           other.bio == this.bio &&
           other.photoUrl == this.photoUrl &&
           other.isFavorite == this.isFavorite &&
@@ -699,6 +742,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
   final Value<String> id;
   final Value<String> name;
   final Value<Uint8List?> photo;
+  final Value<String?> localArtPath;
   final Value<String?> bio;
   final Value<String?> photoUrl;
   final Value<bool> isFavorite;
@@ -709,6 +753,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.photo = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.bio = const Value.absent(),
     this.photoUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
@@ -720,6 +765,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
     required String id,
     required String name,
     this.photo = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.bio = const Value.absent(),
     this.photoUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
@@ -732,6 +778,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<Uint8List>? photo,
+    Expression<String>? localArtPath,
     Expression<String>? bio,
     Expression<String>? photoUrl,
     Expression<bool>? isFavorite,
@@ -743,6 +790,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (photo != null) 'photo': photo,
+      if (localArtPath != null) 'local_art_path': localArtPath,
       if (bio != null) 'bio': bio,
       if (photoUrl != null) 'photo_url': photoUrl,
       if (isFavorite != null) 'is_favorite': isFavorite,
@@ -756,6 +804,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
     Value<String>? id,
     Value<String>? name,
     Value<Uint8List?>? photo,
+    Value<String?>? localArtPath,
     Value<String?>? bio,
     Value<String?>? photoUrl,
     Value<bool>? isFavorite,
@@ -767,6 +816,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
       id: id ?? this.id,
       name: name ?? this.name,
       photo: photo ?? this.photo,
+      localArtPath: localArtPath ?? this.localArtPath,
       bio: bio ?? this.bio,
       photoUrl: photoUrl ?? this.photoUrl,
       isFavorite: isFavorite ?? this.isFavorite,
@@ -787,6 +837,9 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
     }
     if (photo.present) {
       map['photo'] = Variable<Uint8List>(photo.value);
+    }
+    if (localArtPath.present) {
+      map['local_art_path'] = Variable<String>(localArtPath.value);
     }
     if (bio.present) {
       map['bio'] = Variable<String>(bio.value);
@@ -815,6 +868,7 @@ class AudiobookArtistsCompanion extends UpdateCompanion<AudiobookArtist> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('photo: $photo, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('bio: $bio, ')
           ..write('photoUrl: $photoUrl, ')
           ..write('isFavorite: $isFavorite, ')
@@ -873,6 +927,17 @@ class $AudiobooksTable extends Audiobooks
     aliasedName,
     true,
     type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _localArtPathMeta = const VerificationMeta(
+    'localArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> localArtPath = GeneratedColumn<String>(
+    'local_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _coverArtUrlMeta = const VerificationMeta(
@@ -1057,6 +1122,7 @@ class $AudiobooksTable extends Audiobooks
     name,
     artistId,
     coverArt,
+    localArtPath,
     coverArtUrl,
     isFavorite,
     playCount,
@@ -1108,6 +1174,15 @@ class $AudiobooksTable extends Audiobooks
       context.handle(
         _coverArtMeta,
         coverArt.isAcceptableOrUnknown(data['cover_art']!, _coverArtMeta),
+      );
+    }
+    if (data.containsKey('local_art_path')) {
+      context.handle(
+        _localArtPathMeta,
+        localArtPath.isAcceptableOrUnknown(
+          data['local_art_path']!,
+          _localArtPathMeta,
+        ),
       );
     }
     if (data.containsKey('cover_art_url')) {
@@ -1244,6 +1319,10 @@ class $AudiobooksTable extends Audiobooks
         DriftSqlType.blob,
         data['${effectivePrefix}cover_art'],
       ),
+      localArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_art_path'],
+      ),
       coverArtUrl: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cover_art_url'],
@@ -1318,6 +1397,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
   final String name;
   final String? artistId;
   final Uint8List? coverArt;
+  final String? localArtPath;
   final String? coverArtUrl;
   final bool isFavorite;
   final int playCount;
@@ -1338,6 +1418,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
     required this.name,
     this.artistId,
     this.coverArt,
+    this.localArtPath,
     this.coverArtUrl,
     required this.isFavorite,
     required this.playCount,
@@ -1364,6 +1445,9 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
     }
     if (!nullToAbsent || coverArt != null) {
       map['cover_art'] = Variable<Uint8List>(coverArt);
+    }
+    if (!nullToAbsent || localArtPath != null) {
+      map['local_art_path'] = Variable<String>(localArtPath);
     }
     if (!nullToAbsent || coverArtUrl != null) {
       map['cover_art_url'] = Variable<String>(coverArtUrl);
@@ -1415,6 +1499,9 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
       coverArt: coverArt == null && nullToAbsent
           ? const Value.absent()
           : Value(coverArt),
+      localArtPath: localArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localArtPath),
       coverArtUrl: coverArtUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(coverArtUrl),
@@ -1463,6 +1550,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
       name: serializer.fromJson<String>(json['name']),
       artistId: serializer.fromJson<String?>(json['artistId']),
       coverArt: serializer.fromJson<Uint8List?>(json['coverArt']),
+      localArtPath: serializer.fromJson<String?>(json['localArtPath']),
       coverArtUrl: serializer.fromJson<String?>(json['coverArtUrl']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       playCount: serializer.fromJson<int>(json['playCount']),
@@ -1490,6 +1578,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
       'name': serializer.toJson<String>(name),
       'artistId': serializer.toJson<String?>(artistId),
       'coverArt': serializer.toJson<Uint8List?>(coverArt),
+      'localArtPath': serializer.toJson<String?>(localArtPath),
       'coverArtUrl': serializer.toJson<String?>(coverArtUrl),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'playCount': serializer.toJson<int>(playCount),
@@ -1513,6 +1602,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
     String? name,
     Value<String?> artistId = const Value.absent(),
     Value<Uint8List?> coverArt = const Value.absent(),
+    Value<String?> localArtPath = const Value.absent(),
     Value<String?> coverArtUrl = const Value.absent(),
     bool? isFavorite,
     int? playCount,
@@ -1533,6 +1623,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
     name: name ?? this.name,
     artistId: artistId.present ? artistId.value : this.artistId,
     coverArt: coverArt.present ? coverArt.value : this.coverArt,
+    localArtPath: localArtPath.present ? localArtPath.value : this.localArtPath,
     coverArtUrl: coverArtUrl.present ? coverArtUrl.value : this.coverArtUrl,
     isFavorite: isFavorite ?? this.isFavorite,
     playCount: playCount ?? this.playCount,
@@ -1559,6 +1650,9 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
       name: data.name.present ? data.name.value : this.name,
       artistId: data.artistId.present ? data.artistId.value : this.artistId,
       coverArt: data.coverArt.present ? data.coverArt.value : this.coverArt,
+      localArtPath: data.localArtPath.present
+          ? data.localArtPath.value
+          : this.localArtPath,
       coverArtUrl: data.coverArtUrl.present
           ? data.coverArtUrl.value
           : this.coverArtUrl,
@@ -1602,6 +1696,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
           ..write('name: $name, ')
           ..write('artistId: $artistId, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('coverArtUrl: $coverArtUrl, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
@@ -1627,6 +1722,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
     name,
     artistId,
     $driftBlobEquality.hash(coverArt),
+    localArtPath,
     coverArtUrl,
     isFavorite,
     playCount,
@@ -1651,6 +1747,7 @@ class Audiobook extends DataClass implements Insertable<Audiobook> {
           other.name == this.name &&
           other.artistId == this.artistId &&
           $driftBlobEquality.equals(other.coverArt, this.coverArt) &&
+          other.localArtPath == this.localArtPath &&
           other.coverArtUrl == this.coverArtUrl &&
           other.isFavorite == this.isFavorite &&
           other.playCount == this.playCount &&
@@ -1673,6 +1770,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
   final Value<String> name;
   final Value<String?> artistId;
   final Value<Uint8List?> coverArt;
+  final Value<String?> localArtPath;
   final Value<String?> coverArtUrl;
   final Value<bool> isFavorite;
   final Value<int> playCount;
@@ -1694,6 +1792,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
     this.name = const Value.absent(),
     this.artistId = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.coverArtUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
@@ -1716,6 +1815,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
     required String name,
     this.artistId = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.coverArtUrl = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
@@ -1739,6 +1839,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
     Expression<String>? name,
     Expression<String>? artistId,
     Expression<Uint8List>? coverArt,
+    Expression<String>? localArtPath,
     Expression<String>? coverArtUrl,
     Expression<bool>? isFavorite,
     Expression<int>? playCount,
@@ -1761,6 +1862,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
       if (name != null) 'name': name,
       if (artistId != null) 'artist_id': artistId,
       if (coverArt != null) 'cover_art': coverArt,
+      if (localArtPath != null) 'local_art_path': localArtPath,
       if (coverArtUrl != null) 'cover_art_url': coverArtUrl,
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (playCount != null) 'play_count': playCount,
@@ -1786,6 +1888,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
     Value<String>? name,
     Value<String?>? artistId,
     Value<Uint8List?>? coverArt,
+    Value<String?>? localArtPath,
     Value<String?>? coverArtUrl,
     Value<bool>? isFavorite,
     Value<int>? playCount,
@@ -1808,6 +1911,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
       name: name ?? this.name,
       artistId: artistId ?? this.artistId,
       coverArt: coverArt ?? this.coverArt,
+      localArtPath: localArtPath ?? this.localArtPath,
       coverArtUrl: coverArtUrl ?? this.coverArtUrl,
       isFavorite: isFavorite ?? this.isFavorite,
       playCount: playCount ?? this.playCount,
@@ -1841,6 +1945,9 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
     }
     if (coverArt.present) {
       map['cover_art'] = Variable<Uint8List>(coverArt.value);
+    }
+    if (localArtPath.present) {
+      map['local_art_path'] = Variable<String>(localArtPath.value);
     }
     if (coverArtUrl.present) {
       map['cover_art_url'] = Variable<String>(coverArtUrl.value);
@@ -1902,6 +2009,7 @@ class AudiobooksCompanion extends UpdateCompanion<Audiobook> {
           ..write('name: $name, ')
           ..write('artistId: $artistId, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('coverArtUrl: $coverArtUrl, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
@@ -2017,6 +2125,17 @@ class $AudiobookTracksTable extends AudiobookTracks
     type: DriftSqlType.blob,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _localArtPathMeta = const VerificationMeta(
+    'localArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> localArtPath = GeneratedColumn<String>(
+    'local_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isFavoriteMeta = const VerificationMeta(
     'isFavorite',
   );
@@ -2105,6 +2224,7 @@ class $AudiobookTracksTable extends AudiobookTracks
     durationSeconds,
     rating,
     coverArt,
+    localArtPath,
     isFavorite,
     playCount,
     lastPlayed,
@@ -2179,6 +2299,15 @@ class $AudiobookTracksTable extends AudiobookTracks
       context.handle(
         _coverArtMeta,
         coverArt.isAcceptableOrUnknown(data['cover_art']!, _coverArtMeta),
+      );
+    }
+    if (data.containsKey('local_art_path')) {
+      context.handle(
+        _localArtPathMeta,
+        localArtPath.isAcceptableOrUnknown(
+          data['local_art_path']!,
+          _localArtPathMeta,
+        ),
       );
     }
     if (data.containsKey('is_favorite')) {
@@ -2261,6 +2390,10 @@ class $AudiobookTracksTable extends AudiobookTracks
         DriftSqlType.blob,
         data['${effectivePrefix}cover_art'],
       ),
+      localArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_art_path'],
+      ),
       isFavorite: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_favorite'],
@@ -2303,6 +2436,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
   final int? durationSeconds;
   final int rating;
   final Uint8List? coverArt;
+  final String? localArtPath;
   final bool isFavorite;
   final int playCount;
   final DateTime? lastPlayed;
@@ -2318,6 +2452,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
     this.durationSeconds,
     required this.rating,
     this.coverArt,
+    this.localArtPath,
     required this.isFavorite,
     required this.playCount,
     this.lastPlayed,
@@ -2343,6 +2478,9 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
     map['rating'] = Variable<int>(rating);
     if (!nullToAbsent || coverArt != null) {
       map['cover_art'] = Variable<Uint8List>(coverArt);
+    }
+    if (!nullToAbsent || localArtPath != null) {
+      map['local_art_path'] = Variable<String>(localArtPath);
     }
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['play_count'] = Variable<int>(playCount);
@@ -2377,6 +2515,9 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
       coverArt: coverArt == null && nullToAbsent
           ? const Value.absent()
           : Value(coverArt),
+      localArtPath: localArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localArtPath),
       isFavorite: Value(isFavorite),
       playCount: Value(playCount),
       lastPlayed: lastPlayed == null && nullToAbsent
@@ -2406,6 +2547,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
       durationSeconds: serializer.fromJson<int?>(json['durationSeconds']),
       rating: serializer.fromJson<int>(json['rating']),
       coverArt: serializer.fromJson<Uint8List?>(json['coverArt']),
+      localArtPath: serializer.fromJson<String?>(json['localArtPath']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       playCount: serializer.fromJson<int>(json['playCount']),
       lastPlayed: serializer.fromJson<DateTime?>(json['lastPlayed']),
@@ -2426,6 +2568,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
       'durationSeconds': serializer.toJson<int?>(durationSeconds),
       'rating': serializer.toJson<int>(rating),
       'coverArt': serializer.toJson<Uint8List?>(coverArt),
+      'localArtPath': serializer.toJson<String?>(localArtPath),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'playCount': serializer.toJson<int>(playCount),
       'lastPlayed': serializer.toJson<DateTime?>(lastPlayed),
@@ -2444,6 +2587,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
     Value<int?> durationSeconds = const Value.absent(),
     int? rating,
     Value<Uint8List?> coverArt = const Value.absent(),
+    Value<String?> localArtPath = const Value.absent(),
     bool? isFavorite,
     int? playCount,
     Value<DateTime?> lastPlayed = const Value.absent(),
@@ -2461,6 +2605,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
         : this.durationSeconds,
     rating: rating ?? this.rating,
     coverArt: coverArt.present ? coverArt.value : this.coverArt,
+    localArtPath: localArtPath.present ? localArtPath.value : this.localArtPath,
     isFavorite: isFavorite ?? this.isFavorite,
     playCount: playCount ?? this.playCount,
     lastPlayed: lastPlayed.present ? lastPlayed.value : this.lastPlayed,
@@ -2482,6 +2627,9 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
           : this.durationSeconds,
       rating: data.rating.present ? data.rating.value : this.rating,
       coverArt: data.coverArt.present ? data.coverArt.value : this.coverArt,
+      localArtPath: data.localArtPath.present
+          ? data.localArtPath.value
+          : this.localArtPath,
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
           : this.isFavorite,
@@ -2508,6 +2656,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
           ..write('durationSeconds: $durationSeconds, ')
           ..write('rating: $rating, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
           ..write('lastPlayed: $lastPlayed, ')
@@ -2528,6 +2677,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
     durationSeconds,
     rating,
     $driftBlobEquality.hash(coverArt),
+    localArtPath,
     isFavorite,
     playCount,
     lastPlayed,
@@ -2547,6 +2697,7 @@ class AudiobookTrack extends DataClass implements Insertable<AudiobookTrack> {
           other.durationSeconds == this.durationSeconds &&
           other.rating == this.rating &&
           $driftBlobEquality.equals(other.coverArt, this.coverArt) &&
+          other.localArtPath == this.localArtPath &&
           other.isFavorite == this.isFavorite &&
           other.playCount == this.playCount &&
           other.lastPlayed == this.lastPlayed &&
@@ -2564,6 +2715,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
   final Value<int?> durationSeconds;
   final Value<int> rating;
   final Value<Uint8List?> coverArt;
+  final Value<String?> localArtPath;
   final Value<bool> isFavorite;
   final Value<int> playCount;
   final Value<DateTime?> lastPlayed;
@@ -2580,6 +2732,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
     this.durationSeconds = const Value.absent(),
     this.rating = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
     this.lastPlayed = const Value.absent(),
@@ -2597,6 +2750,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
     this.durationSeconds = const Value.absent(),
     this.rating = const Value.absent(),
     this.coverArt = const Value.absent(),
+    this.localArtPath = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.playCount = const Value.absent(),
     this.lastPlayed = const Value.absent(),
@@ -2616,6 +2770,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
     Expression<int>? durationSeconds,
     Expression<int>? rating,
     Expression<Uint8List>? coverArt,
+    Expression<String>? localArtPath,
     Expression<bool>? isFavorite,
     Expression<int>? playCount,
     Expression<DateTime>? lastPlayed,
@@ -2633,6 +2788,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
       if (durationSeconds != null) 'duration_seconds': durationSeconds,
       if (rating != null) 'rating': rating,
       if (coverArt != null) 'cover_art': coverArt,
+      if (localArtPath != null) 'local_art_path': localArtPath,
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (playCount != null) 'play_count': playCount,
       if (lastPlayed != null) 'last_played': lastPlayed,
@@ -2652,6 +2808,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
     Value<int?>? durationSeconds,
     Value<int>? rating,
     Value<Uint8List?>? coverArt,
+    Value<String?>? localArtPath,
     Value<bool>? isFavorite,
     Value<int>? playCount,
     Value<DateTime?>? lastPlayed,
@@ -2669,6 +2826,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       rating: rating ?? this.rating,
       coverArt: coverArt ?? this.coverArt,
+      localArtPath: localArtPath ?? this.localArtPath,
       isFavorite: isFavorite ?? this.isFavorite,
       playCount: playCount ?? this.playCount,
       lastPlayed: lastPlayed ?? this.lastPlayed,
@@ -2706,6 +2864,9 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
     if (coverArt.present) {
       map['cover_art'] = Variable<Uint8List>(coverArt.value);
     }
+    if (localArtPath.present) {
+      map['local_art_path'] = Variable<String>(localArtPath.value);
+    }
     if (isFavorite.present) {
       map['is_favorite'] = Variable<bool>(isFavorite.value);
     }
@@ -2741,6 +2902,7 @@ class AudiobookTracksCompanion extends UpdateCompanion<AudiobookTrack> {
           ..write('durationSeconds: $durationSeconds, ')
           ..write('rating: $rating, ')
           ..write('coverArt: $coverArt, ')
+          ..write('localArtPath: $localArtPath, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('playCount: $playCount, ')
           ..write('lastPlayed: $lastPlayed, ')
@@ -3189,13 +3351,9 @@ final class $$AudiobookFoldersTableReferences
     super.$_typedResult,
   );
 
-  static $AudiobookFoldersTable _parentIdTable(_$AudiobookDatabase db) =>
-      db.audiobookFolders.createAlias(
-        $_aliasNameGenerator(
-          db.audiobookFolders.parentId,
-          db.audiobookFolders.id,
-        ),
-      );
+  static $AudiobookFoldersTable _parentIdTable(_$AudiobookDatabase db) => db
+      .audiobookFolders
+      .createAlias('audiobook_folders__parent_id__audiobook_folders__id');
 
   $$AudiobookFoldersTableProcessedTableManager? get parentId {
     final $_column = $_itemColumn<String>('parent_id');
@@ -3480,6 +3638,7 @@ typedef $$AudiobookArtistsTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<Uint8List?> photo,
+      Value<String?> localArtPath,
       Value<String?> bio,
       Value<String?> photoUrl,
       Value<bool> isFavorite,
@@ -3492,6 +3651,7 @@ typedef $$AudiobookArtistsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<Uint8List?> photo,
+      Value<String?> localArtPath,
       Value<String?> bio,
       Value<String?> photoUrl,
       Value<bool> isFavorite,
@@ -3516,10 +3676,7 @@ final class $$AudiobookArtistsTableReferences
   static MultiTypedResultKey<$AudiobooksTable, List<Audiobook>>
   _audiobooksRefsTable(_$AudiobookDatabase db) => MultiTypedResultKey.fromTable(
     db.audiobooks,
-    aliasName: $_aliasNameGenerator(
-      db.audiobookArtists.id,
-      db.audiobooks.artistId,
-    ),
+    aliasName: 'audiobook_artists__id__audiobooks__artist_id',
   );
 
   $$AudiobooksTableProcessedTableManager get audiobooksRefs {
@@ -3538,10 +3695,7 @@ final class $$AudiobookArtistsTableReferences
   _audiobookTracksRefsTable(_$AudiobookDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.audiobookTracks,
-        aliasName: $_aliasNameGenerator(
-          db.audiobookArtists.id,
-          db.audiobookTracks.artistId,
-        ),
+        aliasName: 'audiobook_artists__id__audiobook_tracks__artist_id',
       );
 
   $$AudiobookTracksTableProcessedTableManager get audiobookTracksRefs {
@@ -3580,6 +3734,11 @@ class $$AudiobookArtistsTableFilterComposer
 
   ColumnFilters<Uint8List> get photo => $composableBuilder(
     column: $table.photo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3683,6 +3842,11 @@ class $$AudiobookArtistsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get bio => $composableBuilder(
     column: $table.bio,
     builder: (column) => ColumnOrderings(column),
@@ -3726,6 +3890,11 @@ class $$AudiobookArtistsTableAnnotationComposer
 
   GeneratedColumn<Uint8List> get photo =>
       $composableBuilder(column: $table.photo, builder: (column) => column);
+
+  GeneratedColumn<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get bio =>
       $composableBuilder(column: $table.bio, builder: (column) => column);
@@ -3833,6 +4002,7 @@ class $$AudiobookArtistsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> bio = const Value.absent(),
                 Value<String?> photoUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
@@ -3843,6 +4013,7 @@ class $$AudiobookArtistsTableTableManager
                 id: id,
                 name: name,
                 photo: photo,
+                localArtPath: localArtPath,
                 bio: bio,
                 photoUrl: photoUrl,
                 isFavorite: isFavorite,
@@ -3855,6 +4026,7 @@ class $$AudiobookArtistsTableTableManager
                 required String id,
                 required String name,
                 Value<Uint8List?> photo = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> bio = const Value.absent(),
                 Value<String?> photoUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
@@ -3865,6 +4037,7 @@ class $$AudiobookArtistsTableTableManager
                 id: id,
                 name: name,
                 photo: photo,
+                localArtPath: localArtPath,
                 bio: bio,
                 photoUrl: photoUrl,
                 isFavorite: isFavorite,
@@ -3961,6 +4134,7 @@ typedef $$AudiobooksTableCreateCompanionBuilder =
       required String name,
       Value<String?> artistId,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<String?> coverArtUrl,
       Value<bool> isFavorite,
       Value<int> playCount,
@@ -3984,6 +4158,7 @@ typedef $$AudiobooksTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> artistId,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<String?> coverArtUrl,
       Value<bool> isFavorite,
       Value<int> playCount,
@@ -4006,10 +4181,9 @@ final class $$AudiobooksTableReferences
     extends BaseReferences<_$AudiobookDatabase, $AudiobooksTable, Audiobook> {
   $$AudiobooksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $AudiobookArtistsTable _artistIdTable(_$AudiobookDatabase db) =>
-      db.audiobookArtists.createAlias(
-        $_aliasNameGenerator(db.audiobooks.artistId, db.audiobookArtists.id),
-      );
+  static $AudiobookArtistsTable _artistIdTable(_$AudiobookDatabase db) => db
+      .audiobookArtists
+      .createAlias('audiobooks__artist_id__audiobook_artists__id');
 
   $$AudiobookArtistsTableProcessedTableManager? get artistId {
     final $_column = $_itemColumn<String>('artist_id');
@@ -4029,10 +4203,7 @@ final class $$AudiobooksTableReferences
   _audiobookTracksRefsTable(_$AudiobookDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.audiobookTracks,
-        aliasName: $_aliasNameGenerator(
-          db.audiobooks.id,
-          db.audiobookTracks.audiobookId,
-        ),
+        aliasName: 'audiobooks__id__audiobook_tracks__audiobook_id',
       );
 
   $$AudiobookTracksTableProcessedTableManager get audiobookTracksRefs {
@@ -4071,6 +4242,11 @@ class $$AudiobooksTableFilterComposer
 
   ColumnFilters<Uint8List> get coverArt => $composableBuilder(
     column: $table.coverArt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4222,6 +4398,11 @@ class $$AudiobooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get coverArtUrl => $composableBuilder(
     column: $table.coverArtUrl,
     builder: (column) => ColumnOrderings(column),
@@ -4338,6 +4519,11 @@ class $$AudiobooksTableAnnotationComposer
 
   GeneratedColumn<Uint8List> get coverArt =>
       $composableBuilder(column: $table.coverArt, builder: (column) => column);
+
+  GeneratedColumn<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get coverArtUrl => $composableBuilder(
     column: $table.coverArtUrl,
@@ -4483,6 +4669,7 @@ class $$AudiobooksTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> artistId = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> coverArtUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
@@ -4504,6 +4691,7 @@ class $$AudiobooksTableTableManager
                 name: name,
                 artistId: artistId,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 coverArtUrl: coverArtUrl,
                 isFavorite: isFavorite,
                 playCount: playCount,
@@ -4527,6 +4715,7 @@ class $$AudiobooksTableTableManager
                 required String name,
                 Value<String?> artistId = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<String?> coverArtUrl = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
@@ -4548,6 +4737,7 @@ class $$AudiobooksTableTableManager
                 name: name,
                 artistId: artistId,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 coverArtUrl: coverArtUrl,
                 isFavorite: isFavorite,
                 playCount: playCount,
@@ -4668,6 +4858,7 @@ typedef $$AudiobookTracksTableCreateCompanionBuilder =
       Value<int?> durationSeconds,
       Value<int> rating,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<bool> isFavorite,
       Value<int> playCount,
       Value<DateTime?> lastPlayed,
@@ -4686,6 +4877,7 @@ typedef $$AudiobookTracksTableUpdateCompanionBuilder =
       Value<int?> durationSeconds,
       Value<int> rating,
       Value<Uint8List?> coverArt,
+      Value<String?> localArtPath,
       Value<bool> isFavorite,
       Value<int> playCount,
       Value<DateTime?> lastPlayed,
@@ -4708,13 +4900,9 @@ final class $$AudiobookTracksTableReferences
     super.$_typedResult,
   );
 
-  static $AudiobookArtistsTable _artistIdTable(_$AudiobookDatabase db) =>
-      db.audiobookArtists.createAlias(
-        $_aliasNameGenerator(
-          db.audiobookTracks.artistId,
-          db.audiobookArtists.id,
-        ),
-      );
+  static $AudiobookArtistsTable _artistIdTable(_$AudiobookDatabase db) => db
+      .audiobookArtists
+      .createAlias('audiobook_tracks__artist_id__audiobook_artists__id');
 
   $$AudiobookArtistsTableProcessedTableManager? get artistId {
     final $_column = $_itemColumn<String>('artist_id');
@@ -4730,10 +4918,9 @@ final class $$AudiobookTracksTableReferences
     );
   }
 
-  static $AudiobooksTable _audiobookIdTable(_$AudiobookDatabase db) =>
-      db.audiobooks.createAlias(
-        $_aliasNameGenerator(db.audiobookTracks.audiobookId, db.audiobooks.id),
-      );
+  static $AudiobooksTable _audiobookIdTable(_$AudiobookDatabase db) => db
+      .audiobooks
+      .createAlias('audiobook_tracks__audiobook_id__audiobooks__id');
 
   $$AudiobooksTableProcessedTableManager? get audiobookId {
     final $_column = $_itemColumn<String>('audiobook_id');
@@ -4753,10 +4940,8 @@ final class $$AudiobookTracksTableReferences
   _audiobookChaptersRefsTable(_$AudiobookDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.audiobookChapters,
-        aliasName: $_aliasNameGenerator(
-          db.audiobookTracks.id,
-          db.audiobookChapters.audiobookTrackId,
-        ),
+        aliasName:
+            'audiobook_tracks__id__audiobook_chapters__audiobook_track_id',
       );
 
   $$AudiobookChaptersTableProcessedTableManager get audiobookChaptersRefs {
@@ -4813,6 +4998,11 @@ class $$AudiobookTracksTableFilterComposer
 
   ColumnFilters<Uint8List> get coverArt => $composableBuilder(
     column: $table.coverArt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4957,6 +5147,11 @@ class $$AudiobookTracksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
     builder: (column) => ColumnOrderings(column),
@@ -5062,6 +5257,11 @@ class $$AudiobookTracksTableAnnotationComposer
 
   GeneratedColumn<Uint8List> get coverArt =>
       $composableBuilder(column: $table.coverArt, builder: (column) => column);
+
+  GeneratedColumn<String> get localArtPath => $composableBuilder(
+    column: $table.localArtPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
@@ -5202,6 +5402,7 @@ class $$AudiobookTracksTableTableManager
                 Value<int?> durationSeconds = const Value.absent(),
                 Value<int> rating = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
                 Value<DateTime?> lastPlayed = const Value.absent(),
@@ -5218,6 +5419,7 @@ class $$AudiobookTracksTableTableManager
                 durationSeconds: durationSeconds,
                 rating: rating,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 isFavorite: isFavorite,
                 playCount: playCount,
                 lastPlayed: lastPlayed,
@@ -5236,6 +5438,7 @@ class $$AudiobookTracksTableTableManager
                 Value<int?> durationSeconds = const Value.absent(),
                 Value<int> rating = const Value.absent(),
                 Value<Uint8List?> coverArt = const Value.absent(),
+                Value<String?> localArtPath = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<int> playCount = const Value.absent(),
                 Value<DateTime?> lastPlayed = const Value.absent(),
@@ -5252,6 +5455,7 @@ class $$AudiobookTracksTableTableManager
                 durationSeconds: durationSeconds,
                 rating: rating,
                 coverArt: coverArt,
+                localArtPath: localArtPath,
                 isFavorite: isFavorite,
                 playCount: playCount,
                 lastPlayed: lastPlayed,
@@ -5411,10 +5615,7 @@ final class $$AudiobookChaptersTableReferences
 
   static $AudiobookTracksTable _audiobookTrackIdTable(_$AudiobookDatabase db) =>
       db.audiobookTracks.createAlias(
-        $_aliasNameGenerator(
-          db.audiobookChapters.audiobookTrackId,
-          db.audiobookTracks.id,
-        ),
+        'audiobook_chapters__audiobook_track_id__audiobook_tracks__id',
       );
 
   $$AudiobookTracksTableProcessedTableManager get audiobookTrackId {

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
@@ -24,13 +25,17 @@ class LibraryArtWidget extends StatelessWidget {
     final isCircle = settingsVM.artworkShape == settings.ArtworkShape.circle;
 
     Uint8List? art;
+    String? localArtPath;
     if (item is Album) {
       art = (item as Album).coverArt;
+      localArtPath = (item as Album).localArtPath;
     } else if (item is Track) {
       final t = item as Track;
       art = t.coverArt ?? viewModel.getArtForTrack(trackId: t.id);
+      localArtPath = t.localArtPath;
     } else if (item is Artist) {
       art = (item as Artist).photo;
+      localArtPath = (item as Artist).localArtPath;
     }
 
     return Container(
@@ -43,10 +48,11 @@ class LibraryArtWidget extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: isCircle ? BorderRadius.circular(size ?? 100) : BorderRadius.circular(size == null ? 12 : 4),
-        child: art != null && art.isNotEmpty
-            ? Image.memory(
-                art,
+        child: (localArtPath != null && File(localArtPath).existsSync())
+            ? Image.file(
+                File(localArtPath),
                 fit: BoxFit.cover,
+                cacheWidth: 300,
                 errorBuilder: (context, error, stackTrace) => Center(
                   child: _getCategoryIcon(
                     viewModel.mode,
@@ -55,13 +61,26 @@ class LibraryArtWidget extends StatelessWidget {
                   ),
                 ),
               )
-            : Center(
-                child: _getCategoryIcon(
-                  viewModel.mode,
-                  theme,
-                  size: size == null ? 64 : 20,
-                ),
-              ),
+            : art != null && art.isNotEmpty
+                ? Image.memory(
+                    art,
+                    fit: BoxFit.cover,
+                    cacheWidth: 300,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: _getCategoryIcon(
+                        viewModel.mode,
+                        theme,
+                        size: size == null ? 64 : 20,
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: _getCategoryIcon(
+                      viewModel.mode,
+                      theme,
+                      size: size == null ? 64 : 20,
+                    ),
+                  ),
       ),
     );
   }
