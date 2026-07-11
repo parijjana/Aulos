@@ -1,1 +1,2 @@
 schema,ts,sha,branch,run_id,pass,integrity_pass,tests_total,tests_failed,suite_load_errors,coverage_pct,analyzer_errors,analyzer_warnings,analyzer_infos,size_violations,baseline_count,largest_file,p90_file,struct_violations,wall_secs,files_changed,insertions,deletions
+1,2026-07-11T02:11:02Z,8fd6ee5,master,29135799069,false,true,118,3,22,40.2,38,2,329,0,21,646,292,0,178,1,3,0
