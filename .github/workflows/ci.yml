@@ -5,6 +5,9 @@ on:
     branches: ['**']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: gate-${{ github.ref }}
   cancel-in-progress: true
