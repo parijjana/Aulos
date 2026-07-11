@@ -1,0 +1,1 @@
+schema,ts,sha,branch,run_id,pass,integrity_pass,tests_total,tests_failed,suite_load_errors,coverage_pct,analyzer_errors,analyzer_warnings,analyzer_infos,size_violations,baseline_count,largest_file,p90_file,struct_violations,wall_secs,files_changed,insertions,deletions
