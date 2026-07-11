@@ -10,7 +10,7 @@ import 'package:aulos/presentation/viewmodels/display_view_model.dart';
 import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:aulos/data/database/app_database.dart';
 import 'package:themer_flutter/themer_flutter.dart';

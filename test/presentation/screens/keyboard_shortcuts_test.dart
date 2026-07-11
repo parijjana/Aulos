@@ -11,7 +11,7 @@ import 'package:aulos/presentation/viewmodels/connectivity_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/noise_view_model.dart';
 import 'package:aulos/presentation/viewmodels/mood_view_model.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 
 class MockPlayerViewModel extends Mock implements PlayerViewModel {}

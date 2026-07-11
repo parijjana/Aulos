@@ -17,7 +17,7 @@ import 'package:aulos/data/library/library_indexer_service.dart';
 import 'package:aulos/data/library/persistent_library_service.dart';
 import 'package:aulos/data/library/discovery_sync_manager.dart';
 import 'package:aulos/domain/network/log_service.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:aulos/domain/playback/playback_engine.dart' as domain;
 import 'package:aulos/data/database/app_database.dart';
 import 'package:aulos/data/database/podcast_database.dart';

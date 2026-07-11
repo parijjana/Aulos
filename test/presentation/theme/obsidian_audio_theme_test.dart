@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 
 void main() {

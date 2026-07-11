@@ -4,7 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:themer_flutter/themer_flutter.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:aulos/presentation/theme/amber_glass_theme.dart';
 import 'package:aulos/presentation/theme/ceramic_trio_theme.dart';
 import 'package:aulos/presentation/theme/dynamic_flat_theme.dart';

@@ -7,7 +7,7 @@ import 'package:aulos/presentation/viewmodels/jamendo_view_model.dart';
 import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/domain/library/jamendo_track.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 
 class MockJamendoViewModel extends Mock implements JamendoViewModel {}

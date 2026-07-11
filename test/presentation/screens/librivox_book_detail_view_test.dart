@@ -8,7 +8,7 @@ import 'package:aulos/presentation/viewmodels/library_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/domain/library/librivox_book.dart';
 import 'package:aulos/data/database/app_database.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 
 class MockLibriVoxViewModel extends Mock implements LibriVoxViewModel {}

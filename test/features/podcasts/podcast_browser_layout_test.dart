@@ -6,7 +6,7 @@ import 'package:aulos/presentation/viewmodels/settings_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/display_view_model.dart';
 import 'package:aulos/data/library/podcast_discovery_service.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 

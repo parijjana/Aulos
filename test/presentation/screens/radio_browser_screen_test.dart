@@ -7,7 +7,7 @@ import 'package:aulos/presentation/viewmodels/radio_view_model.dart';
 import 'package:aulos/presentation/viewmodels/player_view_model.dart';
 import 'package:aulos/presentation/viewmodels/settings_view_model.dart' as settings;
 import 'package:aulos/data/database/radio_database.dart';
-import 'package:aulos/presentation/theme/Aulos_audio_theme.dart';
+import 'package:aulos/presentation/theme/aulos_audio_theme.dart';
 import 'package:themer_flutter/themer_flutter.dart';
 
 class MockRadioViewModel extends Mock implements RadioViewModel {}
