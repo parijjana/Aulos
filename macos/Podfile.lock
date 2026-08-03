@@ -1,0 +1,22 @@
+PODS:
+  - audiotags (1.4.5):
+    - FlutterMacOS
+  - FlutterMacOS (1.0.0)
+
+DEPENDENCIES:
+  - audiotags (from `Flutter/ephemeral/.symlinks/plugins/audiotags/macos`)
+  - FlutterMacOS (from `Flutter/ephemeral`)
+
+EXTERNAL SOURCES:
+  audiotags:
+    :path: Flutter/ephemeral/.symlinks/plugins/audiotags/macos
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+
+SPEC CHECKSUMS:
+  audiotags: 51123144fe0c94c7e0cc5e092b761d50d1f7ab7d
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+
+PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+
+COCOAPODS: 1.16.2

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/themer_model.dart';
 
 /// Compiler that translates [ThemerModel] into Flutter's native [ThemeData].
@@ -119,14 +118,13 @@ class ThemerCompiler {
     if (typography == null) return null;
 
     final String family = typography.fontFamily ?? 'Inter';
-    TextStyle baseStyle;
 
-    try {
-      baseStyle = GoogleFonts.getFont(family, color: textColor);
-    } catch (e) {
-      // Fallback if font name is invalid or not in Google Fonts
-      baseStyle = TextStyle(fontFamily: family, color: textColor);
-    }
+    // Fonts are resolved from the host app's bundled assets, never fetched.
+    // google_fonts was removed (2026-08-03): it performs an HTTP fetch on first
+    // use, which breaks offline-first behaviour and makes widget tests
+    // impossible (flutter_test forces every HTTP response to 400). A family the
+    // host app has not bundled falls back to the platform default.
+    final TextStyle baseStyle = TextStyle(fontFamily: family, color: textColor);
 
     return TextTheme(
       displayLarge: baseStyle.copyWith(

@@ -67,3 +67,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/audio/noise/
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter/Inter[opsz,wght].ttf
+        - asset: assets/fonts/Inter/Inter-Italic[opsz,wght].ttf
+          style: italic
