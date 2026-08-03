@@ -173,6 +173,17 @@ Future<File> captureWidget(
     await tester.pump(const Duration(milliseconds: 100));
   }
 
+  // Image.memory / Image.file decode on a real event loop. Inside
+  // flutter_test's fake-async clock those callbacks never fire, so artwork
+  // renders as empty boxes. Give the engine a real turn, then pump the decoded
+  // frames in.
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 300)),
+  );
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+
   final boundary =
       boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
 
