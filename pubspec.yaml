@@ -14,11 +14,13 @@ dependencies:
   themer_flutter:
     path: packages/themer_sdk
   just_audio: ^0.10.5
-  audiotags: ^1.4.5
+  # 1.4.0 is the last flutter_rust_bridge v1 release. >=1.4.3 (frb v2) ships a
+  # macOS pod whose binary omits the v1-style symbols its own shim references,
+  # so the macOS link fails. Do not bump without testing `flutter build macos`.
+  audiotags: 1.4.0
   file: ^7.0.1
   nsd: ^5.0.1
   qr_flutter: ^4.1.0
-  web_socket_channel: ^3.0.3
   encrypt: ^5.0.3
   qr_secure_handshake:
     path: packages/qr_secure_handshake
@@ -73,3 +75,4 @@ flutter:
         - asset: assets/fonts/Inter/Inter[opsz,wght].ttf
         - asset: assets/fonts/Inter/Inter-Italic[opsz,wght].ttf
           style: italic
+

@@ -35,7 +35,17 @@ target 'Runner' do
   end
 end
 
+# audiotags 1.4.0 packaging bug: its podspec downloads macos.zip, unzips into
+# Libs/, and leaves the zip behind — while vendored_libraries globs 'Libs/**/*'.
+# CocoaPods then emits -lmacos and the link fails with "library 'macos' not
+# found". Delete the stray archive after install so the build is reproducible
+# on a clean pub cache.
 post_install do |installer|
+  Dir.glob(File.join(Dir.home, '.pub-cache/hosted/pub.dev/audiotags-*/macos/Libs/*.zip')).each do |z|
+    File.delete(z)
+    puts "audiotags: removed stray #{File.basename(z)} from Libs/"
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
   end

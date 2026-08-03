@@ -1,5 +1,5 @@
 PODS:
-  - audiotags (1.4.5):
+  - audiotags (1.4.0):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
 
@@ -14,9 +14,9 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral
 
 SPEC CHECKSUMS:
-  audiotags: 51123144fe0c94c7e0cc5e092b761d50d1f7ab7d
+  audiotags: 490636bc5d6176938aa862831223c2a55298acc3
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
 
-PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+PODFILE CHECKSUM: ce27cc7275abe9fc02a490bab5f1f247d1951d16
 
 COCOAPODS: 1.16.2
